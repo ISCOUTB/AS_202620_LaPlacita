@@ -36,6 +36,15 @@ Plataforma está dirigida a:
 
 --- 
 
+# Arquitectura
+Sistema estará conformado por: 
+- Aplicación móvil para los clientes.
+- API REST para la comunicación entre clientes y servidores.
+- Base de datos centralizada.
+- Sistema de notificaciones. 
+
+---
+
 # Equipo de desarrollo 
 - Mateo Josué Buendía Barrios
 - Miguel Ángel Isaza Montalvo
