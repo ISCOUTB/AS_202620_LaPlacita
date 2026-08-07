@@ -17,6 +17,25 @@ Actualmente los usuarios de las cafeterías del campus deben desplazarse hasta l
 
 ---
 
+# Usuarios
+Plataforma está dirigida a:
+
+- Estudiantes
+- Docentes
+- Personal Administrativo
+- Visitantes autorizados del campus
+
+---
+
+# Funcionalidades principales 
+- Consulta de menú.
+- Búsqueda de productos.
+- Creación de pedidos.
+- Tiempo estimado de preparación.
+- Seguimiento del estado del pedido. 
+
+--- 
+
 # Equipo de desarrollo 
 - Mateo Josué Buendía Barrios
 - Miguel Ángel Isaza Montalvo
