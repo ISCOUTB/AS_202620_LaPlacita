@@ -110,12 +110,20 @@ Plataforma está dirigida a la comunidad educativa:
 
 --- 
 
-# Atributos de Calidad
-## Disponibilidad vs Consistencia 
-El sistema debe soportar una alta cantidad de pedidos simultáneos durante las horas pico sin comprometer la exactitud del estado de los pedidos.
+## Atributos de Calidad
 
-## Usabilidad vs Seguridad 
+### Disponibilidad vs. Consistencia
+El sistema debe soportar una alta cantidad de pedidos simultáneos durante las horas pico sin comprometer la exactitud del estado de los pedidos ni la actualización en tiempo real de los inventarios.
+
+### Usabilidad vs. Seguridad
 El sistema debe ofrecer un proceso de compra sencillo, intuitivo y rápido, garantizando al mismo tiempo la autenticidad en la entrega mediante la validación de un PIN de cuatro dígitos asignado a cada pedido.
+
+---
+
+### Detalles de la Ponderación Técnica
+
+* **Trade-off de Disponibilidad y Consistencia:** Para garantizar que múltiples usuarios no pidan el mismo producto agotado en horas de alto tráfico, la consistencia de los datos del inventario se mantiene mediante transacciones atómicas en el backend, priorizando la precisión sobre la velocidad extrema de respuesta.
+* **Trade-off de Usabilidad y Seguridad:** Se minimizan los pasos de autenticación durante la navegación para acelerar el pre-pedido, desplazando el control de seguridad al punto de recolección físico, donde la validación del PIN de 4 dígitos asegura una entrega sin fricciones pero totalmente verificada.
 
 ---
 
