@@ -5,7 +5,7 @@
 
 # Registro de Uso
 | Fecha | Herramienta | Actividad | Resultado obtenido | Validación |
-| -------- | ---------- | ------------------- | -------------------- | --------------- |
+| -------- | ---------- | ---------------------- | ----------------------- | ------------------- |
 | 06/08/2026 | Gemini | Elaboración de la estructura inicial del README del proyecto. | Se obtuvo un README organizado con secciones para la descripción y documentación. | Revisado y adaptado por el equipo. |
 
 --- 
