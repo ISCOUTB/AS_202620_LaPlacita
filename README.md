@@ -12,6 +12,13 @@ El proyecto busca disminuir relativamente los tiempos de espera durante las hora
 
 ---
 
+# Objetivos 
+## Objetivo General
+
+## Objetivos Específicos
+
+---
+
 # Problema 
 Actualmente los usuarios de las cafeterías del campus deben desplazarse hasta los puntos destinados para la venta, esperar en largas filas para realizar el pedido y posteriormente esperar nuevamente mientras este es preparado.
 
@@ -37,11 +44,6 @@ Plataforma está dirigida a:
 --- 
 
 # Arquitectura
-Sistema estará conformado por: 
-- Aplicación móvil para los clientes.
-- API REST para la comunicación entre clientes y servidores.
-- Base de datos centralizada.
-- Sistema de notificaciones. 
 
 ---
 
