@@ -32,7 +32,7 @@ Desarrollar una plataforma digital que permita gestionar pedidos anticipados en 
 ---
 
 # Usuarios
-Plataforma está dirigida a:
+Plataforma está dirigida a la comunidad educativa:
 
 - Estudiantes
 - Docentes
