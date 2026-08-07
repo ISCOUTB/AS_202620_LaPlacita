@@ -14,7 +14,6 @@
 - [Usuarios](#usuarios)
 - [Funcionalidades principales](#funcionalidades-principales)
 - [Visualización](#visualización)
-- [Arquitectura](#arquitectura)
 - [Documentación](#documentación)
 - [Atributos de Calidad](#atributos-de-calidad)
 - [Estado del proyecto](#estado-del-proyecto)
@@ -72,7 +71,8 @@ Plataforma está dirigida a la comunidad educativa:
 
 --- 
 
-# Arquitectura
+# Visualización 
+> Próximamente se agregarán los prototipos de la interfaz y los diagramas de arquitectura del sistema.
 
 ---
 
