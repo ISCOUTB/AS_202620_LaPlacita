@@ -2,7 +2,7 @@
 > Plataforma de pre-pedidos y recolección (Click &amp; Collect) para las cafeterías del campus universitario.
 
 <p aling = "left"> 
-![Estado](https://img.shields.io/badge/Estado-En%20desarrollo-yellow)
+  <img src = "https://img.shields.io/badge/Estado-En%20desarrollo-yellow">
 </p>
 
 --- 
