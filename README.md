@@ -16,7 +16,6 @@
 - [Visualización](#visualización)
 - [Documentación](#documentación)
 - [Atributos de Calidad](#atributos-de-calidad)
-- [Estado del proyecto](#estado-del-proyecto)
 - [Equipo de desarrollo](#equipo-de-desarrollo)
 
 ---
