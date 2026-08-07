@@ -46,7 +46,12 @@ Plataforma está dirigida a la comunidad educativa:
 - Búsqueda de productos.
 - Creación de pedidos.
 - Tiempo estimado de preparación.
-- Seguimiento del estado del pedido. 
+- Seguimiento del estado del pedido.
+- Notificaciones al usuario.
+- Validación mediante PIN.
+- Historial de pedidos.
+- Administración de establecimientos.
+- Administración de productos. 
 
 --- 
 
@@ -54,12 +59,30 @@ Plataforma está dirigida a la comunidad educativa:
 
 ---
 
+# Documentación
+## Estructura del repositorio 
+'''text
+  AS_202620_LaPlacita/
+  │
+  ├── README.md
+  │
+  └── docs/
+      ├── adr/
+      ├── arc42/
+      ├── c4/
+      ├── aspectos.md
+      ├── ficha_del_problema.md
+      └── ia.md
+'''
+
+--- 
+
 # Atributos de Calidad
 ## Disponibilidad vs Consistencia 
 El sistema debe soportar una alta cantidad de pedidos simultáneos durante las horas pico sin comprometer la exactitud del estado de los pedidos.
 
 ## Usabilidad vs Seguridad 
-El sistema debe soportar una alta cantidad de pedidos simultáneos durante las horas pico sin comprometer la exactitud del estado de los pedidos.
+El sistema debe ofrecer un proceso de compra sencillo, intuitivo y rápido, garantizando al mismo tiempo la autenticidad en la entrega mediante la validación de un PIN de cuatro dígitos asignado a cada pedido.
 
 ---
 
