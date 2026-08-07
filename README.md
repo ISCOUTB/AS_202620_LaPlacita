@@ -2,7 +2,7 @@
 > Plataforma de pre-pedidos y recolección (Click &amp; Collect) para las cafeterías del campus universitario.
 
 ![Estado](https://img.shields.io/badge/Estado-En%20desarrollo-yellow)
-
+![Click & Collect](https://img.shields.io/badge/Click%20%26%20Collect-Pre--Pedidos-success)
 --- 
 
 # Descripción
