@@ -10,7 +10,7 @@ La solución integra una aplicación para cubrir las cinco tiendas que conforman
 El proyecto busca disminuir relativamente los tiempos de espera durante las horas de mayor demanda, y mejorar la organización de los establecimientos y brindar una experiencia verdaderamente grata con compras mas cómoda, rápida y eficiente. 
 ---
 
-#Equipo
+# Equipo
 - Mateo Josué Buendía Barrios
 - Miguel Ángel Isaza Montalvo
 - Samuel David Jiménez Álvarez
