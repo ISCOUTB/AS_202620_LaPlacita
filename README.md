@@ -62,7 +62,7 @@ Plataforma está dirigida a la comunidad educativa:
 # Documentación
 ## Estructura del repositorio 
 
-```text
+```
   AS_202620_LaPlacita/
   │
   ├── README.md
