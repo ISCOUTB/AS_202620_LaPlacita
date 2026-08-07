@@ -7,6 +7,18 @@
 
 # Índice
 - [Descripción](#descripción)
+- [Problema](#problema)
+- [Objetivos](#objetivos)
+    - [Objetivo General](#objetivo-general)
+    - [Objetivos Específicos](#objetivos-específicos)
+- [Usuarios](#usuarios)
+- [Funcionalidades principales](#funcionalidades-principales)
+- [Visualización](#visualización)
+- [Arquitectura](#arquitectura)
+- [Documentación](#documentación)
+- [Atributos de Calidad](#atributos-de-calidad)
+- [Estado del proyecto](#estado-del-proyecto)
+- [Equipo de desarrollo](#equipo-de-desarrollo)
 
 ---
 
