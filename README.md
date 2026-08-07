@@ -5,6 +5,11 @@
 ![Click & Collect](https://img.shields.io/badge/Click%20%26%20Collect-Pre--Pedidos-success)
 --- 
 
+# Índice
+- [Descripción](#descripción)
+
+---
+
 # Descripción
 LaPlacita es una plataforma digital diseñada con el fin de optimizar la experiencia de compra en las cafeterías de la institución mediante un sistema de **Pre-pedidos y Recolección (Click & Collect)**. 
 
