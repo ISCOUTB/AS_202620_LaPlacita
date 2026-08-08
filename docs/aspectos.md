@@ -8,7 +8,7 @@ diferentes evidencias durante el desarrollo del proyecto.
 
 # Aspectos del sistema 
 
-| **ID**   | **Aspecto**                                                | **Requisito**   | **C4**    | **ADR**   | **Código**   | **Pruebas**   | **Evidencia**   |
+| **ID**   | **Aspecto**                                | **Requisito**   | **C4**    | **ADR**   | **Código**   | **Pruebas**   | **Evidencia**   |
 | -------- | ---------------------------------------------------------- | --------------- | --------- | --------- | ------------ | ------------- | --------------- |
 | A-01     | Disponibilidad y consistencia del estado de los pedidos    | RF-01           | Pendiente | Pendiente | Pendiente    | Pendiente     | Pendiente       |
 | A-02     | Aislamiento y enrutamiento correcto entre establecimientos | RF-02           | Pendiente | Pendiente | Pendiente    | Pendiente     | Pendiente       |
@@ -35,24 +35,6 @@ diferentes evidencias durante el desarrollo del proyecto.
 **Prioridad:** Alta.
 
 **Estado:** En analsisis.
-
-## Aspecto A-02
-
-**Nombre:** Aislamiento y enrutamiento correcto entre establecimientos.
-
-**Usuario:** Establecimientos de LaPlacita y personal administrivo.
-
-**Problema Que Resuelve:** LaPlacita agrupa varios establecimientos independientes que operan bajo la misma plataforma. Si el sistema no aísla correctamente los datos de cada establecimiento (pedidos, menú, inventario), un pedido podría enrutarse al negocio equivocado, o un establecimiento podría ver o modificar información que no le pertenece, generando errores operativos y desconfianza entre los vendedores.
-
-**Resultado Esperado:** El sistema garantiza que cada pedido, menú e inventario esté correctamente asociado a su establecimiento correspondiente, y que cada establecimiento solo pueda consultar y gestionar su propia información dentro de la plataforma.
-
-**Escenario:** Un usuario realiza un pedido que incluye productos de dos establecimientos distintos dentro de LaPlacita. El sistema debe dividir o asociar correctamente cada parte del pedido con el establecimiento que debe prepararlo, sin mezclar productos, inventario o notificaciones entre negocios.
-
-**Criterio De Éxito:** Ningún establecimiento debe recibir, visualizar o modificar pedidos, menús o inventario que no le pertenezcan, incluso bajo condiciones de alta concurrencia.
-
-**Prioridad:** Alta 
-
-**Estado:** En analsisis
 
 ## Aspecto A-02
 
