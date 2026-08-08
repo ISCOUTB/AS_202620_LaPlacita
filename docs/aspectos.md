@@ -14,8 +14,8 @@ diferentes evidencias durante el desarrollo del proyecto.
 | A-02     | Aislamiento y enrutamiento correcto entre establecimientos | RF-02           | Pendiente | Pendiente | Pendiente    | Pendiente     | Pendiente       |
 | A-03     | Notificación oportuna del cambio de estado                 | RF-03           | Pendiente | Pendiente | Pendiente    | Pendiente     | Pendiente       |
 | A-04     | Protección de datos personales y de pago                   | RF-04           | Pendiente | Pendiente | Pendiente    | Pendiente     | Pendiente       |
-| A-05     | Usabilidad del proceso de pre-pedido con validación segura mediante PIN | RF-05           | Pendiente | Pendiente | Pendiente    | Pendiente     | Pendiente       |
-
+| A-05     | Simplicidad del flujo de navegación y pedido | RF-05           | Pendiente | Pendiente | Pendiente    | Pendiente     | Pendiente       |
+| A-06     | Integridad en la validación de identidad en el punto de recolección | RF-06           | Pendiente | Pendiente | Pendiente    | Pendiente     | Pendiente       |
 
 # Descripción de Aspectos
 
@@ -93,17 +93,35 @@ diferentes evidencias durante el desarrollo del proyecto.
 
 ## Aspecto A-05
 
-**Nombre:** Usabilidad del proceso de pre-pedido con validación segura mediante PIN.
+**Nombre:** Simplicidad del flujo de navegación y pedido.
 
-**Usuario:** Estudiantes, docentes, personal administrativo y establecimientos de LaPlacita.
+**Usuario:** Estudiantes, docentes y personal administrativo que realizan pedidos en LaPlacita.
 
-**Problema Que Resuelve:** El proceso de pre-pedido debe ser simple, intuitivo y rápido para no desincentivar su uso entre la comunidad universitaria, pero al mismo tiempo debe garantizarse que solo el usuario correcto recoja el pedido correspondiente, sin agregar pasos de autenticación adicionales que compliquen la experiencia durante la navegación y selección de productos.
+**Problema Que Resuelve:** Un proceso de pedido con demasiados pasos, pantallas o campos innecesarios desincentiva el uso de la plataforma, especialmente en momentos donde el usuario dispone de poco tiempo (entre clases, en descansos cortos). El sistema debe minimizar la fricción desde que el usuario abre la aplicación hasta que confirma su pedido.
 
-**Resultado Esperado:** El sistema permite completar el flujo de pre-pedido con el mínimo de pasos posibles, desplazando el control de seguridad exclusivamente al punto de recolección física, donde se valida un PIN de cuatro dígitos asignado a cada pedido antes de la entrega.
+**Resultado Esperado:** El usuario puede completar un pedido (buscar producto, seleccionarlo y confirmarlo) en la menor cantidad de pasos e interacciones posible, sin pantallas ni campos redundantes.
 
-**Escenario:** Un usuario navega el catálogo, selecciona productos y confirma su pedido sin necesidad de pasos de autenticación adicionales durante la navegación. Al llegar al establecimiento, el personal solicita el PIN de 4 dígitos y valida que corresponda al pedido antes de entregarlo.
+**Escenario:** Un estudiante con 5 minutos disponibles entre clases abre la aplicación, busca un producto específico, lo agrega al pedido y lo confirma antes de que termine su tiempo libre, sin tener que navegar por pantallas innecesarias.
 
-**Criterio De Éxito:** El proceso de pre-pedido no debe exceder el número de pasos definidos como aceptables por el equipo, y ningún pedido debe ser entregado sin la validación exitosa del PIN correspondiente.
+**Criterio De Éxito:** El flujo completo de pedido no debe exceder el número máximo de pasos o pantallas definido como aceptable por el equipo, medido desde la apertura de la aplicación hasta la confirmación del pedido.
+
+**Prioridad:** Media
+
+**Estado:** En análisis
+
+## Aspecto A-06
+
+**Nombre:** Integridad en la validación de identidad en el punto de recolección.
+
+**Usuario:** Establecimientos de LaPlacita y usuarios que recogen su pedido.
+
+**Problema Que Resuelve:** Como la seguridad se concentra en el PIN de 4 dígitos entregado en el punto de recolección (y no durante la navegación), es crítico que ese mecanismo no pueda ser vulnerado: adivinado por fuerza bruta, interceptado, o reutilizado después de una entrega ya realizada. Si el PIN no tiene controles de integridad, cualquier persona con el número correcto (o con varios intentos) podría recoger un pedido ajeno.
+
+**Resultado Esperado:** El sistema garantiza que cada PIN sea válido para un único pedido, no pueda reutilizarse una vez la entrega fue confirmada, y limite los intentos fallidos de validación para prevenir adivinanza por fuerza bruta.
+
+**Escenario:** Una persona intenta validar un pedido usando un PIN incorrecto varias veces seguidas en el mostrador. El sistema debe bloquear o alertar tras un número limitado de intentos fallidos, y el PIN correcto ya usado en una entrega anterior no debe volver a ser aceptado como válido.
+
+**Criterio De Éxito:** Ningún pedido debe ser entregado dos veces con el mismo PIN, y el sistema debe limitar los intentos fallidos de validación a un número máximo definido por el equipo.
 
 **Prioridad:** Alta
 
