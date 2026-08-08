@@ -14,6 +14,7 @@ diferentes evidencias durante el desarrollo del proyecto.
 | A-02     | Aislamiento y enrutamiento correcto entre establecimientos | RF-02           | Pendiente | Pendiente | Pendiente    | Pendiente     | Pendiente       |
 | A-03     | Notificación oportuna del cambio de estado                 | RF-03           | Pendiente | Pendiente | Pendiente    | Pendiente     | Pendiente       |
 | A-04     | Protección de datos personales y de pago                   | RF-04           | Pendiente | Pendiente | Pendiente    | Pendiente     | Pendiente       |
+| A-05     | Usabilidad del proceso de pre-pedido con validación segura mediante PIN | RF-05           | Pendiente | Pendiente | Pendiente    | Pendiente     | Pendiente       |
 
 
 # Descripción de Aspectos
@@ -85,6 +86,24 @@ diferentes evidencias durante el desarrollo del proyecto.
 **Escenario:** Un usuario realiza un pedido pagando en línea a través de una pasarela de pago externa. El sistema debe registrar únicamente la confirmación del pago (sin almacenar datos sensibles de la tarjeta) y mantener los datos personales del usuario accesibles solo para los roles autorizados.
 
 **Criterio De Éxito:** Ningún dato personal o de pago sensible debe quedar expuesto a establecimientos u otros usuarios sin autorización, y no debe almacenarse información de tarjetas u otros medios de pago sensibles directamente en el sistema.
+
+**Prioridad:** Alta
+
+**Estado:** En análisis
+
+## Aspecto A-05
+
+**Nombre:** Usabilidad del proceso de pre-pedido con validación segura mediante PIN.
+
+**Usuario:** Estudiantes, docentes, personal administrativo y establecimientos de LaPlacita.
+
+**Problema Que Resuelve:** El proceso de pre-pedido debe ser simple, intuitivo y rápido para no desincentivar su uso entre la comunidad universitaria, pero al mismo tiempo debe garantizarse que solo el usuario correcto recoja el pedido correspondiente, sin agregar pasos de autenticación adicionales que compliquen la experiencia durante la navegación y selección de productos.
+
+**Resultado Esperado:** El sistema permite completar el flujo de pre-pedido con el mínimo de pasos posibles, desplazando el control de seguridad exclusivamente al punto de recolección física, donde se valida un PIN de cuatro dígitos asignado a cada pedido antes de la entrega.
+
+**Escenario:** Un usuario navega el catálogo, selecciona productos y confirma su pedido sin necesidad de pasos de autenticación adicionales durante la navegación. Al llegar al establecimiento, el personal solicita el PIN de 4 dígitos y valida que corresponda al pedido antes de entregarlo.
+
+**Criterio De Éxito:** El proceso de pre-pedido no debe exceder el número de pasos definidos como aceptables por el equipo, y ningún pedido debe ser entregado sin la validación exitosa del PIN correspondiente.
 
 **Prioridad:** Alta
 
