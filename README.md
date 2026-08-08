@@ -18,7 +18,7 @@
 - [Visualización](#visualización)
 - [Documentación](#documentación)
     - [Estructura del repositorio](#estructura-del-repositorio)
-    - [Trazabilidad y enlaces a documentación](#trazabilidad-y-enlace-a-documentación)
+    - [Trazabilidad y enlaces a documentación](#trazabilidad-y-enlaces-a-documentación)
 - [Atributos de Calidad](#atributos-de-calidad)
 - [Detalles de la Ponderación Técnica](#detalles-de-la-ponderación-técnica)
 - [Equipo de desarrollo](#equipo-de-desarrollo)
