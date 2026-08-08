@@ -132,3 +132,15 @@ El sistema debe ofrecer un proceso de compra sencillo, intuitivo y rápido, gara
 - Miguel Ángel Isaza Montalvo
 - Samuel David Jiménez Álvarez
 - Jorge Alberto Martínez Castillo
+
+---
+
+## Estado Actual del Proyecto
+
+**Semana 1 — Definición de aspectos de calidad y documentación base**
+
+- ✅ Ficha del problema
+- ✅ Atributos de calidad identificados (6 aspectos documentados en `docs/aspectos.md`)
+- ⏳ Decisiones de arquitectura (ADR) — pendiente
+- ⏳ Diagramas C4 — pendiente
+- ⏳ Documento arc42 — pendiente
