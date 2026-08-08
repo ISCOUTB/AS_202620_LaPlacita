@@ -1,12 +1,10 @@
 # Aspectos De Calidad 
 
-## Descripción
-Este documento registra los atributos de calidad considerados para el desarrollo del proyecto **La placita**, así como la trazabilidad de las decisiones arquitectónicas (ADR) y las 
-diferentes evidencias durante el desarrollo del proyecto.
+> Este documento registra los atributos de calidad considerados para el desarrollo del proyecto **La placita**, así como la trazabilidad de las decisiones arquitectónicas (ADR) y las diferentes evidencias durante el desarrollo del proyecto.
 
 ---
 
-# Aspectos del sistema 
+# 1. Aspectos del sistema 
 
 | **ID**   | **Aspecto**                                | **Requisito**   | **C4**    | **ADR**   | **Código**   | **Pruebas**   | **Evidencia**   |
 | -------- | ---------------------------------------------------------- | --------------- | --------- | --------- | ------------ | ------------- | --------------- |
@@ -17,7 +15,9 @@ diferentes evidencias durante el desarrollo del proyecto.
 | A-05     | Simplicidad del flujo de navegación y pedido | RF-05           | Pendiente | Pendiente | Pendiente    | Pendiente     | Pendiente       |
 | A-06     | Integridad en la validación de identidad en el punto de recolección | RF-06           | Pendiente | Pendiente | Pendiente    | Pendiente     | Pendiente       |
 
-# Descripción de Aspectos
+--- 
+
+# 2. Descripción de Aspectos
 
 ## Aspecto A-01
 
