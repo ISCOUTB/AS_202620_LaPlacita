@@ -27,6 +27,6 @@ diferentes evidencias durante el desarrollo del proyecto.
 
 **Criterio De Éxito:** Ningún pedido debe perderse, duplicarse o mostrar un estado incorrecto como consecuencia de la concurrencia de solicitudes.
 
-**Prioridad:** Alta 
+**Prioridad:** Alta.
 
-**Estado:** En analsisis
+**Estado:** En analsisis.
