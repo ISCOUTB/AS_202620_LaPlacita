@@ -11,11 +11,8 @@ diferentes evidencias durante el desarrollo del proyecto.
 | **ID**   | **Aspecto**                                                | **Requisito**   | **C4**    | **ADR**   | **Código**   | **Pruebas**   | **Evidencia**   |
 | -------- | ---------------------------------------------------------- | --------------- | --------- | --------- | ------------ | ------------- | --------------- |
 | A-01     | Disponibilidad y consistencia del estado de los pedidos    | RF-01           | Pendiente | Pendiente | Pendiente    | Pendiente     | Pendiente       |
-| -------- | -------------                                              | --------------- | --------  | --------- | ------------ | ------------- | --------------- |
 | A-02     | Aislamiento y enrutamiento correcto entre establecimientos | RF-02           | Pendiente | Pendiente | Pendiente    | Pendiente     | Pendiente       |
-| -------- | -------------                                              | --------------- | --------  | --------- | ------------ | ------------- | --------------- |
 | A-03     | Notificación oportuna del cambio de estado                 | RF-03           | Pendiente | Pendiente | Pendiente    | Pendiente     | Pendiente       |
-| -------- | -------------                                              | --------------- | --------  | --------- | ------------ | ------------- | --------------- |
 | A-04     | Protección de datos personales y de pago                   | RF-04           | Pendiente | Pendiente | Pendiente    | Pendiente     | Pendiente       |
 
 
@@ -75,7 +72,7 @@ diferentes evidencias durante el desarrollo del proyecto.
 
 **Estado:** En análisis
 
-## Descripcion Del Aspecto A-03
+## Aspecto A-03
 
 **Nombre:** Notificación oportuna del cambio de estado del pedido.
 
@@ -93,7 +90,7 @@ diferentes evidencias durante el desarrollo del proyecto.
 
 **Estado:** En análisis
 
-## Descripcion Del Aspecto A-04
+## Aspecto A-04
 
 **Nombre:** Protección de datos personales y de pago.
 
