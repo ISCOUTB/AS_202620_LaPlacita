@@ -36,5 +36,5 @@ Desarrollar una plataforma digital de pre-pedidos y recolección (**Click & Coll
 | :--- | :--- |
 | **Optimizar tiempos** | Disminución del tiempo de espera presencial en ventanilla durante horas pico. |
 | **Transparencia** | Consulta de menús e inventarios dinámicos actualizados en tiempo real. |
-| **Trazabilidad** | Notificaciones automáticas en 3 etapas (*Recibido*, *En preparación*, *Listo para recoger*). |
+| **Trazabilidad** | Notificaciones automáticas en 4 etapas (*Recibido*, *En preparación*, *Listo para recoger*, *Entregado*). |
 | **Seguridad** | Entrega verificada en mostrador con un PIN de 4 dígitos. |
