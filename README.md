@@ -33,7 +33,7 @@ El proyecto busca disminuir relativamente los tiempos de espera durante las hora
 ### Funcionalidades Clave del Sistema
 
 * **Catálogo Unificado y Menús Dinámicos:** Acceso directo a la oferta gastronómica actualizada de las 5 tiendas, incluyendo alertas de disponibilidad de productos en tiempo real.
-* **Notificaciones de Estado:** Avisos automáticos que informan al usuario el estado de su orden (*Recibido*, *En preparación* y *Listo para recoger*).
+* **Notificaciones de Estado:** Avisos automáticos que informan al usuario el estado de su orden (*Recibido*, *En preparación*, *Listo para recoger* y *Entregado*).
 * **Gestión Eficiente de Tiempos:** Algoritmo de estimación de demora que calcula el tiempo de entrega según el flujo y la carga de trabajo en cocina de cada establecimiento.
 * **Punto de Recolección Rápida:** Validación agilizada en ventanilla mediante código QR o número de confirmación para una entrega sin fricciones.
 
