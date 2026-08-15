@@ -4,15 +4,33 @@
 
 LaPlacita es una plataforma móvil de tipo Click & Collect que unifica la oferta de las 5 tiendas de la zona de comidas del campus universitario. Permite a estudiantes, docentes, personal administrativo y visitantes autorizados pre-ordenar productos de cualquiera de los 5 establecimientos, consultar menús e inventario en tiempo real, monitorear el estado de preparación mediante notificaciones en 4 etapas (Recibido → En preparación → Listo para recoger → Entregado), y retirar el pedido en mostrador validando su identidad con un PIN de 4 dígitos. El objetivo central es reducir el tiempo de espera presencial durante las horas pico, sin perder trazabilidad ni seguridad en la entrega.
 
-### 1.2 Objetivos de Calidad
+### ## 1.2 Objetivos de Calidad
+
+### 1.2.1 Resumen de Objetivos de Calidad
 
 | Prioridad | Atributo | Aspecto relacionado | Motivo |
-|---|---|---|---|
-| 1 | Disponibilidad y consistencia | A-01 | El sistema debe seguir aceptando y actualizando pedidos correctamente durante los picos de demanda entre clases, sin perder ni duplicar información |
-| 2 | Aislamiento entre establecimientos | A-02 | Al ser 5 negocios independientes compartiendo la plataforma, un pedido o dato mal enrutado genera errores operativos y desconfianza entre vendedores |
-| 3 | Integridad de la validación en el punto de recolección | A-06 | El PIN es el único control de seguridad del flujo; si puede vulnerarse, cualquiera podría recoger un pedido ajeno |
-| 4 | Protección de datos personales y de pago | A-04 | El sistema maneja identidad institucional y confirmaciones de pago; una exposición indebida afecta a toda la comunidad universitaria |
-| 5 | Usabilidad / simplicidad del flujo | A-05 | Los usuarios disponen de ventanas cortas (5-10 min entre clases); un flujo con fricción desincentiva el uso de la plataforma |
+| :---: | :--- | :---: | :--- |
+| 1 | Disponibilidad y consistencia | A-01 | El sistema debe seguir aceptando y actualizando pedidos correctamente durante los picos de demanda entre clases, sin perder ni duplicar información. |
+| 2 | Aislamiento entre establecimientos | A-02 | Al ser 5 negocios independientes compartiendo la plataforma, un pedido o dato mal enrutado genera errores operativos y desconfianza entre vendedores. |
+| 3 | Integridad de la validación en el punto de recolección | A-06 | El PIN es el único control de seguridad del flujo; si puede vulnerarse, cualquiera podría recoger un pedido ajeno. |
+| 4 | Protección de datos personales y de pago | A-04 | El sistema maneja identidad institucional y confirmaciones de pago; una exposición indebida afecta a toda la comunidad universitaria. |
+| 5 | Usabilidad / simplicidad del flujo | A-05 | Los usuarios disponen de ventanas cortas (5-10 min entre clases); un flujo con fricción desincentiva el uso de la plataforma. |
+
+
+```mermaid
+graph LR
+    U[Utilidad General] --> A1[Disponibilidad A-01]
+    U --> A2[Aislamiento A-02]
+    U --> A3[Integridad A-06]
+    U --> A4[Protección Datos A-04]
+    U --> A5[Usabilidad A-05]
+
+    A1 --> S1["Picos entre clases <br/> <b>[Alto, Alto] ➔ ESC-01</b>"]
+    A2 --> S2["Ruteo entre 5 tiendas <br/> <b>[Alto, Alto] ➔ ESC-02</b>"]
+    A3 --> S3["Validación PIN/QR <br/> <b>[Alto, Medio] ➔ ESC-03</b>"]
+    A4 --> S4["Pago seguro <br/> <b>[Alto, Medio] ➔ ESC-04</b>"]
+    A5 --> S5["Compra rápida <br/> <b>[Medio, Bajo] ➔ ESC-05</b>"]
+```
 
 ### 1.3 Stakeholders
 
