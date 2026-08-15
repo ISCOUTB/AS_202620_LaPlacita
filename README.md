@@ -153,10 +153,11 @@ El sistema debe ofrecer un proceso de compra sencillo, intuitivo y rápido, gara
 
 ## Estado actual del proyecto
 
-**Semana 1 — Definición de aspectos de calidad y documentación base**
+**Semana 2 — arc42 secciones 1-3, árbol de utilidad y contexto del sistema**
 
-- ✅ Ficha del problema
-- ✅ Atributos de calidad identificados (6 aspectos documentados en `docs/aspectos.md`)
-- ⏳ Decisiones de arquitectura (ADR) — pendiente
-- ⏳ Diagramas C4 — pendiente
-- ⏳ Documento arc42 — pendiente
+* ✅ arc42 secciones 1-3 (Introducción y objetivos, Restricciones, Alcance y contexto del sistema)
+* ✅ Árbol de utilidad y 5 escenarios de calidad con medida (`docs/aspectos.md`)
+* ✅ Restricciones de arquitectura justificadas
+* ✅ Diagrama C4 de contexto
+* ⏳ Decisiones de arquitectura (ADR) — pendiente
+* ⏳ C4 de contenedores/componentes — pendiente
