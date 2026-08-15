@@ -1,215 +1,74 @@
----
-date: July 2025
-title: "![arc42](images/arc42-logo.png) Template"
----
+## 1. Introducción y Objetivos
 
-# 
+### 1.1 Resumen de Requisitos
 
-**About arc42**
+LaPlacita es una plataforma móvil de tipo Click & Collect que unifica la oferta de las 5 tiendas de la zona de comidas del campus universitario. Permite a estudiantes, docentes, personal administrativo y visitantes autorizados pre-ordenar productos de cualquiera de los 5 establecimientos, consultar menús e inventario en tiempo real, monitorear el estado de preparación mediante notificaciones en 4 etapas (Recibido → En preparación → Listo para recoger → Entregado), y retirar el pedido en mostrador validando su identidad con un PIN de 4 dígitos. El objetivo central es reducir el tiempo de espera presencial durante las horas pico, sin perder trazabilidad ni seguridad en la entrega.
 
-arc42, the template for documentation of software and system
-architecture.
+### 1.2 Objetivos de Calidad
 
-Template Version 9.0-EN. (based upon AsciiDoc version), July 2025
+| Prioridad | Atributo | Aspecto relacionado | Motivo |
+|---|---|---|---|
+| 1 | Disponibilidad y consistencia | A-01 | El sistema debe seguir aceptando y actualizando pedidos correctamente durante los picos de demanda entre clases, sin perder ni duplicar información |
+| 2 | Aislamiento entre establecimientos | A-02 | Al ser 5 negocios independientes compartiendo la plataforma, un pedido o dato mal enrutado genera errores operativos y desconfianza entre vendedores |
+| 3 | Integridad de la validación en el punto de recolección | A-06 | El PIN es el único control de seguridad del flujo; si puede vulnerarse, cualquiera podría recoger un pedido ajeno |
+| 4 | Protección de datos personales y de pago | A-04 | El sistema maneja identidad institucional y confirmaciones de pago; una exposición indebida afecta a toda la comunidad universitaria |
+| 5 | Usabilidad / simplicidad del flujo | A-05 | Los usuarios disponen de ventanas cortas (5-10 min entre clases); un flujo con fricción desincentiva el uso de la plataforma |
 
-Created, maintained and © by Dr. Peter Hruschka, Dr. Gernot Starke and
-contributors. See <https://arc42.org>.
+### 1.3 Stakeholders
 
-# Introduction and Goals {#section-introduction-and-goals}
+| Interesado | Rol / interés | Expectativa principal |
+|---|---|---|
+| Estudiantes, docentes, personal administrativo, visitantes autorizados | Ordenan y recogen productos | Pedido correcto, listo cuando se les notifica, sin filas |
+| Las 5 tiendas/establecimientos de LaPlacita | Reciben, preparan y entregan pedidos | Ver solo sus propios pedidos/menú/inventario, sin mezcla con otros negocios |
+| Equipo de desarrollo (Buendía Barrios Mateo, Isaza Montalvo Miguel, Jimenez Alvarez Samuel, Martinez Castillo Jorge) | Construye y mantiene el sistema | Arquitectura simple de sostener con 4 personas |
 
-## Requirements Overview {#_requirements_overview}
 
-## Quality Goals {#_quality_goals}
+## 2. Restricciones de Arquitectura
 
-## Stakeholders {#_stakeholders}
+| Restricción | Tipo | Justificación |
+|---|---|---|
+| Plataforma multi-establecimiento (5 tiendas independientes) | Funcional / negocio | El modelo de negocio agrupa negocios distintos bajo una sola app; obliga a diseñar con aislamiento de datos desde el inicio, no como añadido posterior |
+| Validación de entrega con PIN de 4 dígitos | Funcional / negocio | Es el único punto de control de identidad en el flujo, ya que no hay verificación durante la navegación o el pago |
+| Confirmación de pago sin almacenar datos sensibles de tarjeta | Normativa / seguridad | El pago en línea pasa por una pasarela externa; el sistema solo debe guardar la confirmación, no los datos de la tarjeta (A-04) |
+| Equipo de 4 integrantes | Organizacional | Limita las tácticas viables (por ejemplo, descarta una descomposición extensa en microservicios) |
+| Entrega en un semestre académico | Organizacional / temporal | Obliga a priorizar los aspectos de mayor riesgo (A-01, A-02, A-04, A-06) sobre los de prioridad media |
 
-+-------------+---------------------------+---------------------------+
-| Role/Name   | Contact                   | Expectations              |
-+=============+===========================+===========================+
-| *           | *\<Contact-1\>*           | *\<Expectation-1\>*       |
-| \<Role-1\>* |                           |                           |
-+-------------+---------------------------+---------------------------+
-| *           | *\<Contact-2\>*           | *\<Expectation-2\>*       |
-| \<Role-2\>* |                           |                           |
-+-------------+---------------------------+---------------------------+
+## 3. Alcance y Contexto del Sistema
 
-# Architecture Constraints {#section-architecture-constraints}
+### 3.1 Contexto de Negocio
 
-# Context and Scope {#section-context-and-scope}
+- **Usuario (estudiante/docente/personal/visitante)**: ordena, paga, consulta estado, recibe notificaciones, valida su identidad con PIN o QR al recoger.
+- **Establecimiento (una de las 5 tiendas)**: gestiona su propio menú e inventario, recibe únicamente los pedidos que le corresponden, actualiza el estado, valida el PIN en la entrega.
+- **Pasarela de pago externa**: procesa el pago en línea y devuelve una confirmación, sin exponer datos de tarjeta al sistema.
 
-## Business Context {#_business_context}
+### 3.2 Contexto Técnico
 
-**\<Diagram or Table\>**
+- App móvil ↔ Backend de LaPlacita: vía API, con el establecimiento como dato de enrutamiento en cada pedido.
+- Backend ↔ Pasarela de pago externa: integración para confirmar pagos en línea.
+- Backend ↔ Servicio de notificaciones push: envío de las 4 etapas de estado.
+- Panel de cada establecimiento ↔ Backend: misma API, con acceso restringido a su propia información.
 
-**\<optionally: Explanation of external domain interfaces\>**
+### 3.3 Diagrama C4 de contexto
 
-## Technical Context {#_technical_context}
+### 3.3 Diagrama C4 de contexto
 
-**\<Diagram or Table\>**
+```mermaid
+graph TB
+    Usuario["👤 Usuario<br/>Estudiante, docente, personal<br/>administrativo o visitante autorizado"]
+    Establecimiento["👤 Establecimiento<br/>Una de las 5 tiendas<br/>de la zona de comidas"]
+    LaPlacita["🖥️ LaPlacita<br/>Plataforma Click & Collect<br/>que unifica 5 establecimientos"]
+    Pago["☁️ Pasarela de pago<br/>Procesa pagos en línea<br/>y devuelve confirmación"]
+    Push["☁️ Servicio de notificaciones push<br/>Envía alertas de cambio de estado"]
 
-**\<optionally: Explanation of technical interfaces\>**
+    Usuario -->|"Ordena, consulta estado,<br/>valida PIN/QR al recoger"| LaPlacita
+    Establecimiento -->|"Gestiona menú/inventario,<br/>ve sus pedidos, actualiza estado,<br/>valida PIN/QR"| LaPlacita
+    LaPlacita -->|"Envía solicitud de pago,<br/>recibe confirmación"| Pago
+    LaPlacita -->|"Solicita envío de notificación"| Push
+    Push -->|"Notifica cambio de estado"| Usuario
 
-**\<Mapping Input/Output to Channels\>**
-
-# Solution Strategy {#section-solution-strategy}
-
-# Building Block View {#section-building-block-view}
-
-## Whitebox Overall System {#_whitebox_overall_system}
-
-***\<Overview Diagram\>***
-
-Motivation
-
-:   *\<text explanation\>*
-
-Contained Building Blocks
-
-:   *\<Description of contained building block (black boxes)\>*
-
-Important Interfaces
-
-:   *\<Description of important interfaces\>*
-
-### \<Name black box 1\> {#_name_black_box_1}
-
-*\<Purpose/Responsibility\>*
-
-*\<Interface(s)\>*
-
-*\<(Optional) Quality/Performance Characteristics\>*
-
-*\<(Optional) Directory/File Location\>*
-
-*\<(Optional) Fulfilled Requirements\>*
-
-*\<(optional) Open Issues/Problems/Risks\>*
-
-### \<Name black box 2\> {#_name_black_box_2}
-
-*\<black box template\>*
-
-### \<Name black box n\> {#_name_black_box_n}
-
-*\<black box template\>*
-
-### \<Name interface 1\> {#_name_interface_1}
-
-...​
-
-### \<Name interface m\> {#_name_interface_m}
-
-## Level 2 {#_level_2}
-
-### White Box *\<building block 1\>* {#_white_box_building_block_1}
-
-*\<white box template\>*
-
-### White Box *\<building block 2\>* {#_white_box_building_block_2}
-
-*\<white box template\>*
-
-...​
-
-### White Box *\<building block m\>* {#_white_box_building_block_m}
-
-*\<white box template\>*
-
-## Level 3 {#_level_3}
-
-### White Box \<\_building block x.1\_\> {#_white_box_building_block_x_1}
-
-*\<white box template\>*
-
-### White Box \<\_building block x.2\_\> {#_white_box_building_block_x_2}
-
-*\<white box template\>*
-
-### White Box \<\_building block y.1\_\> {#_white_box_building_block_y_1}
-
-*\<white box template\>*
-
-# Runtime View {#section-runtime-view}
-
-## \<Runtime Scenario 1\> {#_runtime_scenario_1}
-
--   *\<insert runtime diagram or textual description of the scenario\>*
-
--   *\<insert description of the notable aspects of the interactions
-    between the building block instances depicted in this diagram.\>*
-
-## \<Runtime Scenario 2\> {#_runtime_scenario_2}
-
-## ...​
-
-## \<Runtime Scenario n\> {#_runtime_scenario_n}
-
-# Deployment View {#section-deployment-view}
-
-## Infrastructure Level 1 {#_infrastructure_level_1}
-
-***\<Overview Diagram\>***
-
-Motivation
-
-:   *\<explanation in text form\>*
-
-Quality and/or Performance Features
-
-:   *\<explanation in text form\>*
-
-Mapping of Building Blocks to Infrastructure
-
-:   *\<description of the mapping\>*
-
-## Infrastructure Level 2 {#_infrastructure_level_2}
-
-### *\<Infrastructure Element 1\>* {#_infrastructure_element_1}
-
-*\<diagram + explanation\>*
-
-### *\<Infrastructure Element 2\>* {#_infrastructure_element_2}
-
-*\<diagram + explanation\>*
-
-...​
-
-### *\<Infrastructure Element n\>* {#_infrastructure_element_n}
-
-*\<diagram + explanation\>*
-
-# Cross-cutting Concepts {#section-concepts}
-
-## *\<Concept 1\>* {#_concept_1}
-
-*\<explanation\>*
-
-## *\<Concept 2\>* {#_concept_2}
-
-*\<explanation\>*
-
-...​
-
-## *\<Concept n\>* {#_concept_n}
-
-*\<explanation\>*
-
-# Architecture Decisions {#section-design-decisions}
-
-# Quality Requirements {#section-quality-scenarios}
-
-## Quality Requirements Overview {#_quality_requirements_overview}
-
-## Quality Scenarios {#_quality_scenarios}
-
-# Risks and Technical Debts {#section-technical-risks}
-
-# Glossary {#section-glossary}
-
-+----------------------+-----------------------------------------------+
-| Term                 | Definition                                    |
-+======================+===============================================+
-| *\<Term-1\>*         | *\<definition-1\>*                            |
-+----------------------+-----------------------------------------------+
-| *\<Term-2\>*         | *\<definition-2\>*                            |
-+----------------------+-----------------------------------------------+
+    style LaPlacita fill:#1168bd,color:#fff
+    style Usuario fill:#08427b,color:#fff
+    style Establecimiento fill:#08427b,color:#fff
+    style Pago fill:#999999,color:#fff
+    style Push fill:#999999,color:#fff
+```
