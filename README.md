@@ -156,7 +156,7 @@ El sistema debe ofrecer un proceso de compra sencillo, intuitivo y rápido, gara
 **Semana 2 — arc42 secciones 1-3, árbol de utilidad y contexto del sistema**
 
 * ✅ arc42 secciones 1-3 (Introducción y objetivos, Restricciones, Alcance y contexto del sistema)
-* ✅ Árbol de utilidad y 5 escenarios de calidad con medida (`docs/aspectos.md`)
+* ✅ Árbol de utilidad y 5 escenarios de calidad con medida ([`docs/arc42/arc42-template-EN.md`](docs/arc42/arc42-template-EN.md))
 * ✅ Restricciones de arquitectura justificadas
 * ✅ Diagrama C4 de contexto
 
