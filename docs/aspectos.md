@@ -126,3 +126,80 @@
 **Prioridad:** Alta
 
 **Estado:** En análisis
+
+## 3. Árbol de Utilidad y Escenarios de Calidad
+
+### 3.1 Árbol de utilidad
+
+```mermaid
+graph TD
+    U[Utilidad]
+
+    U --> A01["Disponibilidad y consistencia<br/>A-01 — Alta"]
+    A01 --> QSA01["QS-A01: Pedidos correctos<br/>bajo concurrencia en hora pico"]
+
+    U --> A02["Aislamiento<br/>A-02 — Alta"]
+    A02 --> QSA02["QS-A02: Enrutamiento correcto<br/>entre 5 establecimientos"]
+
+    U --> A06["Seguridad / integridad<br/>A-06 — Alta"]
+    A06 --> QSA06["QS-A06: Validación PIN<br/>no vulnerable"]
+
+    U --> A04["Seguridad / privacidad<br/>A-04 — Alta"]
+    A04 --> QSA04["QS-A04: Protección de datos<br/>personales y de pago"]
+
+    U --> A03["Notificación<br/>A-03 — Media"]
+    A03 --> QSA03["Aviso oportuno de<br/>cambio de estado<br/>(no incluido en esta entrega)"]
+
+    U --> A05["Usabilidad<br/>A-05 — Media"]
+    A05 --> QSA05["QS-A05: Flujo de pedido<br/>en pocos pasos"]
+
+    style U fill:#1168bd,color:#fff
+    style A01 fill:#08427b,color:#fff
+    style A02 fill:#08427b,color:#fff
+    style A06 fill:#08427b,color:#fff
+    style A04 fill:#08427b,color:#fff
+    style A03 fill:#999999,color:#fff
+    style A05 fill:#999999,color:#fff
+```
+
+### 3.2 Escenarios de calidad
+
+**QS-A01 — Disponibilidad y consistencia**
+- **Fuente:** usuarios del campus
+- **Estímulo:** múltiples pedidos simultáneos durante hora pico
+- **Artefacto:** backend / servicio de gestión de pedidos
+- **Entorno:** operación normal, hora pico
+- **Respuesta:** cada pedido se procesa y asocia correctamente a su usuario y establecimiento, sin pérdida ni duplicación
+- **Medida:** 0 pedidos perdidos o duplicados en pruebas con 100 solicitudes concurrentes; disponibilidad ≥ 99% en la ventana de almuerzo
+
+**QS-A02 — Aislamiento entre establecimientos**
+- **Fuente:** usuario que ordena productos de dos establecimientos distintos en un mismo pedido
+- **Estímulo:** el pedido se envía al backend
+- **Artefacto:** módulo de enrutamiento de pedidos
+- **Entorno:** operación normal
+- **Respuesta:** cada parte del pedido se asocia solo al establecimiento correspondiente, sin mezclar menú, inventario ni notificaciones entre negocios
+- **Medida:** 0% de pedidos/datos visibles o modificables por un establecimiento distinto al asignado, en pruebas con los 5 establecimientos activos simultáneamente
+
+**QS-A06 — Integridad de la validación PIN/QR**
+- **Fuente:** persona que no es el dueño del pedido
+- **Estímulo:** intenta validar la entrega con un PIN incorrecto varias veces seguidas, o reutiliza un PIN ya usado
+- **Artefacto:** módulo de validación de identidad en el punto de recolección
+- **Entorno:** mostrador de entrega, operación normal
+- **Respuesta:** el sistema bloquea el intento tras un número límite de fallos y rechaza un PIN ya usado en una entrega anterior
+- **Medida:** máximo 3 intentos fallidos antes de bloqueo; 0% de entregas exitosas con PIN reutilizado en pruebas
+
+**QS-A04 — Protección de datos personales y de pago**
+- **Fuente:** usuario que paga en línea a través de la pasarela externa
+- **Estímulo:** se confirma el pago del pedido
+- **Artefacto:** backend / módulo de pagos
+- **Entorno:** operación normal
+- **Respuesta:** el sistema registra solo la confirmación del pago, sin almacenar datos sensibles de la tarjeta, y mantiene los datos personales visibles solo para el usuario, su establecimiento y el personal autorizado
+- **Medida:** 0 campos de datos de tarjeta almacenados en base de datos; acceso a datos personales limitado a los 3 roles autorizados en pruebas de control de acceso
+
+**QS-A05 — Usabilidad / simplicidad del flujo**
+- **Fuente:** estudiante con una ventana de 5 minutos entre clases
+- **Estímulo:** abre la app para hacer un pedido específico
+- **Artefacto:** flujo de navegación y checkout
+- **Entorno:** uso normal
+- **Respuesta:** completa el pedido sin pantallas ni campos redundantes
+- **Medida:** pedido completado en ≤ 5 pasos / ≤ 2 minutos, con tasa de éxito ≥ 90% en pruebas de usabilidad
