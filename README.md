@@ -159,5 +159,4 @@ El sistema debe ofrecer un proceso de compra sencillo, intuitivo y rápido, gara
 * ✅ Árbol de utilidad y 5 escenarios de calidad con medida (`docs/aspectos.md`)
 * ✅ Restricciones de arquitectura justificadas
 * ✅ Diagrama C4 de contexto
-* ⏳ Decisiones de arquitectura (ADR) — pendiente
-* ⏳ C4 de contenedores/componentes — pendiente
+
