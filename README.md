@@ -153,13 +153,12 @@ El sistema debe ofrecer un proceso de compra sencillo, intuitivo y rápido, gara
 
 ## Estado actual del proyecto
 
-**Semana 2 — arc42 secciones 1-3, árbol de utilidad y contexto del sistema**
+**Semana 3 — Estrategia de solución y primer ADR**
 
-* ✅ arc42 secciones 1-3 (Introducción y objetivos, Restricciones, Alcance y contexto del sistema)
-* ✅ Árbol de utilidad y 5 escenarios de calidad con medida ([`docs/arc42/arc42-template-EN.md`](docs/arc42/arc42-template-EN.md))
-* ✅ Restricciones de arquitectura justificadas
-* ✅ Diagrama C4 de contexto
-
+* ✅ arc42 sección 4 (Estrategia de solución, matriz comparativa de estilos y descomposición de módulos)
+* ✅ ADR-0001: adopción de monolito modular con capas internas ([`docs/adr/0001-adopcion-monolito-modular.md`](docs/adr/0001-adopcion-monolito-modular.md))
+* ✅ ADR enlazado desde `docs/aspectos.md` y desde cada escenario de calidad en arc42
+* ✅ Esqueleto ejecutable: módulos vacíos (`src/modules/*`), servidor base y prueba automatizada en verde
 
 ---
 
