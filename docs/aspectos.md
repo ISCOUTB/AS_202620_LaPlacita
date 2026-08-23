@@ -8,12 +8,12 @@
 
 | **ID**   | **Aspecto**                                | **Requisito**   | **C4**    | **ADR**   | **Código**   | **Pruebas**   | **Evidencia**   |
 | -------- | ---------------------------------------------------------- | --------------- | --------- | --------- | ------------ | ------------- | --------------- |
-| A-01     | Disponibilidad y consistencia del estado de los pedidos    | RF-01           | Pendiente | Pendiente | Pendiente    | Pendiente     | Pendiente       |
-| A-02     | Aislamiento y enrutamiento correcto entre establecimientos | RF-02           | Pendiente | Pendiente | Pendiente    | Pendiente     | Pendiente       |
+| A-01     | Disponibilidad y consistencia del estado de los pedidos    | RF-01           | Pendiente | [ADR-0001](adr/0001-adopcion-monolito-modular.md) | Pendiente    | Pendiente     | Pendiente       |
+| A-02     | Aislamiento y enrutamiento correcto entre establecimientos | RF-02           | Pendiente | [ADR-0001](adr/0001-adopcion-monolito-modular.md) | Pendiente    | Pendiente     | Pendiente       |
 | A-03     | Notificación oportuna del cambio de estado                 | RF-03           | Pendiente | Pendiente | Pendiente    | Pendiente     | Pendiente       |
-| A-04     | Protección de datos personales y de pago                   | RF-04           | Pendiente | Pendiente | Pendiente    | Pendiente     | Pendiente       |
-| A-05     | Simplicidad del flujo de navegación y pedido | RF-05           | Pendiente | Pendiente | Pendiente    | Pendiente     | Pendiente       |
-| A-06     | Integridad en la validación de identidad en el punto de recolección | RF-06           | Pendiente | Pendiente | Pendiente    | Pendiente     | Pendiente       |
+| A-04     | Protección de datos personales y de pago                   | RF-04           | Pendiente | [ADR-0001](adr/0001-adopcion-monolito-modular.md) | Pendiente    | Pendiente     | Pendiente       |
+| A-05     | Simplicidad del flujo de navegación y pedido | RF-05           | Pendiente | [ADR-0001](adr/0001-adopcion-monolito-modular.md) | Pendiente    | Pendiente     | Pendiente       |
+| A-06     | Integridad en la validación de identidad en el punto de recolección | RF-06           | Pendiente | [ADR-0001](adr/0001-adopcion-monolito-modular.md) | Pendiente    | Pendiente     | Pendiente       |
 
 --- 
 
