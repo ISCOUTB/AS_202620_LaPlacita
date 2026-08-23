@@ -105,7 +105,29 @@ graph TB
     style Pago fill:#999999,color:#fff
     style Push fill:#999999,color:#fff
 ```
+# 4. Estrategia de la Solución
 
+Para cumplir los atributos de calidad de LaPlacita bajo las restricciones del proyecto (4 desarrolladores, 1 semestre), se definen las siguientes decisiones estratégicas:
+
+## 4.1. Decisiones Tecnológicas y Arquitectura
+
+- **Monolito Modular:** Aplicación única dividida internamente en módulos por dominio (`src/modules/*`), cada uno con sus capas Controller, Service y Repository.
+- **Aislamiento Estricto:** Prohibidas las consultas directas entre bases de datos o importaciones no autorizadas entre módulos; la comunicación es vía servicios expuestos.
+- **Runtime Node.js:** Su modelo I/O asíncrono no bloqueante permite procesar los picos de tráfico de los descansos universitarios con bajo consumo de recursos.
+- **Despliegue Simple:** Un único contenedor Docker para facilitar el desarrollo local y evitar sobrecostos de infraestructura.
+
+## 4.2. Mapeo a Escenarios de Calidad
+
+- **ESC-01 (Disponibilidad):** Node.js gestiona peticiones concurrentes en horas pico sin colapsar la API REST.
+- **ESC-02 (Aislamiento de Datos):** Módulos delimitados garantizan la independencia de datos de cada tienda.
+- **ESC-03 (Seguridad en Entrega):** El módulo de `pedidos` valida de forma aislada el PIN único de recolección en caja.
+- **ESC-04 (Pagos Seguros):** Integración con pasarelas externas delegando el manejo de datos PCI-DSS.
+- **ESC-05 (Rendimiento):** Backend liviano que asegura respuestas ágiles hacia clientes web/móviles.
+
+## 4.3. Organización y Evolución
+
+- **Desarrollo en Paralelo:** Monorepo claro que permite al equipo trabajar en distintos módulos simultáneamente sin conflictos en Git.
+- **Escalabilidad Futura:** Si un módulo concentra demasiado tráfico, su diseño modular facilita extraerlo a un microservicio independiente sin rehacer el sistema.
 ---
 
 ## 10. Requisitos de Calidad 
