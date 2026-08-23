@@ -130,6 +130,37 @@ Para cumplir los atributos de calidad de LaPlacita bajo las restricciones del pr
 - **Escalabilidad Futura:** Si un módulo concentra demasiado tráfico, su diseño modular facilita extraerlo a un microservicio independiente sin rehacer el sistema.
 ---
 
+## 4. Estrategia de Solución
+
+### 4.1. Decisión de estilo arquitectónico
+
+LaPlacita adopta **monolito modular con capas internas**, según lo registrado en [`docs/adr/0001-adopcion-monolito-modular.md`](../adr/0001-adopcion-monolito-modular.md). Los módulos se delimitan por dominio (`src/modules/*`); dentro de cada módulo, la organización interna sigue capas (presentación, lógica, datos). La comunicación entre módulos ocurre solo a través de su interfaz pública nunca cruzando directo a la capa de datos de otro módulo.
+
+### 4.2. Matriz comparativa de estilos
+
+| Criterio (escenario) | Capas globales | Hexagonal | Monolito modular |
+|---|---|---|---|
+| Aislamiento entre tiendas (ESC-02) | Débil: el aislamiento se implementaría como filtros dispersos en capas compartidas (`controllers/`, `models/`) | Un puerto por establecimiento sería un adaptador paralelo, no una frontera de dominio | Fuerte: cada dominio (`pedidos`, `catalogo`, `pagos`, `entrega`) es un módulo con límite explícito |
+| Disponibilidad y consistencia en pico (ESC-01) | La lógica de concurrencia se acopla con la capa de datos global; difícil aislar su efecto | Facilita cambiar la estrategia de persistencia sin tocar el dominio, pero no resuelve el problema de fondo | El módulo `pedidos` concentra la lógica de concurrencia sin afectar a los demás módulos |
+| Validación PIN (ESC-03) | La lógica de seguridad se filtra entre varias capas técnicas | Ideal en este punto: puerto de validación + adaptadores PIN aislados de infraestructura | El módulo `entrega` aplica el patrón localmente, sin extenderlo a todo el sistema |
+| Protección del pago (ESC-04) | La integración con la pasarela externa se dispersa entre capas | El adaptador de pasarela queda aislado detrás de un puerto | El módulo `pagos` encapsula la integración externa sin indirección en el resto del sistema |
+| Compra rápida (ESC-05) | Rápido al inicio, pero el dominio (5 tiendas) ya lo supera | La indirección adicional no aporta valor a la velocidad del flujo de usuario | Los límites de módulo son internos; no afectan la experiencia del usuario |
+| Costo con equipo de 3-4 personas | Bajo costo inicial, alto costo cuando el dominio crece | Alto costo de disciplina (puertos/adaptadores) sostenida en cada corte semanal | Costo intermedio: exige acordar límites de módulo, no mantener indirección total |
+
+### 4.3. Descomposición de alto nivel
+
+| Módulo | Responsabilidad | Escenario relacionado |
+|---|---|---|
+| `catalogo` | Menús, productos e inventario por establecimiento | ESC-02, ESC-05 |
+| `pedidos` | Creación, estado y concurrencia del ciclo de vida del pedido | ESC-01 |
+| `pagos` | Integración con la pasarela externa y confirmación de pago | ESC-04 |
+| `entrega` | Validación PIN en el punto de recolección | ESC-03 |
+| `notificaciones` | Envío de alertas de cambio de estado (fuera de alcance en esta entrega) | A-03 |
+
+### 4.4. Decisión organizacional
+
+El equipo de 3-4 personas y la ventana de un semestre descartan una descomposición en microservicios: el costo operativo de mantenerlos no es sostenible con este tamaño de equipo. El monolito modular permite un único despliegue mientras se respetan los límites de dominio que exigen ESC-01 y ESC-02.
+
 ## 10. Requisitos de Calidad 
 
 ### 10.1. Árbol de utilidad
