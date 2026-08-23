@@ -160,3 +160,21 @@ El sistema debe ofrecer un proceso de compra sencillo, intuitivo y rápido, gara
 * ✅ Restricciones de arquitectura justificadas
 * ✅ Diagrama C4 de contexto
 
+
+---
+
+## Cómo ejecutar
+
+Requiere Node.js 18 o superior.
+
+```bash
+node src/index.js
+```
+
+El servidor arranca en `http://localhost:3000` con un endpoint de verificación en `/health`.
+
+### Pruebas
+
+```bash
+npm test
+```
