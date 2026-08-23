@@ -81,6 +81,7 @@ El sistema centraliza la consulta de productos y la creación de pedidos, pero c
 - Backend ↔ Servicio de notificaciones push: envío de las 4 etapas de estado.
 - Panel de cada establecimiento ↔ Backend: misma API, con acceso restringido a su propia información.
 
+<<<<<<< HEAD
 # 4. Estrategia de la Solución
 
 Para cumplir los atributos de calidad de LaPlacita bajo las restricciones del proyecto (4 desarrolladores, 1 semestre), se definen las siguientes decisiones estratégicas:
@@ -105,6 +106,30 @@ Para cumplir los atributos de calidad de LaPlacita bajo las restricciones del pr
 - **Desarrollo en Paralelo:** Monorepo claro que permite al equipo trabajar en distintos módulos simultáneamente sin conflictos en Git.
 - **Escalabilidad Futura:** Si un módulo concentra demasiado tráfico, su diseño modular facilita extraerlo a un microservicio independiente sin rehacer el sistema.
 ---
+=======
+### 3.3. Diagrama C4 de contexto
+
+```mermaid
+graph TB
+    Usuario["👤 Usuario<br/>Estudiante, docente, personal<br/>administrativo o visitante autorizado"]
+    Establecimiento["👤 Establecimiento<br/>Una de las 5 tiendas<br/>de la zona de comidas"]
+    LaPlacita["🖥️ LaPlacita<br/>Plataforma Click & Collect<br/>que unifica 5 establecimientos"]
+    Pago["☁️ Pasarela de pago<br/>Procesa pagos en línea<br/>y devuelve confirmación"]
+    Push["☁️ Servicio de notificaciones push<br/>Envía alertas de cambio de estado"]
+
+    Usuario -->|"Ordena, consulta estado,<br/>valida PIN/QR al recoger"| LaPlacita
+    Establecimiento -->|"Gestiona menú/inventario,<br/>ve sus pedidos, actualiza estado,<br/>valida PIN/QR"| LaPlacita
+    LaPlacita -->|"Envía solicitud de pago,<br/>recibe confirmación"| Pago
+    LaPlacita -->|"Solicita envío de notificación"| Push
+    Push -->|"Notifica cambio de estado"| Usuario
+
+    style LaPlacita fill:#1168bd,color:#fff
+    style Usuario fill:#08427b,color:#fff
+    style Establecimiento fill:#08427b,color:#fff
+    style Pago fill:#999999,color:#fff
+    style Push fill:#999999,color:#fff
+```
+>>>>>>> 726142078e8535fbd0313fe135cea64f4ab2e5ae
 
 ## 4. Estrategia de Solución
 
