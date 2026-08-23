@@ -219,6 +219,8 @@ El árbol de utilidad relaciona los objetivos generales de calidad con los atrib
 
 **Prioridad:** Alta importancia / Alta dificultad arquitectónica.
 
+**Decisión relacionada:** [ADR-0001 — Adopción de monolito modular](../adr/0001-adopcion-monolito-modular.md)
+
 #### ESC-02 — Aislamiento entre las cinco tiendas
 **Aspecto:** Aislamiento entre establecimientos — A-02
 
@@ -237,6 +239,8 @@ El árbol de utilidad relaciona los objetivos generales de calidad con los atrib
 - El intento de acceso a información de otro establecimiento debe ser rechazado.
 
 **Prioridad:** Alta importancia / Alta dificultad arquitectónica.
+
+**Decisión relacionada:** [ADR-0001 — Adopción de monolito modular](../adr/0001-adopcion-monolito-modular.md)
 
 #### ESC-03 — Validación de entrega mediante PIN
 **Aspecto:** Integridad de la validación en el punto de recolección — A-06
@@ -258,6 +262,8 @@ El árbol de utilidad relaciona los objetivos generales de calidad con los atrib
 
 **Prioridad:** Alta importancia / Media dificultad arquitectónica.
 
+**Decisión relacionada:** [ADR-0001 — Adopción de monolito modular](../adr/0001-adopcion-monolito-modular.md)
+
 #### ESC-04 — Protección del pago
 **Aspecto:** Protección de datos personales y de pago — A-04
 
@@ -277,6 +283,8 @@ El árbol de utilidad relaciona los objetivos generales de calidad con los atrib
 
 **Prioridad:** Alta importancia / Media dificultad arquitectónica.
 
+**Decisión relacionada:** [ADR-0001 — Adopción de monolito modular](../adr/0001-adopcion-monolito-modular.md)
+
 #### ESC-05 — Compra rápida
 **Aspecto:** Usabilidad / simplicidad del flujo — A-05
 
@@ -295,6 +303,8 @@ El árbol de utilidad relaciona los objetivos generales de calidad con los atrib
 - El usuario debe recibir una confirmación después de registrar correctamente el pedido.
 
 **Prioridad:** Media importancia / Baja dificultad arquitectónica.
+
+**Decisión relacionada:** [ADR-0001 — Adopción de monolito modular](../adr/0001-adopcion-monolito-modular.md)
 
 ### 10.3. Trazabilidad con el árbol de utilidad
 
