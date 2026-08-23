@@ -53,18 +53,16 @@ Los objetivos anteriores se concretan mediante los siguientes criterios medibles
 
 Las siguientes restricciones condicionan las decisiones arquitectónicas de LaPlacita. Se mantienen separadas de los requisitos porque representan condiciones que el sistema debe respetar independientemente de la solución técnica seleccionada.
 
-| Restricción | Tipo | Justificación |
-|---|---|---|
-| Plataforma multi-establecimiento (5 tiendas independientes) | Funcional / negocio | El modelo de negocio agrupa negocios distintos bajo una sola app; obliga a diseñar con aislamiento de datos desde el inicio, no como añadido posterior |
-| Validación de entrega con PIN de 4 dígitos | Funcional / negocio | Es el único punto de control de identidad en el flujo, ya que no hay verificación durante la navegación o el pago |
-| Confirmación de pago sin almacenar datos sensibles de tarjeta | Normativa / seguridad | El pago en línea pasa por una pasarela externa; el sistema solo debe guardar la confirmación, no los datos de la tarjeta (A-04) |
-| Equipo de 4 integrantes | Organizacional | Limita las tácticas viables (por ejemplo, descarta una descomposición extensa en microservicios) |
-| Entrega en un semestre académico | Organizacional / temporal | Obliga a priorizar los aspectos de mayor riesgo (A-01, A-02, A-04, A-06) sobre los de prioridad media |
-| Aplicación móvil como canal principal | Técnica / producto | El sistema está planteado para usuarios que necesitan realizar pedidos rápidamente desde dispositivos móviles. | 
+| ID | Restricción | Tipo | Justificación |
+|----|-------------|------|---------------|
+| RES-01 | Confirmación de pago sin almacenar datos sensibles de tarjeta | Normativa / seguridad | El pago en línea pasa por una pasarela externa; el sistema solo debe guardar la confirmación, no los datos de la tarjeta (A-04) |
+| RES-02 | Equipo de 4 integrantes | Organizacional | Limita las tácticas viables (por ejemplo, descarta una descomposición extensa en microservicios) |
+| RES-03 | Entrega en un semestre académico | Organizacional / temporal | Obliga a priorizar los aspectos de mayor riesgo (A-01, A-02, A-04, A-06) sobre los de prioridad media |
+| RES-04 | Aplicación móvil como canal principal | Técnica / producto | El sistema está planteado para usuarios que necesitan realizar pedidos rápidamente desde dispositivos móviles. | 
 
 ---
 
-## 3. Alcance y Contexto del Sistema
+## 3. Alcance
 
 ### 3.1. Contexto de Negocio
 
@@ -83,28 +81,6 @@ El sistema centraliza la consulta de productos y la creación de pedidos, pero c
 - Backend ↔ Servicio de notificaciones push: envío de las 4 etapas de estado.
 - Panel de cada establecimiento ↔ Backend: misma API, con acceso restringido a su propia información.
 
-### 3.3. Diagrama C4 de contexto
-
-```mermaid
-graph TB
-    Usuario["👤 Usuario<br/>Estudiante, docente, personal<br/>administrativo o visitante autorizado"]
-    Establecimiento["👤 Establecimiento<br/>Una de las 5 tiendas<br/>de la zona de comidas"]
-    LaPlacita["🖥️ LaPlacita<br/>Plataforma Click & Collect<br/>que unifica 5 establecimientos"]
-    Pago["☁️ Pasarela de pago<br/>Procesa pagos en línea<br/>y devuelve confirmación"]
-    Push["☁️ Servicio de notificaciones push<br/>Envía alertas de cambio de estado"]
-
-    Usuario -->|"Ordena, consulta estado,<br/>valida PIN/QR al recoger"| LaPlacita
-    Establecimiento -->|"Gestiona menú/inventario,<br/>ve sus pedidos, actualiza estado,<br/>valida PIN/QR"| LaPlacita
-    LaPlacita -->|"Envía solicitud de pago,<br/>recibe confirmación"| Pago
-    LaPlacita -->|"Solicita envío de notificación"| Push
-    Push -->|"Notifica cambio de estado"| Usuario
-
-    style LaPlacita fill:#1168bd,color:#fff
-    style Usuario fill:#08427b,color:#fff
-    style Establecimiento fill:#08427b,color:#fff
-    style Pago fill:#999999,color:#fff
-    style Push fill:#999999,color:#fff
-```
 # 4. Estrategia de la Solución
 
 Para cumplir los atributos de calidad de LaPlacita bajo las restricciones del proyecto (4 desarrolladores, 1 semestre), se definen las siguientes decisiones estratégicas:
@@ -309,22 +285,16 @@ El árbol de utilidad relaciona los objetivos generales de calidad con los atrib
 ### 10.3. Trazabilidad con el árbol de utilidad
 
 ```
-Utilidad general 
-│ 
-├── Disponibilidad y consistencia (A-01) 
-│   └── ESC-01: Picos de demanda entre clases 
-│ 
-├── Aislamiento entre establecimientos (A-02) 
-│   └── ESC-02: Ruteo entre las 5 tiendas 
-│ 
-├── Integridad de validación (A-06) 
-│   └── ESC-03: Validación PIN/QR 
-│ 
-├── Protección de datos (A-04) 
-│   └── ESC-04: Pago seguro 
-│ 
-└── Usabilidad / simplicidad (A-05) 
-    └── ESC-05: Compra rápida
+Calidad del sistema
+└── Disponibilidad (Alta prioridad)
+│   ├── [ESC-01] Disponibilidad bajo carga concurrente (Alta / Alta)
+│   └── [ESC-02] Tasa de error en procesamiento de pedidos (Alta / Alta)
+├── Seguridad (Alta prioridad)
+│   └── [ESC-03] Acceso no autorizado a pedidos (Alta / Alta)
+├── Usabilidad (Media prioridad)
+│   └── [ESC-04] Flujo de pedido para usuario nuevo (Media / Baja)
+└── Rendimiento (Alta prioridad)
+    └── [ESC-05] Validación de entrega con PIN (Alta / Media)
 ```
 
 La trazabilidad permite comprobar que cada uno de los principales objetivos de calidad posee al menos un escenario concreto mediante el cual puede ser evaluado.

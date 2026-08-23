@@ -19,8 +19,6 @@
 - [Documentación](#documentación)
     - [Estructura del repositorio](#estructura-del-repositorio)
     - [Trazabilidad y enlaces a documentación](#trazabilidad-y-enlaces-a-documentación)
-- [Atributos de Calidad](#atributos-de-calidad)
-- [Detalles de la Ponderación Técnica](#detalles-de-la-ponderación-técnica)
 - [Equipo de desarrollo](#equipo-de-desarrollo)
 - [Estado Actual del Proyecto](#estado-actual-del-proyecto)
 
@@ -105,14 +103,34 @@ Plataforma está dirigida a la comunidad educativa:
   AS_202620_LaPlacita/
   │
   ├── README.md
-  │
+  ├── package.json   
+  ├── src/
+  │   ├── index.js
+  │   └── modules/
+  │          ├── catalogo/
+  │          │      └── index.js
+  │          ├── entrega/
+  │          │      └── index.js
+  │          ├── notificaciones/
+  │          │      └── index.js
+  │          ├── pagos/
+  │          │      └── index.js
+  │          └── pedidos/
+  │                 └── index.js
+  ├── tests/
+  │      └── health.test.js
   └── docs/
-      ├── adr/
-      ├── arc42/
-      ├── c4/
-      ├── aspectos.md
-      ├── ficha_del_problema.md
-      └── ia.md
+        ├── adr/
+        │     └── 
+        ├── arc42/
+        │    ├── images/
+        │    │     └── arc42-logo.png
+        │    └── arc42-template-EN.md
+        ├── c4/
+        │    └──
+        ├── aspectos.md
+        ├── ficha_del_problema.md
+        └── ia.md
 ```
 ### Trazabilidad y enlaces a documentación 
 La documentación del proyecto sigue rigurosamente los lineamientos del curso y se encuentra distribuida en el repositorio de la siguiente manera:
@@ -123,23 +141,6 @@ La documentación del proyecto sigue rigurosamente los lineamientos del curso y 
 * **Decisiones de Arquitectura (ADR):** [docs/adr/](docs/adr/) — Registro histórico de decisiones técnicas adoptadas por el equipo.
 * **Diagramas C4:** [docs/c4/](docs/c4/) — Modelos visuales y estructurados de arquitectura de software.
 * **Registro de IA:** [docs/ia.md](docs/ia.md) — Trazabilidad transparente del uso de herramientas de Inteligencia Artificial.
-
---- 
-
-## Atributos de calidad
-
-### Disponibilidad vs. Consistencia
-El sistema debe soportar una alta cantidad de pedidos simultáneos durante las horas pico sin comprometer la exactitud del estado de los pedidos ni la actualización en tiempo real de los inventarios.
-
-### Usabilidad vs. Seguridad
-El sistema debe ofrecer un proceso de compra sencillo, intuitivo y rápido, garantizando al mismo tiempo la autenticidad en la entrega mediante la validación de un PIN de cuatro dígitos asignado a cada pedido.
-
----
-
-## Detalles de la ponderación técnica
-
-* **Trade-off de Disponibilidad y Consistencia:** Para garantizar que múltiples usuarios no pidan el mismo producto agotado en horas de alto tráfico, la consistencia de los datos del inventario se mantiene mediante transacciones atómicas en el backend, priorizando la precisión sobre la velocidad extrema de respuesta.
-* **Trade-off de Usabilidad y Seguridad:** Se minimizan los pasos de autenticación durante la navegación para acelerar el pre-pedido, desplazando el control de seguridad al punto de recolección físico, donde la validación del PIN de 4 dígitos asegura una entrega sin fricciones pero totalmente verificada.
 
 ---
 

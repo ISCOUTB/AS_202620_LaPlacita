@@ -38,3 +38,38 @@ Desarrollar una plataforma digital de pre-pedidos y recolección (**Click & Coll
 | **Transparencia** | Consulta de menús e inventarios dinámicos actualizados en tiempo real. |
 | **Trazabilidad** | Notificaciones automáticas en 4 etapas (*Recibido*, *En preparación*, *Listo para recoger*, *Entregado*). |
 | **Seguridad** | Entrega verificada en mostrador con un PIN de 4 dígitos. |
+
+---
+
+## 4. Tensiones de calidad 
+
+#### T-01: Consistencia vs. rendimiento
+Durante las horas pico, LaPlacita debe mantener la consistencia de los
+pedidos y evitar pérdidas o duplicaciones de información. Sin embargo,
+los mecanismos necesarios para garantizar la consistencia pueden aumentar
+el tiempo de procesamiento bajo alta concurrencia.
+
+**Atributos enfrentados:** A-01 Disponibilidad y consistencia ↔
+Rendimiento/capacidad de respuesta.
+
+#### T-02: Seguridad vs. usabilidad
+
+La validación de la identidad mediante PIN debe impedir entregas no
+autorizadas. Sin embargo, controles de seguridad adicionales pueden
+incrementar la cantidad de pasos y el tiempo necesario para recoger un
+pedido.
+
+**Atributos enfrentados:** A-06 Integridad de la validación ↔
+A-05 Usabilidad/simplicidad.
+
+#### T-03: Aislamiento vs. simplicidad operativa
+
+LaPlacita tiene 5 establecimientos independientes. se necesita garantizar que una tienda no pueda acceder a los pedidos o inventarios de otra. Sin embargo, se puede conseguir un aislamiento completamente independiente mediante servicios separados, bases de datos separadas, despliegues separados, etc. Lo que aumenta considerablemente la complejidad del sistema.
+
+**Atributos enfrentados:** A-02 Aislamiento correcto entre establecimientos ↔
+simplicidad/mantenibilidad
+
+### 4.1. Detalles de la ponderación técnica
+
+* **Trade-off de Disponibilidad y Consistencia:** Para garantizar que múltiples usuarios no pidan el mismo producto agotado en horas de alto tráfico, la consistencia de los datos del inventario se mantiene mediante transacciones atómicas en el backend, priorizando la precisión sobre la velocidad extrema de respuesta.
+* **Trade-off de Usabilidad y Seguridad:** Se minimizan los pasos de autenticación durante la navegación para acelerar el pre-pedido, desplazando el control de seguridad al punto de recolección físico, donde la validación del PIN de 4 dígitos asegura una entrega sin fricciones pero totalmente verificada.
