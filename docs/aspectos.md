@@ -8,12 +8,12 @@
 
 | **ID**   | **Aspecto**                                | **Requisito**   | **C4**    | **ADR**   | **Código**   | **Pruebas**   | **Evidencia**   |
 | -------- | ---------------------------------------------------------- | --------------- | --------- | --------- | ------------ | ------------- | --------------- |
-| A-01     | Disponibilidad y consistencia del estado de los pedidos    | RF-01           | Pendiente | [ADR-0001](adr/0001-adopcion-monolito-modular.md) | Pendiente    | Pendiente     | Pendiente       |
-| A-02     | Aislamiento y enrutamiento correcto entre establecimientos | RF-02           | Pendiente | [ADR-0001](adr/0001-adopcion-monolito-modular.md) | Pendiente    | Pendiente     | Pendiente       |
-| A-03     | Notificación oportuna del cambio de estado                 | RF-03           | Pendiente | Pendiente | Pendiente    | Pendiente     | Pendiente       |
-| A-04     | Protección de datos personales y de pago                   | RF-04           | Pendiente | [ADR-0001](adr/0001-adopcion-monolito-modular.md) | Pendiente    | Pendiente     | Pendiente       |
-| A-05     | Simplicidad del flujo de navegación y pedido | RF-05           | Pendiente | [ADR-0001](adr/0001-adopcion-monolito-modular.md) | Pendiente    | Pendiente     | Pendiente       |
-| A-06     | Integridad en la validación de identidad en el punto de recolección | RF-06           | Pendiente | [ADR-0001](adr/0001-adopcion-monolito-modular.md) | Pendiente    | Pendiente     | Pendiente       |
+| A-01     | Disponibilidad y consistencia del estado de los pedidos    | RF-01           | Pendiente | [ADR-0001](adr/0001-adopcion-monolito-modular.md) | Esqueleto: [pedidos/index.js](../src/modules/pedidos/index.js) | Pendiente (solo existe prueba genérica health.test.js)  | Pendiente  |
+| A-02     | Aislamiento y enrutamiento correcto entre establecimientos | RF-02           | Pendiente | [ADR-0001](adr/0001-adopcion-monolito-modular.md) | Esqueleto: [catalogo/index.js](../src/modules/catalogo/index.js)  | Pendiente (solo existe prueba genérica health.test.js)     | Pendiente       |
+| A-03     | Notificación oportuna del cambio de estado                 | RF-03           | Pendiente | Pendiente (fuera del alcance de ADR-0001; módulo marcado como "fuera de alcance en esta entrega") | Esqueleto: [notificaciones/index.js](../src/modules/notificaciones/index.js)   | Pendiente (solo existe prueba genérica health.test.js)     | Pendiente       |
+| A-04     | Protección de datos personales y de pago                   | RF-04           | Pendiente | [ADR-0001](adr/0001-adopcion-monolito-modular.md) | Esqueleto: [pagos/index.js](../src/modules/pagos/index.js)  | Pendiente (solo existe prueba genérica health.test.js)     | Pendiente       |
+| A-05     | Simplicidad del flujo de navegación y pedido | RF-05           | Pendiente | [ADR-0001](adr/0001-adopcion-monolito-modular.md) | Pendiente     | Pendiente (solo existe prueba genérica health.test.js)     | Pendiente       |
+| A-06     | Integridad en la validación de identidad en el punto de recolección | RF-06           | Pendiente | [ADR-0001](adr/0001-adopcion-monolito-modular.md) | Esqueleto: [entrega/index.js](../src/modules/entrega/index.js)   | Pendiente (solo existe prueba genérica health.test.js)     | Pendiente       |
 
 --- 
 

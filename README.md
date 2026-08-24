@@ -121,13 +121,14 @@ Plataforma está dirigida a la comunidad educativa:
   │      └── health.test.js
   └── docs/
         ├── adr/
-        │     └── 
+        │     └── docs/adr/     
+                  └── 0001-adopcion-monolito-modular.md
         ├── arc42/
         │    ├── images/
         │    │     └── arc42-logo.png
         │    └── arc42-template-EN.md
         ├── c4/
-        │    └──
+        │    └── contexto.md 
         ├── aspectos.md
         ├── ficha_del_problema.md
         └── ia.md
@@ -137,9 +138,9 @@ La documentación del proyecto sigue rigurosamente los lineamientos del curso y 
 
 * **Ficha del Problema:** [docs/ficha_del_problema.md](docs/ficha_del_problema.md) — Definición profunda del problema de las cafeterías del campus.
 * **Registro de Aspectos:** [docs/aspectos.md](docs/aspectos.md) — Tabla de trazabilidad y declaración de aspectos de desarrollo.
-* **Modelo Arc42:** [docs/arc42/](docs/arc42/) — Documentación arquitectónica estructurada en las secciones del estándar arc42.
+* **Modelo Arc42:** [docs/arc42/](docs/arc42/arc42-template-EN.md) — Documentación arquitectónica estructurada en las secciones del estándar arc42.
 * **Decisiones de Arquitectura (ADR):** [docs/adr/](docs/adr/) — Registro histórico de decisiones técnicas adoptadas por el equipo.
-* **Diagramas C4:** [docs/c4/](docs/c4/) — Modelos visuales y estructurados de arquitectura de software.
+* **Diagramas C4:** [docs/c4/](docs/c4/contexto.md) — Modelos visuales y estructurados de arquitectura de software.
 * **Registro de IA:** [docs/ia.md](docs/ia.md) — Trazabilidad transparente del uso de herramientas de Inteligencia Artificial.
 
 ---
