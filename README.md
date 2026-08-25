@@ -107,6 +107,7 @@ Plataforma está dirigida a la comunidad educativa:
   │          └── ci.yml 
   ├── README.md
   ├── package.json 
+  ├── package-lock.json
   ├── src/
   │   ├── index.js
   │   └── modules/
