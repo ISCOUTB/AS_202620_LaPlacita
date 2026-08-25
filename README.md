@@ -102,8 +102,11 @@ Plataforma está dirigida a la comunidad educativa:
 ```
   AS_202620_LaPlacita/
   │
+  ├── .github/
+  │   └── workflows/ 
+  │          └── ci.yml 
   ├── README.md
-  ├── package.json   
+  ├── package.json 
   ├── src/
   │   ├── index.js
   │   └── modules/
@@ -162,6 +165,12 @@ La documentación del proyecto sigue rigurosamente los lineamientos del curso y 
 * ✅ ADR enlazado desde `docs/aspectos.md` y desde cada escenario de calidad en arc42
 * ✅ Esqueleto ejecutable: módulos vacíos (`src/modules/*`), servidor base y prueba automatizada en verde
 
+**Correcciones tras la revisión S3 (24/08/2026)**
+ 
+* ✅ ADR-0001 ratificado como **aceptado** (antes «propuesto»)
+* ✅ Pipeline de integración continua ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)): ejecuta `npm test` en Node 18.x y posteriores en cada push y pull request
+* ✅ `docs/aspectos.md`: columna Requisito enlazada a los escenarios de calidad correspondientes (`RF-01…RF-06` → `ESC-01…ESC-05`)
+
 ---
 
 ## Cómo ejecutar
@@ -179,3 +188,5 @@ El servidor arranca en `http://localhost:3000` con un endpoint de verificación 
 ```bash
 npm test
 ```
+
+Estas mismas pruebas se ejecutan automáticamente en cada push o pull request mediante GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
