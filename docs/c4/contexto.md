@@ -10,8 +10,8 @@ graph TB
     Pago["☁️ Pasarela de pago<br/>Procesa pagos en línea<br/>y devuelve confirmación"]
     Push["☁️ Servicio de notificaciones push<br/>Envía alertas de cambio de estado"]
 
-    Usuario -->|"Ordena, consulta estado,<br/>valida PIN/QR al recoger"| LaPlacita
-    Establecimiento -->|"Gestiona menú/inventario,<br/>ve sus pedidos, actualiza estado,<br/>valida PIN/QR"| LaPlacita
+    Usuario -->|"Ordena, consulta estado,<br/>valida PIN al recoger"| LaPlacita
+    Establecimiento -->|"Gestiona menú/inventario,<br/>ve sus pedidos, actualiza estado,<br/>valida PIN"| LaPlacita
     LaPlacita -->|"Envía solicitud de pago,<br/>recibe confirmación"| Pago
     LaPlacita -->|"Solicita envío de notificación"| Push
     Push -->|"Notifica cambio de estado"| Usuario
@@ -25,9 +25,9 @@ graph TB
 
 ## Leyenda de colores
 
-| Color en el diagrama | Significado |
-|----------------------|-------------|
-| 🟦 Azul (Person) | Actor humano que interactúa directamente con el sistema. |
-| 🟨 Amarillo / gris claro (System) | El sistema propio — La Placita. |
-| 🟫 Gris oscuro (System_Ext) | Sistema externo fuera del control del equipo. |
-| → Flechas con etiqueta | Relación de comunicación; la etiqueta indica qué se intercambia y el protocolo. |
+| Color en el diagrama             | Significado                                                                     |
+| -------------------------------- | ------------------------------------------------------------------------------- |
+| 🟦 Azul (Person)                  | Actor humano que interactúa directamente con el sistema.                        |
+| 🟨 Amarillo / gris claro (System) | El sistema propio — La Placita.                                                 |
+| 🟫 Gris oscuro (System_Ext)       | Sistema externo fuera del control del equipo.                                   |
+| → Flechas con etiqueta           | Relación de comunicación; la etiqueta indica qué se intercambia y el protocolo. |
