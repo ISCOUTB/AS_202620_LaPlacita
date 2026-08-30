@@ -3,32 +3,32 @@
 > Nivel C4: Contexto del sistema. Muestra qué actores interactúan con el sistema y qué sistemas externos lo rodean.
 
 ```mermaid
-C4Context
-    title Diagrama de Contexto (Nivel 1) — Sistema LaPlacita
+flowchart TD
+    classDef person fill:#08427b,stroke:#073b6f,color:#fff;
+    classDef system fill:#1168bd,stroke:#0e5296,color:#fff;
+    classDef extSystem fill:#999999,stroke:#666666,color:#fff;
 
-    Enterprise_Boundary(b0, "Zona de Usuarios y Roles") {
-        Person(usuario, "👤 Usuario", "Estudiante, docente o administrativo")
-        Person(establecimiento, "👨‍🍳 Establecimiento", "Local de la zona de comidas")
-    }
+    subgraph b0 ["Zona de Usuarios y Roles"]
+        usuario["👤 <b>Usuario</b><br/>[Person]<br/><i>Estudiante, docente o adm.</i>"]:::person
+        establecimiento["👨‍🍳 <b>Establecimiento</b><br/>[Person]<br/><i>Local de la zona de comidas</i>"]:::person
+    end
 
-    Enterprise_Boundary(b1, "Núcleo del Sistema") {
-        System(laPlacita, "📦 Sistema LaPlacita", "Plataforma Click & Collect para la zona de comidas")
-    }
+    subgraph b1 ["Núcleo del Sistema"]
+        laPlacita["📦 <b>Sistema LaPlacita</b><br/>[Software System]<br/><i>Plataforma Click & Collect</i>"]:::system
+    end
 
-    Enterprise_Boundary(b2, "Integraciones Externas") {
-        System_Ext(pago, "💳 Pasarela de Pagos", "Procesamiento PCI-DSS")
-        System_Ext(push, "🔔 Notificaciones Push", "Envío de alertas de estado")
-    }
+    subgraph b2 ["Integraciones Externas"]
+        pago["💳 <b>Pasarela de Pagos</b><br/>[Software System]<br/><i>Procesamiento PCI-DSS</i>"]:::extSystem
+        push["🔔 <b>Notificaciones Push</b><br/>[Software System]<br/><i>Envío de alertas de estado</i>"]:::extSystem
+    end
 
-    %% --- RELACIONES LIMPIAS ---
-    Rel(usuario, laPlacita, "Ordena y consulta PIN", "HTTPS")
-    Rel(establecimiento, laPlacita, "Gestiona menú y PIN", "HTTPS")
+    usuario -->|Ordena y consulta PIN<br/>HTTPS| laPlacita
+    establecimiento -->|Gestiona menú y PIN<br/>HTTPS| laPlacita
 
-    Rel(laPlacita, pago, "Procesa cobro", "JSON / HTTPS")
-    Rel(laPlacita, push, "Solicita envío de alerta", "JSON / HTTPS")
+    laPlacita -->|Procesa cobro<br/>JSON / HTTPS| pago
+    laPlacita -->|Solicita envío de alerta<br/>JSON / HTTPS| push
 
-    Rel(push, usuario, "Entrega notificación push", "Push / HTTPS")
-
+    push -.->|Entrega notificación push<br/>Push / HTTPS| usuario
 ```
 
 ## Leyenda de colores
