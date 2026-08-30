@@ -39,7 +39,7 @@ El proyecto busca disminuir relativamente los tiempos de espera durante las hora
 * **Catálogo Unificado y Menús Dinámicos:** Acceso directo a la oferta gastronómica actualizada de las 5 tiendas, incluyendo alertas de disponibilidad de productos en tiempo real.
 * **Notificaciones de Estado:** Avisos automáticos que informan al usuario el estado de su orden (*Recibido*, *En preparación*, *Listo para recoger* y *Entregado*).
 * **Gestión Eficiente de Tiempos:** Algoritmo de estimación de demora que calcula el tiempo de entrega según el flujo y la carga de trabajo en cocina de cada establecimiento.
-* **Punto de Recolección Rápida:** Validación agilizada en ventanilla mediante código QR o número de confirmación para una entrega sin fricciones.
+* **Punto de Recolección Rápida:** Validación agilizada en ventanilla mediante número de confirmación para una entrega sin fricciones.
 
 ---
 
@@ -191,3 +191,15 @@ npm test
 ```
 
 Estas mismas pruebas se ejecutan automáticamente en cada push o pull request mediante GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
+
+### Corte vertical ejecutable
+
+`src/corte-vertical.js` atraviesa los 5 módulos en un solo flujo end-to-end: catálogo → pedidos → pagos → entrega → notificaciones. Simula un pedido real desde la consulta del producto hasta la entrega validada por PIN.
+
+```bash
+node src/corte-vertical.js
+```
+
+Salida esperada: el pedido avanza por los 4 estados (`Recibido` → `En preparación` → `Listo` → `Entregado`), se genera un PIN de 4 dígitos en el paso "Listo", y se valida ese mismo PIN en el punto de recolección. Cada cambio de estado queda registrado como notificación.
+
+> Nota: en este corte, el punto de recolección se valida solo con **PIN** (el QR fue descartado como mecanismo).
