@@ -3,43 +3,38 @@
 > Nivel C4: Contenedores del sistema. Muestra las aplicaciones, APIs, bases de datos e integraciones que componen la plataforma La Placita.
 
 ```mermaid
-C4Container
-    title Diagrama de Contenedores (Nivel 2) — Sistema LaPlacita
+flowchart TD
+    classDef person fill:#08427b,stroke:#073b6f,color:#fff;
+    classDef container fill:#1168bd,stroke:#0e5296,color:#fff;
+    classDef extSystem fill:#999999,stroke:#666666,color:#fff;
 
-    %% --- ACTORES ---
-    Person(usuario, "👤 Usuario", "Estudiante, docente o administrativo")
-    Person(establecimiento, "👨‍🍳 Establecimiento", "Personal del local de comida")
+    usuario["👤 <b>Usuario</b><br/>[Person]<br/><i>Estudiante, docente o adm.</i>"]:::person
+    establecimiento["👨‍🍳 <b>Establecimiento</b><br/>[Person]<br/><i>Personal del local de comida</i>"]:::person
 
-    %% --- LÍMITE DEL SISTEMA PRINCIPAL ---
-    System_Boundary(laPlacita, "📦 Sistema LaPlacita") {
-        
-        Container(app_user, "📱 App / Web Cliente", "React / PWA", "Explora menús, realiza pedidos, paga y consulta el PIN de retiro.")
-        Container(app_local, "💻 Portal Establecimiento", "React / Web App", "Gestiona el menú, visualiza pedidos entrantes y valida PINs.")
-        
-        Container(api, "⚙️ API Backend Central", "Node.js / Express", "Orquesta las reglas de negocio, pedidos, seguridad e integraciones.")
-        
-        ContainerDb(cache, "⚡ Caché y Colas", "Redis", "Gestión de PINs en memoria y cola de tareas para alertas.")
-        ContainerDb(db, "🗄️ Base de Datos Principal", "PostgreSQL", "Almacena usuarios, locales, productos, órdenes e historial.")
-    }
+    subgraph laPlacita ["📦 Sistema LaPlacita"]
+        app_user["📱 <b>App / Web Cliente</b><br/>[React / PWA]<br/><i>Explora menús, realiza pedidos y consulta PIN</i>"]:::container
+        app_local["💻 <b>Portal Establecimiento</b><br/>[React / Web App]<br/><i>Gestiona menú, ve pedidos y valida PINs</i>"]:::container
+        api["⚙️ <b>API Backend Central</b><br/>[Next.js / Node.js]<br/><i>API Routes, reglas de negocio, pedidos y autenticación</i>"]:::container
+        cache[("⚡ <b>Caché y Colas</b><br/>[Redis]<br/><i>Gestión de PINs y colas de tareas</i>")]:::container
+        db[("🗄️ <b>Base de Datos Principal</b><br/>[PostgreSQL]<br/><i>Usuarios, locales, productos y órdenes</i>")]:::container
+    end
 
-    %% --- SISTEMAS EXTERNOS ---
-    System_Ext(pago, "💳 Pasarela de Pagos", "Procesamiento PCI-DSS")
-    System_Ext(push, "🔔 Servicio Push", "Envío de alertas móviles")
+    pago["💳 <b>Pasarela de Pagos</b><br/>[Software System]<br/><i>Procesamiento PCI-DSS</i>"]:::extSystem
+    push["🔔 <b>Servicio Push</b><br/>[Software System]<br/><i>Envío de alertas móviles</i>"]:::extSystem
 
-    %% --- RELACIONES DIRECTAS ---
-    Rel_D(usuario, app_user, "Ordena y consulta PIN", "HTTPS / JSON")
-    Rel_D(establecimiento, app_local, "Recibe orden y valida PIN", "HTTPS / JSON")
+    usuario -->|Ordena y consulta PIN<br/>HTTPS / JSON| app_user
+    establecimiento -->|Recibe orden y valida PIN<br/>HTTPS / JSON| app_local
 
-    Rel_D(app_user, api, "Solicitudes de compra y pago", "HTTPS / REST API")
-    Rel_D(app_local, api, "Actualiza orden y valida PIN", "HTTPS / REST API")
+    app_user -->|Solicitudes de compra y pago<br/>HTTPS / REST API| api
+    app_local -->|Actualiza orden y valida PIN<br/>HTTPS / REST API| api
 
-    Rel_D(api, db, "Consulta y persiste información", "SQL / TCP")
-    Rel_D(api, cache, "Almacena PINs y encola tareas", "RESP / TCP")
+    api -->|Consulta y persiste información<br/>ORM / TCP| db
+    api -->|Almacena PINs y encola tareas<br/>RESP / TCP| cache
 
-    Rel_R(api, pago, "Inicia cobro y confirma", "JSON / HTTPS")
-    Rel_L(api, push, "Solicita envío de alerta", "JSON / HTTPS")
+    api -->|Inicia cobro y confirma<br/>JSON / HTTPS| pago
+    api -->|Solicita envío de alerta<br/>JSON / HTTPS| push
 
-    Rel_U(push, usuario, "Entrega notificación al celular", "Push / HTTPS")
+    push -.->|Entrega notificación al celular<br/>Push / HTTPS| usuario
 
 ```
 
