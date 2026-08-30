@@ -40,3 +40,17 @@ C4Container
     Rel_L(api, push, "Solicita envío de alerta", "JSON / HTTPS")
 
     Rel_U(push, usuario, "Entrega notificación al celular", "Push / HTTPS")
+
+```
+
+
+
+## Leyenda de colores
+
+| Color en el diagrama | Significado |
+| --- | --- |
+| 🟦 Azul oscuro (`Person`) | Actor humano que opera las aplicaciones del sistema. |
+| 🟦 Azul brillante (`Container` / `ContainerDb`) | Aplicación, API o base de datos que forma parte de La Placita. |
+| ⬛ Gris (`System_Ext`) | Servicio externo integrado fuera del control del equipo. |
+| 🔲 Línea delimitadora (`System_Boundary`) | Frontera lógica que agrupa los contenedores internos de La Placita. |
+| $\rightarrow$ Flechas con etiqueta | Relación de comunicación; la etiqueta indica qué se intercambia y el protocolo (REST, SQL, TCP). |

@@ -30,3 +30,13 @@ C4Context
     Rel(push, usuario, "Entrega notificación push", "Push / HTTPS")
 
 ```
+
+## Leyenda de colores
+
+| Color en el diagrama | Significado |
+| --- | --- |
+| 🟦 Azul oscuro (`Person`) | Actor humano que interactúa directamente con el sistema. |
+| 🟦 Azul brillante (`System`) | El sistema propio — La Placita. |
+| ⬛ Gris (`System_Ext`) | Sistema externo fuera del control del equipo. |
+| 🔲 Línea punteada (`Enterprise_Boundary`) | Delimitador visual que agrupa los componentes por capa lógica. |
+| $\rightarrow$ Flechas con etiqueta | Relación de comunicación; la etiqueta indica qué se intercambia y el protocolo. |
