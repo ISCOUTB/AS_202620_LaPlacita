@@ -141,7 +141,9 @@ Plataforma está dirigida a la comunidad educativa:
   └── docs/
         ├── adr/
         │     └── docs/adr/     
-                  └── 0001-adopcion-monolito-modular.md
+        │     ├── 0001-adopcion-monolito-modular.md
+        │     ├── 0002-ratificacion-monolito-modular.md
+        │     └── 0003-despliegue-railway-docker-sonarcloud.md
         ├── arc42/
         │    ├── images/
         │    │     └── arc42-logo.png
@@ -174,18 +176,17 @@ La documentación del proyecto sigue rigurosamente los lineamientos del curso y 
 
 ## Estado actual del proyecto
 
-**Semana 3 — Estrategia de solución y primer ADR**
+**Semana 4 — Corte vertical ejecutable, C4 y arc42 completo (30/08/2026)**
 
-* ✅ arc42 sección 4 (Estrategia de solución, matriz comparativa de estilos y descomposición de módulos)
-* ✅ ADR-0001: adopción de monolito modular con capas internas ([`docs/adr/0001-adopcion-monolito-modular.md`](docs/adr/0001-adopcion-monolito-modular.md))
-* ✅ ADR enlazado desde `docs/aspectos.md` y desde cada escenario de calidad en arc42
-* ✅ Esqueleto ejecutable: módulos vacíos (`src/modules/*`), servidor base y prueba automatizada en verde
-
-**Correcciones tras la revisión S3 (24/08/2026)**
- 
-* ✅ ADR-0001 ratificado como **aceptado** (antes «propuesto»)
-* ✅ Pipeline de integración continua ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)): ejecuta `npm test` en Node 22 en cada push y pull request
-* ✅ `docs/aspectos.md`: columna Requisito enlazada a los escenarios de calidad correspondientes (`RF-01…RF-06` → `ESC-01…ESC-05`)
+* ✅ Lógica de negocio implementada en los 5 módulos de dominio: `catalogo`, `pedidos`, `pagos`, `entrega` y `notificaciones` ([`src/modules/*`](src/modules/))
+* ✅ Corte vertical ejecutable ([`src/corte-vertical.js`](src/corte-vertical.js)): flujo completo catálogo → pedidos → pagos → entrega → notificaciones, validado con PIN de 4 dígitos
+* ✅ Pruebas automatizadas ampliadas: [`tests/corte-vertical.test.js`](tests/corte-vertical.test.js) (flujo end-to-end e historial de notificaciones) y [`tests/modulos.test.js`](tests/modulos.test.js) (5 tests unitarios por módulo)
+* ✅ Diagramas C4 nivel 1 y nivel 2: [`docs/c4/contexto.md`](docs/c4/contexto.md) y [`docs/c4/contenedores.md`](docs/c4/contenedores.md)
+* ✅ arc42 secciones 5 (Vista de Bloques de Construcción), 6 (Vista de Ejecución), 9 (Decisiones Arquitectónicas), 10 (Requisitos de Calidad) y Glosario inicial completados
+* ✅ Backend migrado de `http` nativo a **Next.js** (App Router): [`app/health/route.js`](app/health/route.js)
+* ✅ Módulos migrados a **ESM** (`type: module`, `import/export` en `src/modules/*`) y CI actualizado a **Node 22**
+* ✅ `src/health.js` extraído como módulo de lógica pura, testeable sin levantar el servidor HTTP
+* ✅ Primera fila de la tabla de aspectos completa hasta la columna «Pruebas» (A-01)
 
 ---
 

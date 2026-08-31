@@ -465,4 +465,6 @@ La trazabilidad permite comprobar que cada uno de los principales objetivos de c
 | **Capa de persistencia** | En el módulo `pedidos`, almacena y recupera pedidos (implementación actual: `Map` en memoria). |
 | **Picos de tráfico** | Intervalo de 5 a 10 minutos en los que se alcanza el valor maximo de clientes simultáneos. |
 | **PIN** | Código númerico de aproximadamente 4 dígitos generado al crear el pedido, se usa para identificar y validar al usuario en el punto de recolección (A-06). | 
-| **SonarCloud** | Plataforma de análisis estático integrada en el pipeline de CI. |
+| **SonarCloud** | Plataforma de análisis estático integrada en el pipeline de CI. Detecta bugs, vulnerabilidades de seguridad, duplicación de código y mide la cobertura de pruebas. Decisión registrada en [ADR-0003](../adr/0003-despliegue-railway-docker-sonarcloud.md). |
+| **Railway** | Plataforma PaaS (Platform as a Service) que despliega la aplicación desde el repositorio GitHub mediante un contenedor Docker. Proporciona URL pública con HTTPS, reinicios automáticos y gestión de variables de entorno. Decisión registrada en [ADR-0003](../adr/0003-despliegue-railway-docker-sonarcloud.md). |
+| **Quality Gate** | Conjunto de umbrales configurados en SonarCloud (cobertura mínima, cero vulnerabilidades críticas, etc.) que deben superarse antes de aceptar un pull request a `master`. |
