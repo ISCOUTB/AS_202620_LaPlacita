@@ -1,0 +1,12 @@
+# dependencias
+/node_modules
+
+# Next.js
+/.next/
+/out/
+
+# entorno
+.env*.local
+
+# logs
+npm-debug.log*

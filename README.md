@@ -6,21 +6,28 @@
 --- 
 
 ## Índice
-- [Descripción](#descripción)
-- [Funcionalidades Clave del Sistema](#funcionalidades-clave-del-sistema)
-- [Impacto Operativo y Beneficios](#impacto-operativo-y-beneficios)
-- [Problema](#problema)
-- [Objetivos](#objetivos)
+- [AS\_202620\_LaPlacita](#as_202620_laplacita)
+  - [](#)
+  - [Índice](#índice)
+  - [Descripción](#descripción)
+  - [Funcionalidades Clave del Sistema](#funcionalidades-clave-del-sistema)
+  - [Impacto Operativo y Beneficios](#impacto-operativo-y-beneficios)
+  - [Problema](#problema)
+  - [Objetivos](#objetivos)
     - [Objetivo General](#objetivo-general)
     - [Objetivos Específicos](#objetivos-específicos)
-- [Usuarios](#usuarios)
-- [Funcionalidades principales](#funcionalidades-principales)
-- [Visualización](#visualización)
-- [Documentación](#documentación)
+  - [Usuarios](#usuarios)
+  - [Funcionalidades principales](#funcionalidades-principales)
+  - [Visualización](#visualización)
+  - [Documentación](#documentación)
     - [Estructura del repositorio](#estructura-del-repositorio)
     - [Trazabilidad y enlaces a documentación](#trazabilidad-y-enlaces-a-documentación)
-- [Equipo de desarrollo](#equipo-de-desarrollo)
-- [Estado Actual del Proyecto](#estado-actual-del-proyecto)
+  - [Equipo de desarrollo](#equipo-de-desarrollo)
+  - [Estado actual del proyecto](#estado-actual-del-proyecto)
+  - [Cómo ejecutar](#cómo-ejecutar)
+    - [Pruebas](#pruebas)
+    - [Corte vertical ejecutable](#corte-vertical-ejecutable)
+  - [Guía paso a paso para ejecutar el proyecto](#guía-paso-a-paso-para-ejecutar-el-proyecto)
 
 ---
 
@@ -106,10 +113,14 @@ Plataforma está dirigida a la comunidad educativa:
   │   └── workflows/ 
   │          └── ci.yml 
   ├── README.md
+  ├── next.config.mjs
+  ├── jsconfig.json
   ├── package.json 
   ├── package-lock.json
+  ├── app/
+  │   └── health/
+  │          └── route.js        # GET /health (Next.js API Route, App Router)
   ├── src/
-  │   ├── index.js
   │   └── modules/
   │          ├── catalogo/
   │          │      └── index.js
@@ -121,6 +132,9 @@ Plataforma está dirigida a la comunidad educativa:
   │          │      └── index.js
   │          └── pedidos/
   │                 └── index.js
+  ├── legacy/                     # servidor http nativo previo a la migración a Next.js (solo referencia)
+  │   ├── README.md
+  │   └── index.node-http.js
   ├── tests/
   │      └── health.test.js
   └── docs/
@@ -176,13 +190,21 @@ La documentación del proyecto sigue rigurosamente los lineamientos del curso y 
 
 ## Cómo ejecutar
 
-Requiere Node.js 18 o superior.
+Requiere Node.js 18 o superior. El backend está construido sobre **Next.js** (API Routes, App Router).
 
 ```bash
-node src/index.js
+npm install
+npm run dev
 ```
 
 El servidor arranca en `http://localhost:3000` con un endpoint de verificación en `/health`.
+
+Para producción:
+
+```bash
+npm run build
+npm start
+```
 
 ### Pruebas
 
@@ -203,3 +225,62 @@ node src/corte-vertical.js
 Salida esperada: el pedido avanza por los 4 estados (`Recibido` → `En preparación` → `Listo` → `Entregado`), se genera un PIN de 4 dígitos en el paso "Listo", y se valida ese mismo PIN en el punto de recolección. Cada cambio de estado queda registrado como notificación.
 
 > Nota: en este corte, el punto de recolección se valida solo con **PIN** (el QR fue descartado como mecanismo).
+
+---
+
+## Guía paso a paso para ejecutar el proyecto
+
+1. **Requisitos previos**
+   - [Node.js](https://nodejs.org/) versión 18 o superior (incluye `npm`).
+   - Git instalado.
+   - Verifica tu versión de Node:
+     ```bash
+     node -v
+     ```
+
+2. **Clonar el repositorio**
+   ```bash
+   git clone https://github.com/ISCOUTB/AS_202620_LaPlacita.git
+   cd AS_202620_LaPlacita
+   ```
+
+3. **Instalar las dependencias**
+   ```bash
+   npm install
+   ```
+   Esto descarga Next.js, React y el resto de dependencias declaradas en `package.json`.
+
+4. **Levantar el servidor en modo desarrollo**
+   ```bash
+   npm run dev
+   ```
+   El backend queda disponible en `http://localhost:3000`.
+
+5. **Verificar que el servidor responde correctamente**
+   Abre en el navegador (o con `curl`) la siguiente URL:
+   ```
+   http://localhost:3000/health
+   ```
+   Deberías ver la respuesta:
+   ```json
+   { "status": "ok" }
+   ```
+   > La raíz `http://localhost:3000/` devuelve 404: es esperado, todavía no hay páginas/frontend en el proyecto, solo la API.
+
+6. **Ejecutar las pruebas automatizadas**
+   ```bash
+   npm test
+   ```
+   Debería mostrar la prueba de `/health` en verde. Estas mismas pruebas corren automáticamente en cada push o pull request mediante GitHub Actions.
+
+7. **(Opcional) Ejecutar el corte vertical**
+   Para ver el flujo completo de dominio (catálogo → pedidos → pagos → entrega → notificaciones) simulado por consola:
+   ```bash
+   node src/corte-vertical.js
+   ```
+
+8. **(Opcional) Compilar para producción**
+   ```bash
+   npm run build
+   npm start
+   ```
