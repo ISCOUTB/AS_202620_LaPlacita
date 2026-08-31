@@ -121,6 +121,8 @@ Plataforma está dirigida a la comunidad educativa:
   │   └── health/
   │          └── route.js        # GET /health (Next.js API Route, App Router)
   ├── src/
+  │   ├── health.js              # Lógica pura del endpoint /health
+  │   ├── corte-vertical.js      # Corte vertical ejecutable (flujo completo)
   │   └── modules/
   │          ├── catalogo/
   │          │      └── index.js
@@ -132,11 +134,10 @@ Plataforma está dirigida a la comunidad educativa:
   │          │      └── index.js
   │          └── pedidos/
   │                 └── index.js
-  ├── legacy/                     # servidor http nativo previo a la migración a Next.js (solo referencia)
-  │   ├── README.md
-  │   └── index.node-http.js
   ├── tests/
-  │      └── health.test.js
+  │      ├── health.test.js
+  │      ├── modulos.test.js
+  │      └── corte-vertical.test.js
   └── docs/
         ├── adr/
         │     └── docs/adr/     
@@ -183,14 +184,14 @@ La documentación del proyecto sigue rigurosamente los lineamientos del curso y 
 **Correcciones tras la revisión S3 (24/08/2026)**
  
 * ✅ ADR-0001 ratificado como **aceptado** (antes «propuesto»)
-* ✅ Pipeline de integración continua ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)): ejecuta `npm test` en Node 18.x y posteriores en cada push y pull request
+* ✅ Pipeline de integración continua ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)): ejecuta `npm test` en Node 22 en cada push y pull request
 * ✅ `docs/aspectos.md`: columna Requisito enlazada a los escenarios de calidad correspondientes (`RF-01…RF-06` → `ESC-01…ESC-05`)
 
 ---
 
 ## Cómo ejecutar
 
-Requiere Node.js 18 o superior. El backend está construido sobre **Next.js** (API Routes, App Router).
+Requiere **Node.js 22 o superior** (el proyecto usa JavaScript ESM nativo). El backend está construido sobre **Next.js** (API Routes, App Router).
 
 ```bash
 npm install
@@ -226,12 +227,14 @@ Salida esperada: el pedido avanza por los 4 estados (`Recibido` → `En preparac
 
 > Nota: en este corte, el punto de recolección se valida solo con **PIN** (el QR fue descartado como mecanismo).
 
+> **Limitación actual:** los módulos de dominio (`src/modules/*`) mantienen su estado en memoria (`Map`, contadores y arreglos). Esto es adecuado para este corte de demostración y para las pruebas, pero el estado **no persiste** entre requests ni entre reinicios del proceso. La persistencia real (p. ej. PostgreSQL/Redis) queda pendiente para iteraciones futuras, según ADR-0001.
+
 ---
 
 ## Guía paso a paso para ejecutar el proyecto
 
 1. **Requisitos previos**
-   - [Node.js](https://nodejs.org/) versión 18 o superior (incluye `npm`).
+   - [Node.js](https://nodejs.org/) versión 22 o superior (incluye `npm`).
    - Git instalado.
    - Verifica tu versión de Node:
      ```bash

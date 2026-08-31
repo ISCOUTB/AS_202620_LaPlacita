@@ -1,7 +1,8 @@
-const { test } = require('node:test');
-const assert = require('node:assert/strict');
-const { ejecutarCorteVertical } = require('../src/corte-vertical');
-const notificaciones = require('../src/modules/notificaciones');
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+
+import { ejecutarCorteVertical } from '../src/corte-vertical.js';
+import * as notificaciones from '../src/modules/notificaciones/index.js';
 
 test('el corte vertical completa el flujo hasta Entregado', () => {
   const pedido = ejecutarCorteVertical();

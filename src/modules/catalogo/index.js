@@ -23,4 +23,4 @@ function listarProductosPorTienda(tiendaId) {
   return Array.from(productos.values()).filter((p) => p.tiendaId === tiendaId);
 }
 
-module.exports = { obtenerProducto, listarProductosPorTienda };
+export { obtenerProducto, listarProductosPorTienda };

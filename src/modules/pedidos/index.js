@@ -2,7 +2,7 @@
 // Responsabilidad: creación, estado y concurrencia del ciclo de vida del pedido (ESC-01).
 // Lógica de negocio pura, sin framework HTTP — ver docs/adr/0001-adopcion-monolito-modular.md
 
-const catalogo = require('../catalogo');
+import { obtenerProducto } from '../catalogo/index.js';
 
 const ESTADOS = ['Recibido', 'En preparación', 'Listo', 'Entregado'];
 
@@ -17,7 +17,7 @@ function crearPedido({ productoId, cantidad, clienteId }) {
     throw new Error('clienteId es obligatorio');
   }
 
-  const producto = catalogo.obtenerProducto(productoId);
+  const producto = obtenerProducto(productoId);
 
   contador += 1;
   const pedido = {
@@ -59,4 +59,4 @@ function cambiarEstado(pedidoId, nuevoEstado) {
   return pedido;
 }
 
-module.exports = { crearPedido, obtenerPedido, cambiarEstado, ESTADOS };
+export { crearPedido, obtenerPedido, cambiarEstado, ESTADOS };

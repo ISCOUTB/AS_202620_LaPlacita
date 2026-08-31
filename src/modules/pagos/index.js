@@ -2,12 +2,12 @@
 // Responsabilidad: integración con la pasarela externa y confirmación de pago (ESC-04).
 // Lógica de negocio pura, sin framework HTTP — ver docs/adr/0001-adopcion-monolito-modular.md
 
-const pedidos = require('../pedidos');
+import { obtenerPedido, cambiarEstado } from '../pedidos/index.js';
 
 const pagosConfirmados = new Map();
 
 function confirmarPago(pedidoId) {
-  const pedido = pedidos.obtenerPedido(pedidoId);
+  const pedido = obtenerPedido(pedidoId);
 
   if (pedido.estado !== 'Recibido') {
     throw new Error(`No se puede pagar un pedido en estado ${pedido.estado}`);
@@ -19,7 +19,7 @@ function confirmarPago(pedidoId) {
     confirmadoEn: new Date().toISOString(),
   });
 
-  return pedidos.cambiarEstado(pedidoId, 'En preparación');
+  return cambiarEstado(pedidoId, 'En preparación');
 }
 
-module.exports = { confirmarPago };
+export { confirmarPago };

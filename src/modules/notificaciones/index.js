@@ -20,4 +20,4 @@ function obtenerNotificaciones(pedidoId) {
   return notificacionesEnviadas.filter((n) => n.pedidoId === pedidoId);
 }
 
-module.exports = { notificarCambioEstado, obtenerNotificaciones };
+export { notificarCambioEstado, obtenerNotificaciones };

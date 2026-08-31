@@ -5,11 +5,12 @@
 //
 // Uso: node src/corte-vertical.js
 
-const catalogo = require('./modules/catalogo');
-const pedidos = require('./modules/pedidos');
-const pagos = require('./modules/pagos');
-const entrega = require('./modules/entrega');
-const notificaciones = require('./modules/notificaciones');
+import { pathToFileURL } from 'node:url';
+import * as catalogo from './modules/catalogo/index.js';
+import * as pedidos from './modules/pedidos/index.js';
+import * as pagos from './modules/pagos/index.js';
+import * as entrega from './modules/entrega/index.js';
+import * as notificaciones from './modules/notificaciones/index.js';
 
 function ejecutarCorteVertical() {
   const producto = catalogo.obtenerProducto('prod-001');
@@ -42,8 +43,8 @@ function ejecutarCorteVertical() {
   return pedido;
 }
 
-if (require.main === module) {
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
   ejecutarCorteVertical();
 }
 
-module.exports = { ejecutarCorteVertical };
+export { ejecutarCorteVertical };

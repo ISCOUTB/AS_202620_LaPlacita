@@ -1,10 +1,10 @@
-const { test } = require('node:test');
-const assert = require('node:assert/strict');
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
 
-const catalogo = require('../src/modules/catalogo');
-const pedidos = require('../src/modules/pedidos');
-const pagos = require('../src/modules/pagos');
-const entrega = require('../src/modules/entrega');
+import * as catalogo from '../src/modules/catalogo/index.js';
+import * as pedidos from '../src/modules/pedidos/index.js';
+import * as pagos from '../src/modules/pagos/index.js';
+import * as entrega from '../src/modules/entrega/index.js';
 
 test('catalogo.obtenerProducto lanza error si el producto no existe', () => {
   assert.throws(() => catalogo.obtenerProducto('no-existe'));
