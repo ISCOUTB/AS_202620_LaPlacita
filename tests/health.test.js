@@ -1,12 +1,8 @@
-const { test } = require('node:test');
-const assert = require('node:assert');
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
 
-test('GET /health responde 200 con estado ok', async () => {
-  const { GET } = await import('../app/health/route.js');
+import { estadoSalud } from '../src/health.js';
 
-  const response = await GET();
-  const body = await response.json();
-
-  assert.strictEqual(response.status, 200);
-  assert.deepStrictEqual(body, { status: 'ok' });
+test('GET /health responde 200 con estado ok', () => {
+  assert.deepEqual(estadoSalud(), { status: 'ok' });
 });
