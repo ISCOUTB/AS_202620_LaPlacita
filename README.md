@@ -113,6 +113,7 @@ Plataforma está dirigida a la comunidad educativa:
   │   └── workflows/ 
   │          └── ci.yml 
   ├── README.md
+  ├── correcciones.md 
   ├── next.config.mjs
   ├── jsconfig.json
   ├── package.json 

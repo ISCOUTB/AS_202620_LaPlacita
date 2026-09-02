@@ -121,7 +121,11 @@ El equipo de 3-4 personas y la ventana de un semestre descartan una descomposici
 --- 
 
 ## 5. Vista de Bloques de Construcción
- 
+
+La vista de bloques de construcción descompone el sistema en módulos con responsabilidad declarada
+y describe cómo se comunican entre sí. LaPlacita usa una **arquitectura monolítica modular** (ADR-0001):
+un único proceso desplegable cuyas partes internas están separadas por fronteras de módulo estrictas.
+
 ### 5.1. Nivel 1 — Sistema completo (whitebox)
  
 LaPlacita se despliega como un **monolito modular**: un único proceso Next.js que expone una API HTTP REST y agrupa internamente cinco módulos de dominio con límites explícitos (ver [ADR-0001](../adr/0001-adopcion-monolito-modular.md)).
@@ -281,6 +285,14 @@ Esta sección registra el historial de decisiones arquitectónicas significativa
 - ADR-0001 y ADR-0002 determinan la estructura: un único proceso con módulos de dominio separados.
 - ADR-0003 determina la infraestructura de despliegue: contenedor Docker en Railway, pipeline con SonarCloud.
 **Principio:** ningún ADR aceptado se edita ni se borra. Si una decisión cambia, se escribe un nuevo ADR que referencia al anterior como «reemplazado».
+
+### 9.1. Razonamiento resumido
+ 
+**ADR-0001 — Monolito modular.** Se eligió esta estrategia por encima de microservicios porque el
+equipo es pequeño (4 personas), el plazo es corto y la comunicación entre módulos dentro del mismo
+proceso tiene latencia despreciable. Los módulos tienen fronteras claras (interfaces bien definidas,
+sin acceso directo a la base de datos de otro módulo), lo que permite una migración futura a
+servicios independientes si el sistema crece.
  
 ---
 
@@ -344,6 +356,8 @@ El árbol de utilidad relaciona los objetivos generales de calidad con los atrib
 
 **Prioridad:** Alta importancia / Alta dificultad arquitectónica.
 
+**Artefacto:** Módulo `orders`.
+
 **Decisión relacionada:** [ADR-0001 — Adopción de monolito modular](../adr/0001-adopcion-monolito-modular.md)
 
 #### ESC-02 — Aislamiento entre las cinco tiendas
@@ -364,6 +378,8 @@ El árbol de utilidad relaciona los objetivos generales de calidad con los atrib
 - El intento de acceso a información de otro establecimiento debe ser rechazado.
 
 **Prioridad:** Alta importancia / Alta dificultad arquitectónica.
+
+**Artefacto:** Módulos `orders` + `notifications`.
 
 **Decisión relacionada:** [ADR-0001 — Adopción de monolito modular](../adr/0001-adopcion-monolito-modular.md)
 
@@ -387,6 +403,8 @@ El árbol de utilidad relaciona los objetivos generales de calidad con los atrib
 
 **Prioridad:** Alta importancia / Media dificultad arquitectónica.
 
+**Artefacto:** Módulo `payments`.
+
 **Decisión relacionada:** [ADR-0001 — Adopción de monolito modular](../adr/0001-adopcion-monolito-modular.md)
 
 #### ESC-04 — Protección del pago
@@ -408,6 +426,8 @@ El árbol de utilidad relaciona los objetivos generales de calidad con los atrib
 
 **Prioridad:** Alta importancia / Media dificultad arquitectónica.
 
+**Artefacto:** Módulo `establishments` + `catalog`.
+
 **Decisión relacionada:** [ADR-0001 — Adopción de monolito modular](../adr/0001-adopcion-monolito-modular.md)
 
 #### ESC-05 — Compra rápida
@@ -428,6 +448,8 @@ El árbol de utilidad relaciona los objetivos generales de calidad con los atrib
 - El usuario debe recibir una confirmación después de registrar correctamente el pedido.
 
 **Prioridad:** Media importancia / Baja dificultad arquitectónica.
+
+**Artefacto:** Flujo completo (auth → catalog → orders → payments).
 
 **Decisión relacionada:** [ADR-0001 — Adopción de monolito modular](../adr/0001-adopcion-monolito-modular.md)
 
@@ -468,3 +490,8 @@ La trazabilidad permite comprobar que cada uno de los principales objetivos de c
 | **SonarCloud** | Plataforma de análisis estático integrada en el pipeline de CI. Detecta bugs, vulnerabilidades de seguridad, duplicación de código y mide la cobertura de pruebas. Decisión registrada en [ADR-0003](../adr/0003-despliegue-railway-docker-sonarcloud.md). |
 | **Railway** | Plataforma PaaS (Platform as a Service) que despliega la aplicación desde el repositorio GitHub mediante un contenedor Docker. Proporciona URL pública con HTTPS, reinicios automáticos y gestión de variables de entorno. Decisión registrada en [ADR-0003](../adr/0003-despliegue-railway-docker-sonarcloud.md). |
 | **Quality Gate** | Conjunto de umbrales configurados en SonarCloud (cobertura mínima, cero vulnerabilidades críticas, etc.) que deben superarse antes de aceptar un pull request a `master`. |
+| **Ítem de catálogo** | Producto o servicio ofrecido por un establecimiento, con nombre, descripción, precio y disponibilidad |
+| **Estado del pedido** | Fase del ciclo de vida de un pedido: `CREADO` → `CONFIRMADO` → `EN_PREPARACION` → `LISTO` → `ENTREGADO` (o `CANCELADO` / `PENDIENTE_PAGO`) |
+| **Corte vertical** | Implementación completa de un flujo desde la interfaz HTTP hasta la base de datos, incluyendo lógica de negocio y prueba automatizada |
+| **Notificación push** | Mensaje enviado al dispositivo del usuario o del dueño del establecimiento ante cambios relevantes en el pedido |
+| **Módulo** | Unidad de organización interna del monolito con responsabilidad única; no puede acceder directamente a la base de datos de otro módulo |
