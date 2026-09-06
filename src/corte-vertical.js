@@ -13,30 +13,32 @@ import * as entrega from './modules/entrega/index.js';
 import * as notificaciones from './modules/notificaciones/index.js';
 
 function ejecutarCorteVertical() {
-  const producto = catalogo.obtenerProducto('prod-001');
-  console.log(`[catalogo] producto consultado: ${producto.nombre} ($${producto.precio})`);
+  const tiendaId = 'tienda-01';
+  const producto = catalogo.obtenerProducto('prod-001', tiendaId);
+  console.log(`[catalogo] producto consultado: ${producto.nombre} ($${producto.precio}) tienda: ${tiendaId}`);
 
   let pedido = pedidos.crearPedido({
     productoId: producto.id,
     cantidad: 2,
     clienteId: 'cliente-01',
+    tiendaId,
   });
-  notificaciones.notificarCambioEstado(pedido.id, pedido.estado);
-  console.log(`[pedidos] pedido creado: ${pedido.id} — estado: ${pedido.estado}`);
+  notificaciones.notificarCambioEstado(pedido.id, pedido.estado, tiendaId);
+  console.log(`[pedidos] pedido creado: ${pedido.id} — estado: ${pedido.estado} tienda: ${pedido.tiendaId}`);
 
-  pedido = pagos.confirmarPago(pedido.id);
-  notificaciones.notificarCambioEstado(pedido.id, pedido.estado);
+  pedido = pagos.confirmarPago(pedido.id, tiendaId);
+  notificaciones.notificarCambioEstado(pedido.id, pedido.estado, tiendaId);
   console.log(`[pagos] pago confirmado — estado: ${pedido.estado}`);
 
-  pedido = entrega.marcarListo(pedido.id);
-  notificaciones.notificarCambioEstado(pedido.id, pedido.estado);
+  pedido = entrega.marcarListo(pedido.id, tiendaId);
+  notificaciones.notificarCambioEstado(pedido.id, pedido.estado, tiendaId);
   console.log(`[entrega] pedido listo — PIN: ${pedido.pin}`);
 
-  pedido = entrega.validarPin(pedido.id, pedido.pin);
-  notificaciones.notificarCambioEstado(pedido.id, pedido.estado);
+  pedido = entrega.validarPin(pedido.id, tiendaId, pedido.pin);
+  notificaciones.notificarCambioEstado(pedido.id, pedido.estado, tiendaId);
   console.log(`[entrega] PIN validado — estado: ${pedido.estado}`);
 
-  const historial = notificaciones.obtenerNotificaciones(pedido.id);
+  const historial = notificaciones.obtenerNotificaciones(pedido.id, tiendaId);
   console.log('[notificaciones] historial de eventos:');
   historial.forEach((n) => console.log(`  - ${n.enviadaEn}: ${n.mensaje}`));
 

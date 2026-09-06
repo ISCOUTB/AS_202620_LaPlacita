@@ -27,4 +27,31 @@ jobs:
 
         - name: Ejecutar pruebas
           run: npm test
+
+    sonar:
+        runs-on: ubuntu-latest
+        if: ${{ secrets.SONAR_TOKEN != '' }}
+        steps:
+        - name: Descargar código (historial completo)
+          uses: actions/checkout@v4
+          with:
+            fetch-depth: 0
+
+        - name: Configurar Node.js
+          uses: actions/setup-node@v4
+          with:
+            node-version: '22'
+            cache: 'npm'
+
+        - name: Instalar dependencias
+          run: npm ci
+
+        - name: Ejecutar pruebas
+          run: npm test
+
+        - name: Análisis estático con SonarCloud
+          uses: sonarsource/sonarcloud-github-action@v5
+          env:
+                SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         

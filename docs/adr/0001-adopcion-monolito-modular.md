@@ -1,6 +1,6 @@
 # 0001 - Adopción de Monolito Modular con Capas Internas frente a Capas Globales y Hexagonal
 
-- **Estado:** propuesto
+- **Estado:** aceptado (ratificado por [ADR-0002](0002-ratificacion-monolito-modular.md))
 - **Fecha:** 2026-08-23
 - **Decide:** Buendía Barrios Mateo, Isaza Montalvo Miguel, Jiménez Álvarez Samuel, Martínez Castillo Jorge
 - **Escenario de calidad relacionado:** ESC-01, ESC-02, ESC-03, ESC-04, ESC-05
@@ -37,5 +37,5 @@ Se elige **Monolito Modular con Capas Internas**, porque empaqueta la aplicació
   - ESC-04 -> A-04 (Seguridad en pasarela de pagos)
   - ESC-05 -> A-05 (Usabilidad y tiempo de respuesta de la API)
 - **Elementos C4 afectados:** Backend API, Módulos Internos (`src/modules/*`)
-- **Implementación: commit / PR:** `[Pendiente - Commit esqueleto ejecutable]`
-- **Pruebas que lo cubren:** `tests/health.test.js`
+- **Implementación: commit / PR:** `f0d869b` (módulos `src/modules/*` y corte vertical ejecutable con pruebas); `26a9210`, `ce1676c` (migración a ESM, Node 22 y health modular). Aislamiento por tienda: commits del corte 1 que aplican [ADR-0004](0004-aislamiento-por-establecimiento.md).
+- **Pruebas que lo cubren:** `tests/health.test.js`, `tests/modulos.test.js`, `tests/corte-vertical.test.js` y `tests/aislamiento.test.js`

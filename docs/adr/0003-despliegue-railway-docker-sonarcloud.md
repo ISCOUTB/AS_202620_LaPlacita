@@ -94,8 +94,8 @@ El Quality Gate de SonarCloud debe estar en verde antes de aceptar cualquier pul
 - **ADR antecedentes:** [ADR-0001](0001-adopcion-monolito-modular.md), [ADR-0002](0002-ratificacion-monolito-modular.md)
 - **Elementos C4 afectados:** API Backend Central (contenedor) — ahora desplegado en Railway.
 - **Archivos de configuración relacionados:**
-  - [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) — pipeline CI donde se añade el paso de SonarCloud.
-  - `Dockerfile` — (pendiente de crear) imagen de producción para Railway.
-  - `sonar-project.properties` — (pendiente de crear) configuración del análisis de SonarCloud.
-- **Implementación: commit / PR:** `[Pendiente — configuración Railway + SonarCloud]`
-- **Pruebas que lo cubren:** [`tests/health.test.js`](../../tests/health.test.js), [`tests/corte-vertical.test.js`](../../tests/corte-vertical.test.js), [`tests/modulos.test.js`](../../tests/modulos.test.js)
+  - [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) — pipeline CI; el paso de SonarCloud se activa cuando existe el secreto `SONAR_TOKEN`.
+  - `Dockerfile` — imagen de producción para Railway (build multiplataforma + standalone de Next.js).
+  - `sonar-project.properties` — configuración del análisis de SonarCloud (código mínimo aplicado; análisis en vivo pendiente de secreto `SONAR_TOKEN` en la organización).
+- **Implementación: commit / PR:** corte 1 — creación de `Dockerfile`, `sonar-project.properties` y paso de SonarCloud en `ci.yml`. Pendiente: configurar `SONAR_TOKEN` en GitHub para activar el análisis bajo `docs/arc42/arc42-template-EN.md` §9.1 (ADR-0003).
+- **Pruebas que lo cubren:** [`tests/health.test.js`](../../tests/health.test.js), [`tests/corte-vertical.test.js`](../../tests/corte-vertical.test.js), [`tests/modulos.test.js`](../../tests/modulos.test.js), [`tests/aislamiento.test.js`](../../tests/aislamiento.test.js)

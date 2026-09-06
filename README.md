@@ -98,7 +98,12 @@ Plataforma está dirigida a la comunidad educativa:
 --- 
 
 ## Visualización 
-> Próximamente se agregarán los prototipos de la interfaz y los diagramas de arquitectura del sistema.
+Los diagramas de arquitectura C4 están disponibles en:
+
+* **Nivel 1 (Contexto):** [`docs/c4/contexto.md`](docs/c4/contexto.md)
+* **Nivel 2 (Contenedores):** [`docs/c4/contenedores.md`](docs/c4/contenedores.md)
+
+Los prototipos de interfaz están planeados para el Corte 2 (contendores App/Web, Portal, Redis y PostgreSQL marcados como `planeado` en el C4).
 
 ---
 
@@ -114,6 +119,8 @@ Plataforma está dirigida a la comunidad educativa:
   │          └── ci.yml 
   ├── README.md
   ├── correcciones.md 
+  ├── Dockerfile
+  ├── sonar-project.properties
   ├── next.config.mjs
   ├── jsconfig.json
   ├── package.json 
@@ -121,9 +128,11 @@ Plataforma está dirigida a la comunidad educativa:
   ├── app/
   │   └── health/
   │          └── route.js        # GET /health (Next.js API Route, App Router)
+  ├── scripts/
+  │   └── medir-aislamiento.js   # Medición reproducible de RES-05 (0 accesos cruzados)
   ├── src/
   │   ├── health.js              # Lógica pura del endpoint /health
-  │   ├── corte-vertical.js      # Corte vertical ejecutable (flujo completo)
+  │   ├── corte-vertical.js      # Corte vertical ejecutable (flujo completo con tiendaId)
   │   └── modules/
   │          ├── catalogo/
   │          │      └── index.js
@@ -138,19 +147,21 @@ Plataforma está dirigida a la comunidad educativa:
   ├── tests/
   │      ├── health.test.js
   │      ├── modulos.test.js
-  │      └── corte-vertical.test.js
+  │      ├── corte-vertical.test.js
+  │      └── aislamiento.test.js
   └── docs/
         ├── adr/
-        │     └── docs/adr/     
         │     ├── 0001-adopcion-monolito-modular.md
         │     ├── 0002-ratificacion-monolito-modular.md
-        │     └── 0003-despliegue-railway-docker-sonarcloud.md
+        │     ├── 0003-despliegue-railway-docker-sonarcloud.md
+        │     └── 0004-aislamiento-por-establecimiento.md
         ├── arc42/
         │    ├── images/
         │    │     └── arc42-logo.png
         │    └── arc42-template-EN.md
         ├── c4/
-        │    └── contexto.md 
+        │    ├── contexto.md 
+        │    └── contenedores.md
         ├── aspectos.md
         ├── ficha_del_problema.md
         └── ia.md
@@ -177,17 +188,26 @@ La documentación del proyecto sigue rigurosamente los lineamientos del curso y 
 
 ## Estado actual del proyecto
 
+**Corte 1 — Aislamiento estricto por establecimiento (RES-05) — (06/09/2026)**
+
+* Restricción RES-05 implementada: las operaciones de catálogo, pedidos y entrega exigen `tiendaId`; repositorios particionados por tienda en `src/modules/*` (decisión en [`docs/adr/0004-aislamiento-por-establecimiento.md`](docs/adr/0004-aislamiento-por-establecimiento.md))
+* Línea base medida sobre `812d227`: **2/2 accesos cruzados** logrados (incumplía ESC-02); post-cambio: **0/300** (cumple umbral)
+* Nueva prueba de aislamiento ([`tests/aislamiento.test.js`](tests/aislamiento.test.js)) y medición reproducible ([`scripts/medir-aislamiento.js`](scripts/medir-aislamiento.js))
+* Suites en verde: 13 pruebas (`npm test`); CI en GitHub Actions + paso SonarCloud (activo cuando exista `SONAR_TOKEN`)
+* Diagnóstico completo en arc42 §11 e incidencias de corte marcadas en [`correcciones.md`](correcciones.md)
+* Configuración SonarCloud pendiente: definir organización/projectKey y `SONAR_TOKEN` (ADRs y `sonar-project.properties` ya listos)
+
 **Semana 4 — Corte vertical ejecutable, C4 y arc42 completo (30/08/2026)**
 
-* ✅ Lógica de negocio implementada en los 5 módulos de dominio: `catalogo`, `pedidos`, `pagos`, `entrega` y `notificaciones` ([`src/modules/*`](src/modules/))
-* ✅ Corte vertical ejecutable ([`src/corte-vertical.js`](src/corte-vertical.js)): flujo completo catálogo → pedidos → pagos → entrega → notificaciones, validado con PIN de 4 dígitos
-* ✅ Pruebas automatizadas ampliadas: [`tests/corte-vertical.test.js`](tests/corte-vertical.test.js) (flujo end-to-end e historial de notificaciones) y [`tests/modulos.test.js`](tests/modulos.test.js) (5 tests unitarios por módulo)
-* ✅ Diagramas C4 nivel 1 y nivel 2: [`docs/c4/contexto.md`](docs/c4/contexto.md) y [`docs/c4/contenedores.md`](docs/c4/contenedores.md)
-* ✅ arc42 secciones 5 (Vista de Bloques de Construcción), 6 (Vista de Ejecución), 9 (Decisiones Arquitectónicas), 10 (Requisitos de Calidad) y Glosario inicial completados
-* ✅ Backend migrado de `http` nativo a **Next.js** (App Router): [`app/health/route.js`](app/health/route.js)
-* ✅ Módulos migrados a **ESM** (`type: module`, `import/export` en `src/modules/*`) y CI actualizado a **Node 22**
-* ✅ `src/health.js` extraído como módulo de lógica pura, testeable sin levantar el servidor HTTP
-* ✅ Primera fila de la tabla de aspectos completa hasta la columna «Pruebas» (A-01)
+* Lógica de negocio implementada en los 5 módulos de dominio: `catalogo`, `pedidos`, `pagos`, `entrega` y `notificaciones` ([`src/modules/*`](src/modules/))
+* Corte vertical ejecutable ([`src/corte-vertical.js`](src/corte-vertical.js)): flujo completo catálogo → pedidos → pagos → entrega → notificaciones, validado con PIN de 4 dígitos
+* Pruebas automatizadas ampliadas: [`tests/corte-vertical.test.js`](tests/corte-vertical.test.js) (flujo end-to-end e historial de notificaciones) y [`tests/modulos.test.js`](tests/modulos.test.js) (5 tests unitarios por módulo)
+* Diagramas C4 nivel 1 y nivel 2: [`docs/c4/contexto.md`](docs/c4/contexto.md) y [`docs/c4/contenedores.md`](docs/c4/contenedores.md)
+* arc42 secciones 5 (Vista de Bloques de Construcción), 6 (Vista de Ejecución), 9 (Decisiones Arquitectónicas), 10 (Requisitos de Calidad) y Glosario inicial completados
+* Backend migrado de `http` nativo a **Next.js** (App Router): [`app/health/route.js`](app/health/route.js)
+* Módulos migrados a **ESM** (`type: module`, `import/export` en `src/modules/*`) y CI actualizado a **Node 22**
+* `src/health.js` extraído como módulo de lógica pura, testeable sin levantar el servidor HTTP
+* Primera fila de la tabla de aspectos completa hasta la columna «Pruebas» (A-01)
 
 ---
 
@@ -219,7 +239,7 @@ Estas mismas pruebas se ejecutan automáticamente en cada push o pull request me
 
 ### Corte vertical ejecutable
 
-`src/corte-vertical.js` atraviesa los 5 módulos en un solo flujo end-to-end: catálogo → pedidos → pagos → entrega → notificaciones. Simula un pedido real desde la consulta del producto hasta la entrega validada por PIN.
+`src/corte-vertical.js` atraviesa los 5 módulos en un solo flujo end-to-end: catálogo → pedidos → pagos → entrega → notificaciones. Todo el flujo se ejecuta en el contexto de una tienda (`tiendaId`). Simula un pedido real desde la consulta del producto hasta la entrega validada por PIN.
 
 ```bash
 node src/corte-vertical.js
@@ -227,9 +247,19 @@ node src/corte-vertical.js
 
 Salida esperada: el pedido avanza por los 4 estados (`Recibido` → `En preparación` → `Listo` → `Entregado`), se genera un PIN de 4 dígitos en el paso "Listo", y se valida ese mismo PIN en el punto de recolección. Cada cambio de estado queda registrado como notificación.
 
+### Medir el aislamiento (RES-05 / ESC-02)
+
+`scripts/medir-aislamiento.js` lanza 100 ciclos × 3 accesos cruzados hacia otra tienda (300 intentos) y verifica que **ninguno** se concrete (umbral ESC-02 = 0).
+
+```bash
+node scripts/medir-aislamiento.js
+```
+
+Salida esperada: `accesosCruzadosLogrados: 0`, cumple umbral → termina con código `0`.
+
 > Nota: en este corte, el punto de recolección se valida solo con **PIN** (el QR fue descartado como mecanismo).
 
-> **Limitación actual:** los módulos de dominio (`src/modules/*`) mantienen su estado en memoria (`Map`, contadores y arreglos). Esto es adecuado para este corte de demostración y para las pruebas, pero el estado **no persiste** entre requests ni entre reinicios del proceso. La persistencia real (p. ej. PostgreSQL/Redis) queda pendiente para iteraciones futuras, según ADR-0001.
+> **Limitación actual:** los módulos de dominio (`src/modules/*`) mantienen su estado en memoria (`Map` por tienda, contadores y arreglos). Esto es adecuado para este corte de demostración y para las pruebas, pero el estado **no persiste** entre requests ni entre reinicios del proceso. La persistencia real (p. ej. PostgreSQL/Redis) queda pendiente para iteraciones futuras, según ADR-0001.
 
 ---
 

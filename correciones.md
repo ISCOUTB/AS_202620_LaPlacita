@@ -83,14 +83,14 @@
 --- 
 
 ## Semana 4 - Corte vertical y C4 nivel 2
-**Commit revisado:** `745e799` · 2026-08-30 · Resultado: **4/10 criterios cumplidos** (nota sugerida: 2.6)
+**Commit revisado:** `745e799` · 2026-08-30 · Resultado del sistema: **4/10 criterios cumplidos** (nota sugerida: 2.6) · **Verificación manual posterior: 8/10 criterios cumplidos** (nota sugerida: 4.2)
  
 ### Hallazgos del revisor
 | # | Hallazgo | Detectado por el sistema |
 |---|---|---|
 | 1 | C4 nivel 2 dibuja contenedores (Redis, PostgreSQL, App/Web Cliente, Portal) sin código en el repositorio | Sí |
-| 2 | `docs/ia.md` sin columna de rechazo (motivo técnico) | Sí |
-| 3 | Secciones 5, 6, 9, 10 y 12 de arc42 no verificadas (el extracto del sistema se cortó en §4.4) | **No automáticamente** — el sistema no leyó el archivo completo |
+| 2 | `docs/ia.md` sin columna de rechazo (motivo técnico) | Sí (falso positivo) — descartado en verificación manual: los rechazos con motivo técnico ya constan en la columna «Validación» desde S3 (`docs/ia.md`, entradas del 23/08) |
+| 3 | Secciones 5, 6, 9, 10 y 12 de arc42 no verificadas (el extracto del sistema se cortó en §4.4) | **No automáticamente** — verificado manualmente el archivo completo: las secciones están redactadas con contenido propio (no texto de plantilla) |
 | 4 | ADR-0001 y ADR-0003 dejan implementación como «Pendiente» en la sección de trazabilidad | Sí (parcial) |
 | 5 | Sin SonarCloud configurado pese a lo declarado en ADR-0003 | Sí |
  
@@ -102,7 +102,7 @@
 | ADR-0003 creado (despliegue Railway + Docker + SonarCloud) con alternativas y trazabilidad | `745e799` | Sí (parcial) | El ADR existe y pasa el filtro de nombre; la implementación de `sonar-project.properties` y `Dockerfile` figura como pendiente |
 | Fila A-01 de `docs/aspectos.md` completa hasta columna Pruebas, con rutas verificables | `745e799` | Sí | Enlaza RF-01, ESC-01, C4, ADR-0001, ADR-0003, código y tests |
 | Corte vertical con prueba automatizada (`tests/corte-vertical.test.js`) en CI verde | `745e799` | Sí | Run `33352046552` success |
-| arc42 secciones 6 a 9 escritas (subtítulos visibles en el mensaje de commit) | `745e799` | **No automáticamente** | El mensaje del commit dice «escritura del adr-0003 y los subtitulos del 6-9 del Arc42», pero el sistema no leyó el contenido completo de esas secciones. **Las secciones existen en el archivo aunque el sistema no pudo verificar su contenido** |
+| arc42 secciones 5-6, 9, 10 y Glosario (12) redactadas con contenido propio, sin texto de plantilla | `745e799` | **No automáticamente** | Verificado manualmente en `docs/arc42/arc42-template-EN.md`: s.5 (5.1/5.2 whitebox), s.6 (6.1-6.3), s.9 (tabla de ADR + §9.1 «Razonamiento resumido» en HEAD), s.10 (árbol de utilidad + ESC-01..05) y §12 Glosario con términos del dominio; filtro de plantilla sin coincidencias |
 | Migración de Node.js nativo (`http`) a Next.js App Router para el backend | `745e799` | Parcial | El `README.md` actualiza los comandos; `app/health/route.js` existe en el árbol |
 | Módulos migrados a JavaScript ESM (`import`/`export`); suite de 8 tests en verde | `745e799` | Sí | `npm test` pasa en CI |
  
@@ -114,13 +114,56 @@
 - Registrar en `docs/ia.md` al menos una salida de IA rechazada con motivo técnico de este corte.
 - Configurar SonarCloud: crear `sonar-project.properties` y añadir el paso al pipeline.
 - Aportar medición reproducible (herramienta + carga + procedimiento).
+- Alinear arc42 §5/§6 con el código real: describen archivos inexistentes (`src/index.js`, `src/modules/pedidos/store.js`, rutas `/pedidos*`).
+- Arc42 §10: corregir la categoría de ESC-04/05 (intercambiadas entre Usabilidad y Rendimiento) y usar artefactos con los nombres de los módulos reales (`pedidos`, `pagos`) en vez de inglés.
+- Glosario: eliminar entradas duplicadas («corte vertical») y pegar el listado de estados del pedido a la máquina de estados real (`Recibido → En preparación → Listo → Entregado`).
 
 ---
 
 ## Semana 5 · Primer Corte (CORTE 1)
-**Commit revisado:** `745e799` · 2026-08-30 · Resultado: **0/12 criterios cumplidos**
+**Commit revisado:** `812d227` · 2026-09-02 · Resultado: **0/12 criterios cumplidos**
  
-> La revisión del corte 1 se ejecutó el 2026-09-02 sobre el commit `745e799` (2026-08-30) porque no existía la etiqueta `corte-1`. El cierre oficial es **2026-09-07**, por lo que aún se  puede corregir y etiquetar antes del cierre.
+### Cumplimiento del corte 1 (trabajo previo al re-etiquetado `corte-1`)
+| # | Casilla (orden de prioridad) | Estado | Evidencia |
+|---|---|---|---|
+| 1 | Etiqueta `corte-1` con CI en verde | Pendiente de revisión del equipo | **Sin commit/push/tag hasta la revisión**; el cierre oficial es 2026-09-07. Se crearán los commits de este corte, se verificará CI en verde y luego se creará la etiqueta sobre un commit anterior al cierre |
+| 2 | Restricción del equipo declarada | OK | **RES-05 — Aislamiento estricto por establecimiento** (todo flujo exige `tiendaId`; 0 accesos cruzados) |
+| 3 | Diagnóstico con línea base | OK | arc42 §11.2-11.3: sobre `812d227` se midieron **2/2 accesos cruzados logrados** (incumple ESC-02, umbral `0`) |
+| 4 | ADR del reto | OK | [`docs/adr/0004-aislamiento-por-establecimiento.md`](docs/adr/0004-aislamiento-por-establecimiento.md) — alternativas A/B/C, decisión B (repositorio particionado por tienda), consecuencias y trazabilidad |
+| 5 | Implementación sobre el corte vertical con prueba nueva en CI | OK | `tiendaId` obligatorio en `src/modules/{catalogo,pedidos,pagos,entrega,notificaciones}/index.js` y `src/corte-vertical.js`; [`tests/aislamiento.test.js`](tests/aislamiento.test.js) (4 pruebas) que corren en `npm test` dentro del CI |
+| 6 | Medición vs umbral | OK | [`scripts/medir-aislamiento.js`](scripts/medir-aislamiento.js): 100 ciclos × 3 accesos cruzados = 300 intentos; **0 logrados**, cumple umbral (`exit 0`) |
+| 7 | Trazabilidad | OK | ADR-0001 → ADR-0002 → ADR-0004; RF-02 → A-02 → ESC-02 en `docs/aspectos.md`; arc42 §5/§6/§9/§10/§11 alineados al código real |
+| 8 | `docs/ia.md` | OK | Entrada del 06/09/2026 registrada (resultado + validación pendiente del equipo) |
+| 9 | PDF de 2 páginas | Pendiente (del equipo) | Se genera tras la revisión y se sube a Moodle (no se commitea) |
+| 10 | Sustentación (5to criterio) | Pendiente | Evidencia del dominio: línea base 2/2 → post-cambio 0/300 (reproducible) |
+
+### Correcciones aplicadas en el corte 1
+| Corrección | Estado | Observación |
+|---|---|---|
+| ADR-0001 marcado «aceptado (ratificado por ADR-0002)» y su trazabilidad con commits reales (`f0d869b`, `26a9210`, `ce1676c`) | OK | Cierra el arrastre de S3/S4 (el ADR-0002 ya decía aceptado, ahora el 0001 lo refleja) |
+| ADR-0003: `Dockerfile` (Next standalone), `sonar-project.properties` y paso SonarCloud en `ci.yml` | Config OK; activación pendiente | Falta `SONAR_TOKEN` y org/projectKey reales para el análisis en vivo |
+| C4 de contenedores: App/Web, Portal, Redis y PostgreSQL marcados `planeado (Corte 2)` | OK | Cierra el hallazgo S4#1 (contenedores sin código) |
+| A-02 en `docs/aspectos.md`: ADR-0004, código (`tiendaId`/`pedidosPorTienda`) y evidencia 0/300 | OK | Cierra el pendiente de corte 1 |
+| Celdas Pruebas (A-02..A-06) y Evidencia (A-01..A-06) completadas | OK | Con rutas verificables a código y tests reales |
+| Columna Requisito (RF-xx) enlazada a los escenarios | OK | RF-01→ESC-01 … RF-06→ESC-03 (cierra el hallazgo S3#3) |
+| arc42 §5/§6 alineados al código real (`app/health/route.js`, `src/corte-vertical.js`, módulos con `tiendaId`) | OK | Cierra el arrastre del corte 1 (archivos inexistentes) |
+| arc42 §10: ESC-04/05 con categoría y artefactos correctos (módulos `pedidos`, `pagos`, … en español) | OK | Cierra el arrastre del corte 1 |
+| Glosario: duplicado de «corte vertical» eliminado y estados pegados a `ESTADOS` real | OK | Cierra el arrastre del corte 1 |
+| arc42 §11 «Reto RES-05» añadida (restricción, diagnóstico, línea base 2/2 y post-cambio 0/300, procedimiento) | OK | Casillas 2, 3 y 6 documentadas |
+| `README.md` actualizado (árbol, C4, estado del proyecto) | OK | Reconcilia el árbol con los archivos reales |
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Semana | Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|---|
+| S3 | Escenarios ESC-01 a ESC-05 con campo «Artefacto» añadido | Leer cada escenario en `docs/arc42/arc42-template-EN.md` y confirmar que la sección «Artefacto» está presente |
+| S3 | `docs/ia.md` con entradas del 23/08 que incluyen rechazo del C4 detallado y rechazo de restaurar sección en aspectos.md, con motivo técnico | Leer las filas del 23/08 en `docs/ia.md` y confirmar que la columna «Validación» incluye «Se Rechazó» + justificación |
+| S3 | `npm test` en verde localmente antes de subir (sin pipeline aún) | El equipo declaró pass 1/fail 0 en `docs/ia.md`; verificable en el historial del pipeline que se añadió en S4 |
+| S4 | ADR-0001 ratificado por ADR-0002 (el ADR-0002 tiene estado «aceptado») | Leer `docs/adr/0002-ratificacion-monolito-modular.md`, que dice estado «aceptado» y referencia al ADR-0001 |
+| S4 | arc42 secciones 5-6, 9, 10 y Glosario (12) redactadas en el archivo (el sistema no leyó el archivo completo) | Leer `docs/arc42/arc42-template-EN.md` y confirmar que las secciones 5-6, 9, 10 y 12 tienen contenido propio (no texto de plantilla) |
+| S4 | Módulos migrados a ESM con imports/exports válidos | Revisar `src/modules/*/index.js` y confirmar que usan `export` en vez de `module.exports` |
+| Corte 1 | Línea base 2/2 fugas y post-cambio 0/300 de RES-05 | Reproductible: verificar el estado en `812d227` (2/2) y luego ejecutar `node scripts/medir-aislamiento.js` en HEAD (0/300) |
+| Corte 1 | Contenedores C4 «planeados» sin infraestructura implementada | Leer `docs/c4/contenedores.md` y confirmar que Redis/PostgreSQL/App/Portal no levantan servicios reales |
+| Corte 1 | Aislamiento estructural (mapas por tienda) más allá de «corrección de una fuga» | `tests/aislamiento.test.js` demuestra que ids coincidentes entre tiendas no colisionan (`pedido-1` en tienda-01 vs tienda-02) |
 
 ---
  
@@ -131,5 +174,5 @@
 | S3 | `docs/ia.md` con entradas del 23/08 que incluyen rechazo del C4 detallado y rechazo de restaurar sección en aspectos.md, con motivo técnico | Leer las filas del 23/08 en `docs/ia.md` y confirmar que la columna «Validación» incluye «Se Rechazó» + justificación |
 | S3 | `npm test` en verde localmente antes de subir (sin pipeline aún) | El equipo declaró pass 1/fail 0 en `docs/ia.md`; verificable en el historial del pipeline que se añadió en S4 |
 | S4 | ADR-0001 ratificado por ADR-0002 (el ADR-0002 tiene estado «aceptado») | Leer `docs/adr/0002-ratificacion-monolito-modular.md`, que dice estado «aceptado» y referencia al ADR-0001 |
-| S4 | arc42 secciones 6 a 9 redactadas en el archivo (el sistema no leyó el archivo completo) | Leer `docs/arc42/arc42-template-EN.md` y confirmar que las secciones 6 a 9 tienen contenido propio (no texto de plantilla) |
+| S4 | arc42 secciones 5-6, 9, 10 y Glosario (12) redactadas en el archivo (el sistema no leyó el archivo completo) | Leer `docs/arc42/arc42-template-EN.md` y confirmar que las secciones 5-6, 9, 10 y 12 tienen contenido propio (no texto de plantilla) |
 | S4 | Módulos migrados a ESM con imports/exports válidos | Revisar `src/modules/*/index.js` y confirmar que usan `export` en vez de `module.exports` |

@@ -1,27 +1,44 @@
 // Módulo: pedidos
 // Responsabilidad: creación, estado y concurrencia del ciclo de vida del pedido (ESC-01).
 // Lógica de negocio pura, sin framework HTTP — ver docs/adr/0001-adopcion-monolito-modular.md
+// Aislamiento RES-05: cada tienda tiene su propio repositorio de pedidos; ninguna
+// operación puede leer ni mutar el estado de otra tienda (A-02, ESC-02).
 
 import { obtenerProducto } from '../catalogo/index.js';
 
 const ESTADOS = ['Recibido', 'En preparación', 'Listo', 'Entregado'];
 
-const pedidos = new Map();
-let contador = 0;
+const pedidosPorTienda = new Map();
+const contadoresPorTienda = new Map();
 
-function crearPedido({ productoId, cantidad, clienteId }) {
+function repoTienda(tiendaId) {
+  if (!pedidosPorTienda.has(tiendaId)) {
+    pedidosPorTienda.set(tiendaId, new Map());
+  }
+  return pedidosPorTienda.get(tiendaId);
+}
+
+function siguienteId(tiendaId) {
+  const n = (contadoresPorTienda.get(tiendaId) ?? 0) + 1;
+  contadoresPorTienda.set(tiendaId, n);
+  return `pedido-${n}`;
+}
+
+function crearPedido({ productoId, cantidad, clienteId, tiendaId }) {
   if (!cantidad || cantidad <= 0) {
     throw new Error('La cantidad debe ser mayor a 0');
   }
   if (!clienteId) {
     throw new Error('clienteId es obligatorio');
   }
+  if (!tiendaId) {
+    throw new Error('tiendaId es obligatorio');
+  }
 
-  const producto = obtenerProducto(productoId);
+  const producto = obtenerProducto(productoId, tiendaId);
 
-  contador += 1;
   const pedido = {
-    id: `pedido-${contador}`,
+    id: siguienteId(tiendaId),
     clienteId,
     tiendaId: producto.tiendaId,
     productoId: producto.id,
@@ -31,20 +48,26 @@ function crearPedido({ productoId, cantidad, clienteId }) {
     pin: null,
   };
 
-  pedidos.set(pedido.id, pedido);
+  repoTienda(tiendaId).set(pedido.id, pedido);
   return pedido;
 }
 
-function obtenerPedido(pedidoId) {
-  const pedido = pedidos.get(pedidoId);
+function obtenerPedido(pedidoId, tiendaId) {
+  if (!tiendaId) {
+    throw new Error('tiendaId es obligatorio');
+  }
+  const pedido = repoTienda(tiendaId).get(pedidoId);
   if (!pedido) {
-    throw new Error(`Pedido ${pedidoId} no encontrado`);
+    throw new Error(`Pedido ${pedidoId} no encontrado en la tienda ${tiendaId}`);
   }
   return pedido;
 }
 
-function cambiarEstado(pedidoId, nuevoEstado) {
-  const pedido = obtenerPedido(pedidoId);
+function cambiarEstado(pedidoId, tiendaId, nuevoEstado) {
+  if (!tiendaId) {
+    throw new Error('tiendaId es obligatorio');
+  }
+  const pedido = obtenerPedido(pedidoId, tiendaId);
   const indiceActual = ESTADOS.indexOf(pedido.estado);
   const indiceNuevo = ESTADOS.indexOf(nuevoEstado);
 

@@ -9,17 +9,17 @@ flowchart TD
     classDef extSystem fill:#999999,stroke:#666666,color:#fff;
 
     subgraph b0 ["Zona de Usuarios y Roles"]
-        usuario["👤 <b>Usuario</b><br/>[Person]<br/><i>Estudiante, docente o adm.</i>"]:::person
-        establecimiento["👨‍🍳 <b>Establecimiento</b><br/>[Person]<br/><i>Local de la zona de comidas</i>"]:::person
+        usuario["<b>Usuario</b><br/>[Person]<br/><i>Estudiante, docente o adm.</i>"]:::person
+        establecimiento["<b>Establecimiento</b><br/>[Person]<br/><i>Local de la zona de comidas</i>"]:::person
     end
 
     subgraph b1 ["Núcleo del Sistema"]
-        laPlacita["📦 <b>Sistema LaPlacita</b><br/>[Software System]<br/><i>Plataforma Click & Collect</i>"]:::system
+        laPlacita["<b>Sistema LaPlacita</b><br/>[Software System]<br/><i>Plataforma Click & Collect</i>"]:::system
     end
 
     subgraph b2 ["Integraciones Externas"]
-        pago["💳 <b>Pasarela de Pagos</b><br/>[Software System]<br/><i>Procesamiento PCI-DSS</i>"]:::extSystem
-        push["🔔 <b>Notificaciones Push</b><br/>[Software System]<br/><i>Envío de alertas de estado</i>"]:::extSystem
+        pago["<b>Pasarela de Pagos</b><br/>[Software System]<br/><i>Procesamiento PCI-DSS</i>"]:::extSystem
+        push["<b>Notificaciones Push</b><br/>[Software System]<br/><i>Envío de alertas de estado</i>"]:::extSystem
     end
 
     usuario -->|Ordena y consulta PIN<br/>HTTPS| laPlacita
@@ -35,8 +35,8 @@ flowchart TD
 
 | Color en el diagrama | Significado |
 | --- | --- |
-| 🟦 Azul oscuro (`Person`) | Actor humano que interactúa directamente con el sistema. |
-| 🟦 Azul brillante (`System`) | El sistema propio — La Placita. |
-| ⬛ Gris (`System_Ext`) | Sistema externo fuera del control del equipo. |
-| 🔲 Línea punteada (`Enterprise_Boundary`) | Delimitador visual que agrupa los componentes por capa lógica. |
+| Azul oscuro (`Person`) | Actor humano que interactúa directamente con el sistema. |
+| Azul brillante (`System`) | El sistema propio — La Placita. |
+| Gris (`System_Ext`) | Sistema externo fuera del control del equipo. |
+| Línea punteada (`Enterprise_Boundary`) | Delimitador visual que agrupa los componentes por capa lógica. |
 | $\rightarrow$ Flechas con etiqueta | Relación de comunicación; la etiqueta indica qué se intercambia y el protocolo. |

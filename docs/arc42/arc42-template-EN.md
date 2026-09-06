@@ -134,19 +134,25 @@ LaPlacita se despliega como un **monolito modular**: un único proceso Next.js q
  
 ```mermaid
 graph TD
-    API["⚙️ HTTP API\nsrc/index.js\nEnrutamiento de peticiones"]
- 
-    CAT["📋 catalogo\nsrc/modules/catalogo/\nMenús, productos e inventario\npor establecimiento"]
-    PED["🛒 pedidos\nsrc/modules/pedidos/\nCiclo de vida del pedido:\ncreación, estado, concurrencia"]
-    PAG["💳 pagos\nsrc/modules/pagos/\nIntegración con pasarela\nde pago externa"]
-    ENT["📦 entrega\nsrc/modules/entrega/\nValidación PIN en el punto\nde recolección"]
-    NOT["🔔 notificaciones\nsrc/modules/notificaciones/\nAlertas de cambio de estado\n(fuera de alcance en esta entrega)"]
- 
+    API["API Backend (Next.js App Router)\napp/health/route.js\nEndpoint /health"]
+    CV["Corte vertical ejecutable\nsrc/corte-vertical.js\nFlujo catálogo → pedidos → pagos\n→ entrega → notificaciones"]
+
+    CAT["catalogo\nsrc/modules/catalogo/\nMenús, productos e inventario\npor establecimiento (tiendaId)"]
+    PED["pedidos\nsrc/modules/pedidos/\nCiclo de vida del pedido:\ncreación, estado, concurrencia (tiendaId)"]
+    PAG["pagos\nsrc/modules/pagos/\nIntegración con pasarela\nde pago externa (tiendaId)"]
+    ENT["entrega\nsrc/modules/entrega/\nValidación PIN en el punto\nde recolección (tiendaId)"]
+    NOT["notificaciones\nsrc/modules/notificaciones/\nAlertas de cambio de estado (tiendaId)"]
+
     API --> CAT
     API --> PED
     API --> PAG
     API --> ENT
     API --> NOT
+    CV --> CAT
+    CV --> PED
+    CV --> PAG
+    CV --> ENT
+    CV --> NOT
 ```
  
 **Motivación:** la separación por dominio responde directamente a los escenarios de calidad. ESC-02 exige que el aislamiento entre las cinco tiendas sea una frontera explícita del código, no un filtro disperso; ESC-01 concentra la concurrencia en `pedidos` sin propagar el riesgo a los otros módulos.
@@ -167,31 +173,31 @@ graph TD
 
 ### 5.2. Nivel 2 — Módulo `pedidos` (whitebox)
  
-El módulo `pedidos` es el núcleo del corte vertical de esta entrega y se descompone en tres capas internas:
+El módulo `pedidos` es el núcleo del corte vertical y aísla su estado por tienda (RES-05). Sus tres capas internas viven en un único archivo (`src/modules/pedidos/index.js`) para mantener la lógica pura y testeable sin framework HTTP:
  
 ```mermaid
 graph LR
-    Route["🌐 Capa de interfaz\nsrc/index.js\nRutas /pedidos*\n• POST /pedidos\n• GET /pedidos/:id\n• PATCH /pedidos/:id/estado"]
-    Service["🧠 Capa de lógica\nsrc/modules/pedidos/index.js\nPedidosService\n• crear()\n• consultar()\n• actualizarEstado()"]
-    Store["🗄️ Capa de persistencia\nsrc/modules/pedidos/store.js\nPedidosStore (Map en memoria)\n• guardar()\n• buscar()\n• limpiar()"]
- 
-    Route --> Service
-    Service --> Store
+    Intro["Interfaz del módulo\ncrearPedido / obtenerPedido / cambiarEstado\n(todo con tiendaId)"]
+    Logic["Capa de lógica\nvalidaciones, máquina de estados,\nids por tienda"]
+    Store["Capa de persistencia\npedidosPorTienda (Map por tienda,\nen memoria)"]
+
+    Intro --> Logic
+    Logic --> Store
 ```
  
 | Capa | Archivo | Responsabilidad |
 |---|---|---|
-| Interfaz | `src/index.js` (rutas `/pedidos*`) | Recibe, parsea y valida la petición HTTP; delega al servicio; devuelve JSON |
-| Lógica | `src/modules/pedidos/index.js` | Crea pedido, genera PIN, gestiona la máquina de estados; aplica reglas de negocio |
-| Persistencia | `src/modules/pedidos/store.js` | Almacena y recupera pedidos con un `Map` en memoria; interfaz diseñada para sustituirse por PostgreSQL sin cambiar la lógica |
+| Interfaz | `src/modules/pedidos/index.js` | Expone `crearPedido`, `obtenerPedido(pedidoId, tiendaId)`, `cambiarEstado(pedidoId, tiendaId, estado)`, `ESTADOS` |
+| Lógica | `src/modules/pedidos/index.js` | Valida cantidad/cliente/tienda, genera id por tienda, gestiona la máquina de estados y aplica reglas de negocio |
+| Persistencia | `src/modules/pedidos/index.js` | `pedidosPorTienda`: un `Map` por tienda en memoria; interfaz diseñada para sustituirse por PostgreSQL sin cambiar la lógica (ADR-0001) |
  
 **Máquina de estados del pedido**
  
 ```
-RECIBIDO → EN_PREPARACION → LISTO_PARA_RECOGER → ENTREGADO
+Recibido → En preparación → Listo → Entregado
 ```
  
-Solo se permiten transiciones secuenciales. Un salto de más de un estado será rechazado con HTTP 400.
+Solo se permiten transiciones secuenciales; un salto de más de un estado es rechazado. Desde el corte-1, **toda operación exige `tiendaId`** y es rechazada si el pedido no pertenece a la tienda (0 accesos cruzados, RES-05).
 
 ---
 
@@ -204,25 +210,23 @@ Solo se permiten transiciones secuenciales. Un salto de más de un estado será 
  
 ```mermaid
 sequenceDiagram
-    participant App as 📱 App Móvil (Usuario)
-    participant API as ⚙️ HTTP API<br/>src/index.js
-    participant Svc as 🧠 PedidosService<br/>pedidos/index.js
-    participant Str as 🗄️ PedidosStore<br/>pedidos/store.js
- 
-    App->>API: POST /pedidos<br/>{ items, establecimiento_id, usuario_id }
-    API->>Svc: crear({ items, establecimiento_id, usuario_id })
-    Svc->>Svc: Valida items y establecimiento_id
-    Svc->>Svc: Genera id único y PIN de 4 dígitos
-    Svc->>Str: guardar(pedido)
-    Str-->>Svc: pedido { id, estado:"RECIBIDO", pin, ... }
-    Svc-->>API: pedido creado
-    API-->>App: HTTP 201 { id, pin, estado:"RECIBIDO", establecimiento_id }
+    participant App as App / CLI (corte vertical)
+    participant Svc as pedidos/index.js<br/>crearPedido()
+    participant Str as pedidosPorTienda<br/>(Map en memoria por tienda)
+
+    App->>Svc: crearPedido({ productoId, cantidad, clienteId, tiendaId })
+    Svc->>Svc: valida tiendaId y producto (obtenerProducto con scope de tienda)
+    Svc->>Svc: genera id único por tienda y pin
+    Svc->>Str: guardar(pedido) en el Map de la tienda
+    Str-->>Svc: pedido { id, estado:"Recibido", tiendaId, ... }
+    Svc-->>App: pedido creado
 ```
  
 **Aspectos notables:**
-- La generación de `id` y `pin` ocurre en la capa de lógica, no en el enrutador. Esto permite testear `PedidosService` en aislamiento sin levantar el servidor HTTP.
-- La capa de persistencia expone una interfaz independiente del protocolo; sustituir el `Map` por PostgreSQL no modifica `PedidosService`.
+- La generación de `id` y `pin` ocurre en la lógica del módulo, no en un enrutador HTTP: el corte vertical se ejecuta igual por CLI (`node src/corte-vertical.js`) o desde una futura API (corte 2). La interfaz HTTP de pedidos aún no existe.
+- La capa de persistencia expone una interfaz independiente del protocolo; sustituir el `Map` por PostgreSQL no modifica la lógica (ADR-0001).
 - Node.js atiende las peticiones concurrentes en su ciclo de eventos (un solo hilo): la atomicidad del `Map.set()` garantiza que dos pedidos simultáneos no se sobreescriban.
+- Cada tienda tiene su propio repositorio (`pedidosPorTienda`), de modo que los ids de distintas tiendas pueden coincidir sin colisionar (RES-05).
 ---
  
 ### 6.2. Escenario ESC-02 — Aislamiento entre establecimientos
@@ -232,17 +236,19 @@ sequenceDiagram
  
 ```mermaid
 sequenceDiagram
-    participant Panel as 🏪 Panel Establecimiento A
-    participant API as ⚙️ HTTP API
-    participant Svc as 🧠 PedidosService
- 
-    Panel->>API: GET /pedidos/:id
-    API->>Svc: consultar(id)
-    Svc-->>API: pedido { ..., establecimiento_id: "A" }
-    API-->>Panel: HTTP 200 { ..., establecimiento_id: "A" }
- 
-    Note over Panel, Svc: El establecimiento_id se persiste en cada pedido<br/>desde la creación. La autorización por rol<br/>(pendiente de implementar) devolverá 403<br/>si un establecimiento B intenta ver pedidos de A.
+    participant Panel as Panel Establecimiento B
+    participant Svc as pedidos/index.js<br/>obtenerPedido()
+    participant Str as pedidosPorTienda<br/>(Map de tienda B)
+
+    Panel->>Svc: obtenerPedido(pedido_id_tienda_A, "tienda-B")
+    Svc->>Str: buscar(pedido_id) en el Map de tienda B
+    Str-->>Svc: no encontrado
+    Svc-->>Panel: Error "no encontrado en la tienda tienda-B"
+
+    Note over Panel, Str: RES-05: cada tienda vive en su propio Map.<br/>Leer/mutar pedidos de otra tienda es rechazado:<br/>0 accesos cruzados (ver tests/aislamiento.test.js<br/>y scripts/medir-aislamiento.js).
 ```
+ 
+**Decisión relacionada:** [ADR-0004 — Aislamiento estricto por establecimiento](../adr/0004-aislamiento-por-establecimiento.md)
  
 ---
  
@@ -253,20 +259,17 @@ sequenceDiagram
  
 ```mermaid
 sequenceDiagram
-    participant Panel as 🏪 Panel Establecimiento
-    participant API as ⚙️ HTTP API
-    participant Svc as 🧠 PedidosService
-    participant Str as 🗄️ PedidosStore
- 
-    Panel->>API: PATCH /pedidos/:id/estado { estado: "EN_PREPARACION" }
-    API->>Svc: actualizarEstado(id, "EN_PREPARACION")
-    Svc->>Str: buscar(id)
-    Str-->>Svc: pedido { estado: "RECIBIDO" }
-    Svc->>Svc: Valida RECIBIDO → EN_PREPARACION ✓
-    Svc->>Str: guardar(pedido { estado: "EN_PREPARACION" })
+    participant Panel as Panel Establecimiento
+    participant Svc as pedidos/index.js<br/>cambiarEstado()
+    participant Str as pedidosPorTienda
+
+    Panel->>Svc: cambiarEstado(pedidoId, tiendaId, "En preparación")
+    Svc->>Str: buscar(pedidoId) en el Map de la tienda
+    Str-->>Svc: pedido { estado: "Recibido" }
+    Svc->>Svc: valida Recibido → En preparación (transición secuencial)
+    Svc->>Str: guardar(pedido { estado: "En preparación" })
     Str-->>Svc: pedido actualizado
-    Svc-->>API: pedido { estado: "EN_PREPARACION" }
-    API-->>Panel: HTTP 200 { estado: "EN_PREPARACION" }
+    Svc-->>Panel: pedido { estado: "En preparación", tiendaId }
 ```
 
 ---
@@ -279,11 +282,13 @@ Esta sección registra el historial de decisiones arquitectónicas significativa
 |---|---|---|---|---|---|
 | ADR-0001 | Adopción de Monolito Modular con Capas Internas frente a Capas Globales y Hexagonal | Aceptado (ratificado por ADR-0002) | 2026-08-23 | ESC-01…ESC-05 | [0001-adopcion-monolito-modular.md](../adr/0001-adopcion-monolito-modular.md) |
 | ADR-0002 | Ratificación de la adopción del Monolito Modular con Capas Internas | Aceptado | 2026-08-24 | ESC-01…ESC-05 | [0002-ratificacion-monolito-modular.md](../adr/0002-ratificacion-monolito-modular.md) |
-| ADR-0003 | Despliegue en contenedor Docker vía Railway y análisis estático en SonarCloud | Propuesto | 2026-08-30 | ESC-01 (disponibilidad), todos | [0003-despliegue-railway-docker-sonarcloud.md](../adr/0003-despliegue-railway-docker-sonarcloud.md) |
+| ADR-0003 | Despliegue en contenedor Docker vía Railway y análisis estático en SonarCloud | Aceptado | 2026-08-30 | ESC-01 (disponibilidad), todos | [0003-despliegue-railway-docker-sonarcloud.md](../adr/0003-despliegue-railway-docker-sonarcloud.md) |
+| ADR-0004 | Aislamiento estricto por establecimiento (RES-05) | Aceptado | 2026-09-06 | ESC-02 | [0004-aislamiento-por-establecimiento.md](../adr/0004-aislamiento-por-establecimiento.md) |
  
 **Relación con los bloques de construcción:**
 - ADR-0001 y ADR-0002 determinan la estructura: un único proceso con módulos de dominio separados.
 - ADR-0003 determina la infraestructura de despliegue: contenedor Docker en Railway, pipeline con SonarCloud.
+- ADR-0004 refuerza la frontera de módulo declarada en ADR-0001: todo acceso a catálogo, pedidos y entrega queda acotado por `tiendaId` (ESC-02).
 **Principio:** ningún ADR aceptado se edita ni se borra. Si una decisión cambia, se escribe un nuevo ADR que referencia al anterior como «reemplazado».
 
 ### 9.1. Razonamiento resumido
@@ -293,6 +298,12 @@ equipo es pequeño (4 personas), el plazo es corto y la comunicación entre mód
 proceso tiene latencia despreciable. Los módulos tienen fronteras claras (interfaces bien definidas,
 sin acceso directo a la base de datos de otro módulo), lo que permite una migración futura a
 servicios independientes si el sistema crece.
+
+**ADR-0004 — Aislamiento estricto por establecimiento (RES-05).** La frontera declarada en ADR-0001
+se concreta llevando `tiendaId` a todas las operaciones de catálogo, pedidos y entrega: cada tienda
+dispone de su propio repositorio (`Map` por tienda), de modo que el acceso cruzado es rechazado en
+tiempo de ejecución y verificado por prueba. La alternativa de servicios separados por tienda se
+descartó por RES-02/RES-03 (equipo pequeño y semestre académico).
  
 ---
 
@@ -356,7 +367,7 @@ El árbol de utilidad relaciona los objetivos generales de calidad con los atrib
 
 **Prioridad:** Alta importancia / Alta dificultad arquitectónica.
 
-**Artefacto:** Módulo `orders`.
+**Artefacto:** Módulo `pedidos`.
 
 **Decisión relacionada:** [ADR-0001 — Adopción de monolito modular](../adr/0001-adopcion-monolito-modular.md)
 
@@ -379,9 +390,9 @@ El árbol de utilidad relaciona los objetivos generales de calidad con los atrib
 
 **Prioridad:** Alta importancia / Alta dificultad arquitectónica.
 
-**Artefacto:** Módulos `orders` + `notifications`.
+**Artefacto:** Módulos `pedidos` + `notificaciones`.
 
-**Decisión relacionada:** [ADR-0001 — Adopción de monolito modular](../adr/0001-adopcion-monolito-modular.md)
+**Decisión relacionada:** [ADR-0001 — Adopción de monolito modular](../adr/0001-adopcion-monolito-modular.md), [ADR-0004 — Aislamiento estricto por establecimiento](../adr/0004-aislamiento-por-establecimiento.md)
 
 #### ESC-03 — Validación de entrega mediante PIN
 **Aspecto:** Integridad de la validación en el punto de recolección — A-06
@@ -403,7 +414,7 @@ El árbol de utilidad relaciona los objetivos generales de calidad con los atrib
 
 **Prioridad:** Alta importancia / Media dificultad arquitectónica.
 
-**Artefacto:** Módulo `payments`.
+**Artefacto:** Módulo `entrega` (validación por PIN).
 
 **Decisión relacionada:** [ADR-0001 — Adopción de monolito modular](../adr/0001-adopcion-monolito-modular.md)
 
@@ -426,7 +437,7 @@ El árbol de utilidad relaciona los objetivos generales de calidad con los atrib
 
 **Prioridad:** Alta importancia / Media dificultad arquitectónica.
 
-**Artefacto:** Módulo `establishments` + `catalog`.
+**Artefacto:** Módulo `pagos` (adaptador de pasarela de pago externa).
 
 **Decisión relacionada:** [ADR-0001 — Adopción de monolito modular](../adr/0001-adopcion-monolito-modular.md)
 
@@ -449,7 +460,7 @@ El árbol de utilidad relaciona los objetivos generales de calidad con los atrib
 
 **Prioridad:** Media importancia / Baja dificultad arquitectónica.
 
-**Artefacto:** Flujo completo (auth → catalog → orders → payments).
+**Artefacto:** Flujo completo del corte vertical: `catalogo` → `pedidos` → `pagos` → `entrega`.
 
 **Decisión relacionada:** [ADR-0001 — Adopción de monolito modular](../adr/0001-adopcion-monolito-modular.md)
 
@@ -459,18 +470,75 @@ El árbol de utilidad relaciona los objetivos generales de calidad con los atrib
 
 ```
 Calidad del sistema
-└── Disponibilidad (Alta prioridad)
-│   ├── [ESC-01] Disponibilidad bajo carga concurrente (Alta / Alta)
-│   └── [ESC-02] Tasa de error en procesamiento de pedidos (Alta / Alta)
-├── Seguridad (Alta prioridad)
-│   └── [ESC-03] Acceso no autorizado a pedidos (Alta / Alta)
-├── Usabilidad (Media prioridad)
-│   └── [ESC-04] Flujo de pedido para usuario nuevo (Media / Baja)
-└── Rendimiento (Alta prioridad)
-    └── [ESC-05] Validación de entrega con PIN (Alta / Media)
+├── Disponibilidad y consistencia (Alta prioridad)
+│   └── [ESC-01] Picos de demanda entre clases (Alta / Alta)
+├── Aislamiento (Alta prioridad)
+│   └── [ESC-02] Aislamiento entre las cinco tiendas (Alta / Alta)
+├── Seguridad / integridad (Alta prioridad)
+│   ├── [ESC-03] Validación de entrega mediante PIN (Alta / Media)
+│   └── [ESC-04] Protección del pago y datos personales (Alta / Media)
+└── Usabilidad (Media prioridad)
+    └── [ESC-05] Compra rápida (Media / Baja)
 ```
 
-La trazabilidad permite comprobar que cada uno de los principales objetivos de calidad posee al menos un escenario concreto mediante el cual puede ser evaluado.
+La trazabilidad permite comprobar que cada uno de los principales objetivos de calidad posee al menos un escenario concreto mediante el cual puede ser evaluado. ESC-02 queda ligado a la restricción RES-05 y al [ADR-0004](../adr/0004-aislamiento-por-establecimiento.md).
+
+---
+
+## 11. Reto RES-05 — Aislamiento estricto por establecimiento
+
+### 11.1. Restricción asignada (corte 1)
+
+> **RES-05 (asignada al equipo para el corte-1):** las operaciones de catálogo, pedidos y entrega
+> deben ejecutarse **siempre en el contexto de una tienda** (`tiendaId`) y queda **prohibido** leer
+> o mutar estado que pertenezca a otra tienda. Ningún módulo de dominio expone acceso global sin
+> filtro de tienda.
+
+### 11.2. Diagnóstico — impacto localizado
+
+- **Requisito afectado:** RF-02 (aislamiento y enrutamiento correcto entre establecimientos, aspectos `docs/aspectos.md` A-02).
+- **Escenario de calidad:** ESC-02 — umbral: **0 registros pertenecientes a otra tienda**.
+- **Elemento C4 afectado:** API Backend Central y los límites internos del monolito (`src/modules/*`).
+- **Código afectado (estado inicial, commit `812d227`):**
+  - `src/modules/pedidos/index.js` — `obtenerPedido`/`cambiarEstado` operaban sobre un único `Map` global, sin `tiendaId`.
+  - `src/modules/catalogo/index.js` — `obtenerProducto` no verificaba la tienda del producto.
+  - `src/modules/entrega/index.js` — `marcarListo`/`validarPin` sin contexto de tienda.
+
+### 11.3. Línea base medida (pre-cambio)
+
+Ejecutada el 2026-09-06 sobre el commit `812d227` (antes del cambio). Procedimiento reproducible en §11.5.
+
+| Magnitud | Valor |
+|---|---|
+| Accesos cruzados intentados | 2 |
+| Accesos cruzados logrados (fuga) | **2** |
+| Umbral ESC-02 | 0 |
+| Cumplimiento | No |
+
+Resultado: el estado inicial **incumplía** el umbral (100 % de los accesos cruzados lograban leer datos de otra tienda).
+
+### 11.4. Medición post-cambio (contrastada contra ESC-02)
+
+Ejecutada el 2026-09-06 sobre el mismo procedimiento tras implementar ADR-0004.
+
+| Magnitud | Valor |
+|---|---|
+| Carga aplicada | 100 ciclos × 3 operaciones cruzadas = **300 intentos** |
+| Accesos cruzados logrados (fuga) | **0** |
+| Umbral ESC-02 | 0 |
+| Cumplimiento | Sí |
+
+Resultado: **0/300 accesos cruzados** → se cumple el umbral de ESC-02.
+
+### 11.5. Reproducción de la medición
+
+- **Herramienta:** `node scripts/medir-aislamiento.js` (Node ≥ 22, ESM).
+- **Carga:** 100 iteraciones; en cada una se intentan 3 accesos cruzados (leer pedido, mutar estado y leer producto) con la tienda equivocada.
+- **Procedimiento:**
+  1. `npm install`
+  2. `node scripts/medir-aislamiento.js` (imprime intentados, logrados, umbral y cumplimiento; exit 0 si cumple).
+  3. `npm test` (13 pruebas, incluida `tests/aislamiento.test.js`).
+- **Evidencia:** salidas capturadas en §11.3/§11.4 y en el run de CI.
 
 ---
 
@@ -481,17 +549,17 @@ La trazabilidad permite comprobar que cada uno de los principales objetivos de c
 | **A-xx** | Identificador de aspectos de calidad encontrado en `docs/aspectos.md` (ej. A-0x disponibilidad y consistencia de pedidos). |
 | **ESC-xx** | Escenario de calidad definido en [`docs/arc42/arc42-template-EN.md`](../../docs/arc42/arc42-template-EN.md#102-escenarios-de-calidad) (ej. ESC-01 = Picos de demanda entre clases). |
 | **Click & Collect** | Modalidad de compra en la que el usuario ordena digitalmente de forma anticipada y recoge el producto en el establecimiento fisico. |
-| **Corte Vertical** | Implementación que atraviesa todas las capas del sistema (Interfaz HTTPS -> Lógica del negocio -> Persistencia) para una funcionalidad especifica, demuestra que la arquitectura es ejecutable de extremo a extremo. |
-| **Capa de interfaz** | En el módulo `pedidos`, recibe y parsea la petición HTTP y delega el servicio. |
-| **Capa lógica** | En el módulo `pedidos`, aplica reglas de negocio y gestiona la máquina de estados. |
-| **Capa de persistencia** | En el módulo `pedidos`, almacena y recupera pedidos (implementación actual: `Map` en memoria). |
+| **Corte vertical** | Implementación ejecutable que atraviesa la arquitectura de extremo a extremo: `src/corte-vertical.js` recorre `catalogo → pedidos → pagos → entrega → notificaciones`, con lógica de negocio, estado por tienda y prueba automatizada. |
+| **RES-05** | Restricción asignada en el corte 1: las operaciones de catálogo, pedidos y entrega exigen `tiendaId` y queda prohibido acceder al estado de otra tienda (0 operaciones cruzadas, ver [ADR-0004](../adr/0004-aislamiento-por-establecimiento.md)). |
+| **Capa de interfaz** | En el módulo `pedidos`, la interfaz pública (`crearPedido`, `obtenerPedido`, `cambiarEstado`) recibe siempre `tiendaId` y delega en la lógica. |
+| **Capa lógica** | En el módulo `pedidos`, aplica reglas de negocio y gestiona la máquina de estados en el contexto de la tienda. |
+| **Capa de persistencia** | En el módulo `pedidos`, `pedidosPorTienda`: un `Map` por tienda en memoria (implementación actual), sustituible por PostgreSQL (ADR-0001). |
 | **Picos de tráfico** | Intervalo de 5 a 10 minutos en los que se alcanza el valor maximo de clientes simultáneos. |
 | **PIN** | Código númerico de aproximadamente 4 dígitos generado al crear el pedido, se usa para identificar y validar al usuario en el punto de recolección (A-06). | 
 | **SonarCloud** | Plataforma de análisis estático integrada en el pipeline de CI. Detecta bugs, vulnerabilidades de seguridad, duplicación de código y mide la cobertura de pruebas. Decisión registrada en [ADR-0003](../adr/0003-despliegue-railway-docker-sonarcloud.md). |
 | **Railway** | Plataforma PaaS (Platform as a Service) que despliega la aplicación desde el repositorio GitHub mediante un contenedor Docker. Proporciona URL pública con HTTPS, reinicios automáticos y gestión de variables de entorno. Decisión registrada en [ADR-0003](../adr/0003-despliegue-railway-docker-sonarcloud.md). |
 | **Quality Gate** | Conjunto de umbrales configurados en SonarCloud (cobertura mínima, cero vulnerabilidades críticas, etc.) que deben superarse antes de aceptar un pull request a `master`. |
 | **Ítem de catálogo** | Producto o servicio ofrecido por un establecimiento, con nombre, descripción, precio y disponibilidad |
-| **Estado del pedido** | Fase del ciclo de vida de un pedido: `CREADO` → `CONFIRMADO` → `EN_PREPARACION` → `LISTO` → `ENTREGADO` (o `CANCELADO` / `PENDIENTE_PAGO`) |
-| **Corte vertical** | Implementación completa de un flujo desde la interfaz HTTP hasta la base de datos, incluyendo lógica de negocio y prueba automatizada |
+| **Estado del pedido** | Fase del ciclo de vida de un pedido: `Recibido` → `En preparación` → `Listo` → `Entregado` (`const ESTADOS` en `src/modules/pedidos/index.js`; transiciones solo secuenciales). |
 | **Notificación push** | Mensaje enviado al dispositivo del usuario o del dueño del establecimiento ante cambios relevantes en el pedido |
 | **Módulo** | Unidad de organización interna del monolito con responsabilidad única; no puede acceder directamente a la base de datos de otro módulo |
