@@ -30,6 +30,8 @@ jobs:
 
     sonar:
         runs-on: ubuntu-latest
+        env:
+            SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         steps:
         - name: Descargar código (historial completo)
           uses: actions/checkout@v4
@@ -49,9 +51,8 @@ jobs:
           run: npm test
 
         - name: Análisis estático con SonarCloud
-          if: ${{ secrets.SONAR_TOKEN != '' }}
+          if: ${{ env.SONAR_TOKEN != '' }}
           uses: sonarsource/sonarcloud-github-action@v5
           env:
-                SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
                 GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
