@@ -30,7 +30,6 @@ jobs:
 
     sonar:
         runs-on: ubuntu-latest
-        if: ${{ secrets.SONAR_TOKEN != '' }}
         steps:
         - name: Descargar código (historial completo)
           uses: actions/checkout@v4
@@ -50,6 +49,7 @@ jobs:
           run: npm test
 
         - name: Análisis estático con SonarCloud
+          if: ${{ secrets.SONAR_TOKEN != '' }}
           uses: sonarsource/sonarcloud-github-action@v5
           env:
                 SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
