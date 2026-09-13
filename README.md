@@ -162,6 +162,11 @@ Los prototipos de interfaz están planeados para el Corte 2 (contendores App/Web
         ├── c4/
         │    ├── contexto.md 
         │    └── contenedores.md
+        ├── dominio/
+        │    ├── contextos-delimitados.md
+        │    ├── mapa-de-contextos.md
+        │    ├── propiedad-de-datos.md
+        │    └── auditoria-modularidad.md
         ├── aspectos.md
         ├── ficha_del_problema.md
         └── ia.md
@@ -197,17 +202,11 @@ La documentación del proyecto sigue rigurosamente los lineamientos del curso y 
 * Diagnóstico completo en arc42 §11 e incidencias de corte marcadas en [`correcciones.md`](correcciones.md)
 * Configuración SonarCloud pendiente: definir organización/projectKey y `SONAR_TOKEN` (ADRs y `sonar-project.properties` ya listos)
 
-**Semana 4 — Corte vertical ejecutable, C4 y arc42 completo (30/08/2026)**
-
-* Lógica de negocio implementada en los 5 módulos de dominio: `catalogo`, `pedidos`, `pagos`, `entrega` y `notificaciones` ([`src/modules/*`](src/modules/))
-* Corte vertical ejecutable ([`src/corte-vertical.js`](src/corte-vertical.js)): flujo completo catálogo → pedidos → pagos → entrega → notificaciones, validado con PIN de 4 dígitos
-* Pruebas automatizadas ampliadas: [`tests/corte-vertical.test.js`](tests/corte-vertical.test.js) (flujo end-to-end e historial de notificaciones) y [`tests/modulos.test.js`](tests/modulos.test.js) (5 tests unitarios por módulo)
-* Diagramas C4 nivel 1 y nivel 2: [`docs/c4/contexto.md`](docs/c4/contexto.md) y [`docs/c4/contenedores.md`](docs/c4/contenedores.md)
-* arc42 secciones 5 (Vista de Bloques de Construcción), 6 (Vista de Ejecución), 9 (Decisiones Arquitectónicas), 10 (Requisitos de Calidad) y Glosario inicial completados
-* Backend migrado de `http` nativo a **Next.js** (App Router): [`app/health/route.js`](app/health/route.js)
-* Módulos migrados a **ESM** (`type: module`, `import/export` en `src/modules/*`) y CI actualizado a **Node 22**
-* `src/health.js` extraído como módulo de lógica pura, testeable sin levantar el servidor HTTP
-* Primera fila de la tabla de aspectos completa hasta la columna «Pruebas» (A-01)
+**Semana 6 — Contextos delimitados y propiedad de datos (13/09/2026)**
+* Mapa DDD con C/S, OHS, SK `tiendaId` y ACL futura ([`docs/dominio/mapa-de-contextos.md`](docs/dominio/mapa-de-contextos.md), §8 en [`docs/arc42/08-conceptos-transversales.md`](docs/arc42/08-conceptos-transversales.md))
+* Tabla dueño único + auditoría V-01…V-06 con plan ([`docs/dominio/propiedad-de-datos.md`](docs/dominio/propiedad-de-datos.md), [`docs/dominio/auditoria-modularidad.md`](docs/dominio/auditoria-modularidad.md))
+* C4 nivel 3 ([`docs/c4/componentes.md`](docs/c4/componentes.md)) + ADR-0005 de reajuste; contenedores intactos
+* Trazabilidad Aspecto→Contexto en [`docs/aspectos.md`](docs/aspectos.md); correcciones en [`correcciones.md`](correcciones.md)
 
 ---
 

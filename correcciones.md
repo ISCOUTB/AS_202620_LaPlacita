@@ -166,6 +166,47 @@
 | Corte 1 | Aislamiento estructural (mapas por tienda) más allá de «corrección de una fuga» | `tests/aislamiento.test.js` demuestra que ids coincidentes entre tiendas no colisionan (`pedido-1` en tienda-01 vs tienda-02) |
 
 ---
+
+---
+
+## Semana 6 · Evidencia S6 — Contextos delimitados y propiedad de datos (2026-09-13)
+**Commit base revisado por pipeline:** `50b92f8` (2026-09-06) · **0/8** · **HEAD tras este plan:** por etiquetar.
+
+### Hallazgos del revisor (pasada temprana `semana-06-evidencia-s6.md`)
+| # | Hallazgo | Detectado por el sistema |
+|---|---|---|
+| 1 | Sin mapa de contextos con relaciones tipificadas (C4 técnico no vale como mapa DDD) | Sí |
+| 2 | Sin tabla módulo→datos con dueño único | Sí |
+| 3 | Sin cobertura tabla↔código | Sí |
+| 4 | ADR-0004 es aislamiento por tienda, no auditoría de propiedad entre módulos | Sí |
+| 5 | Sin plan de corrección por violación | Sí |
+| 6 | Sin §8 arc42 con lenguaje ubicuo + mapa | Sí (busca `docs/arc42/08*`) |
+| 7 | Sin C4 nivel 3 (`docs/c4/componentes.md`) ni ADR de reajuste | Sí |
+| 8 | `docs/aspectos.md` sin relación a contextos | Sí |
+| T-1 | Archivo se llamaba `correciones.md`, debe ser `correcciones.md` (arrastre S5) | Sí (`git show HEAD:correcciones.md` → null) |
+| T-2 | `docs/ia.md` con validaciones "pendiente" y sin fila S6 | Sí |
+| T-3 | SonarCloud sin `SONAR_TOKEN` (arrastre S5) | Sí |
+
+### Correcciones realizadas 
+| Corrección | Archivo(s) | ¿El sistema lo detecta? | Observación |
+|---|---|---|---|
+| Renombrado exacto `correciones.md` → `correcciones.md` + esta sección S6 datada | `correcciones.md` | Sí — `git log --follow -- correcciones.md` | Cierra arrastre S5 de nombre |
+| Mapa de contextos con 5 contextos + 6 relaciones tipificadas (Customer/Supplier ×3, OHS, ACL futura, Shared Kernel `tiendaId`) + diagrama Mermaid | `docs/dominio/mapa-de-contextos.md`, `docs/arc42/08-conceptos-transversales.md`, `docs/arc42/arc42-template-EN.md` §8 | Sí (contenido + `docs/arc42/08*`) | No es diagrama técnico: usa vocabulario DDD |
+| Tabla módulo→datos con dueño único + columnas Quién escribe/lee + cobertura de los 6 almacenes reales (Maps/array) | `docs/dominio/propiedad-de-datos.md` | Parcial — verificar leyendo la tabla | Cubre `productos`, `pedidosPorTienda`, `contadoresPorTienda`, `pagosConfirmados`, `pin`, `notificacionesEnviadas`, `tiendaId` |
+| Auditoría de modularidad sobre código actual: V-01…V-06 con ruta:línea + plan por violación + comandos de verificación | `docs/dominio/auditoria-modularidad.md` | **No automáticamente** — requiere leer rutas:líneas citadas y correr `git grep` | Incluye recorrido documentado |
+| arc42 §8 con lenguaje ubicuo (10 términos) + mapa incorporado + regla "cada dato tiene un dueño" | `docs/arc42/arc42-template-EN.md` §8 + `docs/arc42/08-conceptos-transversales.md` | Sí (`docs/arc42/08*` existe) | El template enlaza al 08; el 08 es canónico |
+| C4 nivel 3 (componentes dentro de API Backend Central = los 5 módulos + orquestador + stores) | `docs/c4/componentes.md` | Sí | Nivel 3 nuevo, niveles 1-2 intactos |
+| ADR-0005 de reajuste: contenedores no cambian, componentes se precisan como Bounded Contexts + reglas de propiedad | `docs/adr/0005-reajuste-contextos-propiedad.md` | Sí | Referencia ADR-0001/0004, no los reescribe |
+| `docs/aspectos.md` relacionable: tabla Aspecto→Contexto(s) + columna Contexto | `docs/aspectos.md` | Sí | A-01→Pedidos, A-02→todos (SK), A-03→Notificaciones, A-04→Pagos, A-05→orquestador, A-06→Entrega+Pedidos |
+| `docs/ia.md` al día: cierre de "pendientes" 30/08 y 06/09 + filas 13/09 con Rechazado y motivo | `docs/ia.md` | Parcial | Columna Validación incluye "Se rechazó … porque …" |
+| `README.md`: árbol + estado S6 + enlaces | `README.md` | Sí | Enlace `correcciones.md` ya no roto |
+| SonarCloud | — | No resuelto | Sin `SONAR_TOKEN` no hay análisis en vivo; queda como pendiente declarado. No bloquea S6 pero resta en transversal. |
+
+### Pendiente trasladado (fuera de S6)
+- Configurar `SONAR_TOKEN` + org/projectKey reales (dueño: equipo, antes de S7).
+- Implementar en código V-01 (`asignarPin` en Pedidos + freeze en `obtenerPedido`) y V-03 (métodos de intención). En S6 solo se documentan + plan; el código cambia en S7 para no romper `corte-1` verde.
+
+---
  
 ## Resumen de correcciones que el sistema automatizado no detecta automáticamente
 | Semana | Corrección invisible al sistema | Cómo verificarla manualmente |
@@ -176,3 +217,4 @@
 | S4 | ADR-0001 ratificado por ADR-0002 (el ADR-0002 tiene estado «aceptado») | Leer `docs/adr/0002-ratificacion-monolito-modular.md`, que dice estado «aceptado» y referencia al ADR-0001 |
 | S4 | arc42 secciones 5-6, 9, 10 y Glosario (12) redactadas en el archivo (el sistema no leyó el archivo completo) | Leer `docs/arc42/arc42-template-EN.md` y confirmar que las secciones 5-6, 9, 10 y 12 tienen contenido propio (no texto de plantilla) |
 | S4 | Módulos migrados a ESM con imports/exports válidos | Revisar `src/modules/*/index.js` y confirmar que usan `export` en vez de `module.exports` |
+

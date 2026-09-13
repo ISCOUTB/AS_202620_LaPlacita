@@ -274,6 +274,35 @@ sequenceDiagram
 
 ---
 
+## 8. Conceptos Transversales
+
+### 8.1. Lenguaje ubicuo (dominio plaza de mercado)
+| Término | Definición | Dueño |
+|---|---|---|
+| Tienda / Establecimiento | Negocio independiente (`tienda-01…05`), clave de partición | Shared Kernel (origen Catálogo) |
+| Producto | `{id, tiendaId, nombre, precio, disponible}` | Catálogo |
+| Pedido | Agregado + máquina `Recibido → En preparación → Listo → Entregado` | Pedidos |
+| Estado | Fase, solo secuencial vía `cambiarEstado` | Pedidos |
+| PIN | 4 dígitos al `Listo`, validado al `Entregado` (QR descartado) | Pedidos (almacén) / Entrega (concepto) |
+| Pago / Confirmación | `{pedidoId, tiendaId, monto, confirmadoEn}` clave `tienda:pedido`, sin tarjeta | Pagos |
+| Recolección / Validación | `marcarListo/validarPin` en mostrador | Entrega |
+| Notificación | `{pedidoId, tiendaId, estado, mensaje, enviadaEn}` | Notificaciones |
+| Cliente | `clienteId` opaco que ordena | Pedidos (ref) |
+| Orquestador | `src/corte-vertical.js`, composición, no es contexto | — |
+
+### 8.2 Mapa de contextos (resumen + enlace)
+Ver `docs/dominio/mapa-de-contextos.md` (diagrama Mermaid canónico).
+Relaciones: Pedidos→Catálogo (C/S), Pagos→Pedidos (C/S), Entrega→Pedidos (C/S), *→Notificaciones (OHS), Pagos→Pasarela (ACL futura), `tiendaId` (Shared Kernel).
+Proyección a código: `docs/c4/componentes.md`. Decisiones: ADR-0001 (estilo), ADR-0004 (aislamiento), ADR-0005 (reajuste S6).
+
+### 8.3 Reglas transversales
+1. **Cada dato tiene un dueño único** (tabla en `docs/dominio/propiedad-de-datos.md`). Solo el dueño escribe.
+2. **RES-05:** toda operación exige `tiendaId`; 0 accesos cruzados (ESC-02, `scripts/medir-aislamiento.js`).
+3. **Frontera de módulo:** comunicación solo vía `index.js` público; prohibido tocar el Map ajeno (violaciones V-01…V-06 en `docs/dominio/auditoria-modularidad.md`).
+4. **RES-01:** nunca tarjeta en el repo; solo confirmación (ACL).
+
+---
+
 ## 9. Decisiones Arquitectónicas
  
 Esta sección registra el historial de decisiones arquitectónicas significativas adoptadas por el equipo. Cada decisión se documenta en detalle en el archivo ADR correspondiente en `docs/adr/`.

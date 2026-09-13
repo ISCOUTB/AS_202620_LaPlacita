@@ -15,6 +15,16 @@
 | A-05     | Simplicidad del flujo de navegación y pedido | RF-05    |   [ESC-05](arc42/arc42-template-EN.md#esc-05--compra-rápida)    | [Contexto](c4/contexto.md), [Contenedores](c4/contenedores.md) | [ADR-0001](adr/0001-adopcion-monolito-modular.md) | [`src/corte-vertical.js`](../src/corte-vertical.js) — flujo completo catálogo → pedidos → pagos → entrega → notificaciones | [`tests/corte-vertical.test.js`](../tests/corte-vertical.test.js) — flujo end-to-end | `node src/corte-vertical.js` (pedido en 4 pasos de dominio, sin pantallas redundantes) |
 | A-06     | Integridad en la validación de identidad en el punto de recolección | RF-06   |    [ESC-03](arc42/arc42-template-EN.md#esc-03--validación-de-entrega-mediante-pin)    | [Contexto](c4/contexto.md), [Contenedores](c4/contenedores.md) | [ADR-0001](adr/0001-adopcion-monolito-modular.md) | [`src/modules/entrega/index.js`](../src/modules/entrega/index.js) — `marcarListo`, `validarPin(pedidoId, tiendaId, pin)` | [`tests/modulos.test.js`](../tests/modulos.test.js), [`tests/corte-vertical.test.js`](../tests/corte-vertical.test.js) — PIN correcto/incorrecto por tienda | `npm test` (validación PIN en verde) |
 
+## Mapa Aspecto -> Contexto 
+| Aspecto | Contexto(s) | Mapa | C4-3 | ADR |
+|---|---|---|---|---|
+| A-01 | Pedidos | [mapa](dominio/mapa-de-contextos.md) | [componentes](c4/componentes.md) | ADR-0001 |
+| A-02 | Todos (SK `tiendaId`) | [mapa](dominio/mapa-de-contextos.md) | [componentes](c4/componentes.md) | ADR-0004, ADR-0005 |
+| A-03 | Notificaciones (OHS) | [mapa](dominio/mapa-de-contextos.md) | [componentes](c4/componentes.md) | ADR-0001, ADR-0005 |
+| A-04 | Pagos (+ACL pasarela) | [mapa](dominio/mapa-de-contextos.md) | [componentes](c4/componentes.md) | ADR-0001 |
+| A-05 | Orquestador (composición) | [mapa](dominio/mapa-de-contextos.md) | [componentes](c4/componentes.md) | ADR-0001 |
+| A-06 | Entrega (concepto) + Pedidos (almacén PIN) | [mapa](dominio/mapa-de-contextos.md) | [componentes](c4/componentes.md) | ADR-0001, ADR-0005 (V-01) |
+
 --- 
 
 # 2. Descripción de Aspectos
