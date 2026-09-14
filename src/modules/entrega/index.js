@@ -4,16 +4,20 @@
 // Lógica de negocio pura, sin framework HTTP — ver docs/adr/0001-adopcion-monolito-modular.md
 // Aislamiento RES-05: la validación se resuelve en el contexto de la tienda del pedido (A-02).
 
-import { obtenerPedido, cambiarEstado } from '../pedidos/index.js';
+import {
+  obtenerPedido,
+  asignarPin,
+  marcarListo as marcarListoPedido,
+  confirmarEntrega,
+} from '../pedidos/index.js';
 
 function generarPin() {
   return String(Math.floor(1000 + Math.random() * 9000));
 }
 
 function marcarListo(pedidoId, tiendaId) {
-  const pedido = cambiarEstado(pedidoId, tiendaId, 'Listo');
-  pedido.pin = generarPin();
-  return pedido;
+  marcarListoPedido(pedidoId, tiendaId);
+  return asignarPin(pedidoId, tiendaId, generarPin());
 }
 
 function validarPin(pedidoId, tiendaId, pinIngresado) {
@@ -26,7 +30,7 @@ function validarPin(pedidoId, tiendaId, pinIngresado) {
     throw new Error('PIN incorrecto');
   }
 
-  return cambiarEstado(pedidoId, tiendaId, 'Entregado');
+  return confirmarEntrega(pedidoId, tiendaId);
 }
 
 export { marcarListo, validarPin };

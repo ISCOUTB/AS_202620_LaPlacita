@@ -74,8 +74,9 @@ test('el flujo completo de una tienda no es visible desde otra', () => {
 
   pagos.confirmarPago(pedido.id, 'tienda-01');
   entrega.marcarListo(pedido.id, 'tienda-01');
-  const entregado = entrega.validarPin(pedido.id, 'tienda-01', pedido.pin);
+  const listo = pedidos.obtenerPedido(pedido.id, 'tienda-01');
+  const entregado = entrega.validarPin(pedido.id, 'tienda-01', listo.pin);
   assert.equal(entregado.estado, 'Entregado');
 
-  assert.throws(() => entrega.validarPin(pedido.id, 'tienda-02', pedido.pin), /no encontrado en la tienda/);
+  assert.throws(() => entrega.validarPin(pedido.id, 'tienda-02', listo.pin), /no encontrado en la tienda/);
 });

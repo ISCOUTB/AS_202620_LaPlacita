@@ -33,3 +33,18 @@ test('entrega.validarPin rechaza un PIN incorrecto', () => {
   entrega.marcarListo(pedido.id, 'tienda-01');
   assert.throws(() => entrega.validarPin(pedido.id, 'tienda-01', '0000'));
 });
+
+test('pin inmutable desde fuera: mutar la copia de obtenerPedido no afecta al pedido real (V-01)', () => {
+  const pedido = pedidos.crearPedido({ productoId: 'prod-002', cantidad: 1, clienteId: 'cliente-06', tiendaId: 'tienda-01' });
+
+  const copia = pedidos.obtenerPedido(pedido.id, 'tienda-01');
+  assert.throws(() => {
+    copia.pin = '9999';
+  }, TypeError);
+
+  pagos.confirmarPago(pedido.id, 'tienda-01');
+  entrega.marcarListo(pedido.id, 'tienda-01');
+  const actualizado = pedidos.obtenerPedido(pedido.id, 'tienda-01');
+  assert.notEqual(actualizado.pin, '9999');
+  assert.ok(actualizado.pin, 'solo pedidos.asignarPin (invocado por entrega.marcarListo) pudo fijar el pin');
+});

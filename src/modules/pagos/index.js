@@ -3,7 +3,7 @@
 // Lógica de negocio pura, sin framework HTTP — ver docs/adr/0001-adopcion-monolito-modular.md
 // Aislamiento RES-05: la confirmación se resuelve en el contexto de la tienda del pedido (A-02).
 
-import { obtenerPedido, cambiarEstado } from '../pedidos/index.js';
+import { obtenerPedido, confirmarPago as confirmarPagoPedido } from '../pedidos/index.js';
 
 const pagosConfirmados = new Map();
 
@@ -21,7 +21,7 @@ function confirmarPago(pedidoId, tiendaId) {
     confirmadoEn: new Date().toISOString(),
   });
 
-  return cambiarEstado(pedidoId, tiendaId, 'En preparación');
+  return confirmarPagoPedido(pedidoId, tiendaId);
 }
 
 export { confirmarPago };
