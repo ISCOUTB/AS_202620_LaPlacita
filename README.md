@@ -203,10 +203,12 @@ La documentación del proyecto sigue rigurosamente los lineamientos del curso y 
 * Configuración SonarCloud pendiente: definir organización/projectKey y `SONAR_TOKEN` (ADRs y `sonar-project.properties` ya listos)
 
 **Semana 6 — Contextos delimitados y propiedad de datos (13/09/2026)**
-* Mapa DDD con C/S, OHS, SK `tiendaId` y ACL futura ([`docs/dominio/mapa-de-contextos.md`](docs/dominio/mapa-de-contextos.md), §8 en [`docs/arc42/08-conceptos-transversales.md`](docs/arc42/08-conceptos-transversales.md))
+* Mapa DDD con C/S, OHS, SK `tiendaId` y ACL futura ([`docs/dominio/mapa-de-contextos.md`](docs/dominio/mapa-de-contextos.md), §8 en [`docs/arc42/arc42-template-EN.md`](docs/arc42/arc42-template-EN.md))
 * Tabla dueño único + auditoría V-01…V-06 con plan ([`docs/dominio/propiedad-de-datos.md`](docs/dominio/propiedad-de-datos.md), [`docs/dominio/auditoria-modularidad.md`](docs/dominio/auditoria-modularidad.md))
 * C4 nivel 3 ([`docs/c4/componentes.md`](docs/c4/componentes.md)) + ADR-0005 de reajuste; contenedores intactos
 * Trazabilidad Aspecto→Contexto en [`docs/aspectos.md`](docs/aspectos.md); correcciones en [`correcciones.md`](correcciones.md)
+* V-01 y V-03 ya implementados en código el mismo día (`pedidos.asignarPin` único escritor de `pin`; métodos de intención `confirmarPago/marcarListo/confirmarEntrega`), sin romper `corte-1` (`npm test` 14/14, aislamiento 0/300) — detalle en `correcciones.md` y ADR-0005
+* Pendiente: `SONAR_TOKEN`/organización de SonarCloud (requiere que el equipo cree el proyecto en sonarcloud.io con su cuenta)
 
 ---
 

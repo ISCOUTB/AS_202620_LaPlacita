@@ -10,15 +10,16 @@
 
 ## Hallazgos
 
-### V-01 CRÍTICA — Entrega muta `pin` de Pedidos
-**Ubicación:** `src/modules/entrega/index.js:15`. **Dueño:** Pedidos (`src/modules/pedidos/index.js:40-49,11`). **Evidencia:** `pedido.pin = generarPin()` sin pasar por `cambiarEstado` (`src/modules/pedidos/index.js:66-83`).
-**Plan:** (1) añadir `pedidos.asignarPin(pedidoId, tiendaId, pin)` único escritor; (2) Entrega lo invoca; (3) `obtenerPedido` retorna copia frozen; (4) test `pin inmutable desde fuera`. **Prioridad:** P0 (antes S7). **No rompe S6:** solo documentado.
+### V-01 CRÍTICA — Entrega muta `pin` de Pedidos — **Implementado (13/09/2026)**
+**Ubicación (histórica):** `src/modules/entrega/index.js:15`. **Dueño:** Pedidos (`src/modules/pedidos/index.js`).
+**Corrección aplicada:** `pedidos.asignarPin(pedidoId, tiendaId, pin)` es el único escritor de `pin`; `entrega.marcarListo` lo invoca en vez de mutar directo. `obtenerPedido` retorna copia `Object.freeze`. Test de regresión: `tests/modulos.test.js` → *"pin inmutable desde fuera"*. Ver ADR-0005, sección "Actualización".
 
 ### V-02 ALTA — Pedidos→Catálogo sin ACL
 **Ubicación:** `src/modules/pedidos/index.js:7,38-43`. **Plan:** DTO mínimo `{productoId, tiendaId, precio}` + puerto `CatalogoPort`; hoy se declara Customer/Supplier. P1.
 
-### V-03 ALTA — Pagos+Entrega deciden transiciones de `estado`
-**Ubicación:** `src/modules/pagos/index.js:24`, `src/modules/entrega/index.js:14,29` vs dueño `ESTADOS` (`src/modules/pedidos/index.js:9`). **Plan:** métodos de intención `confirmarPago/marcarListo/confirmarEntrega` en Pedidos; Pagos/Entrega dejan de conocer la máquina. Deuda aceptada a corto plazo (vía API, no directa). P1.
+### V-03 ALTA — Pagos+Entrega deciden transiciones de `estado` — **Implementado (13/09/2026)**
+**Ubicación (histórica):** `src/modules/pagos/index.js:24`, `src/modules/entrega/index.js:14,29` vs dueño `ESTADOS` (`src/modules/pedidos/index.js`).
+**Corrección aplicada:** Pedidos expone `confirmarPago`, `marcarListo`, `confirmarEntrega` como métodos de intención; Pagos y Entrega ya no llaman `cambiarEstado(id, tienda, '<estado>')` con el nombre del estado destino, invocan el método de intención correspondiente. Ver ADR-0005, sección "Actualización".
 
 ### V-04 MEDIA — `tiendaId` kernel implícito
 **Ubicación:** guards en `catalogo/index.js:13`, `pedidos/index.js:34,56,67` + propagación en resto. **Plan:** declarar Shared Kernel (hecho en mapa) + extraer `src/shared/tienda.js` en Corte 2. P2.

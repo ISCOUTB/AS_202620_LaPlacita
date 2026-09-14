@@ -203,8 +203,15 @@
 | SonarCloud | — | No resuelto | Sin `SONAR_TOKEN` no hay análisis en vivo; queda como pendiente declarado. No bloquea S6 pero resta en transversal. |
 
 ### Pendiente trasladado (fuera de S6)
-- Configurar `SONAR_TOKEN` + org/projectKey reales (dueño: equipo, antes de S7).
-- Implementar en código V-01 (`asignarPin` en Pedidos + freeze en `obtenerPedido`) y V-03 (métodos de intención). En S6 solo se documentan + plan; el código cambia en S7 para no romper `corte-1` verde.
+- Configurar `SONAR_TOKEN` + org/projectKey reales (dueño: equipo, antes de S7). `sonar-project.properties` todavía tiene los placeholders `REEMPLAZAR-POR-ORGANIZACION-SONARCLOUD`/`REEMPLAZAR-POR-PROJECTKEY-SONARCLOUD`: requiere que alguien del equipo cree/vincule el proyecto en sonarcloud.io con su cuenta de GitHub y genere el token — no es algo que se pueda completar sin esas credenciales.
+
+### Actualización (13/09/2026) — cierre de deuda de código V-01/V-03
+Lo que en la fila anterior estaba planificado para S7 se implementó el mismo día, sin romper `corte-1`:
+- V-01: `pedidos.asignarPin` como único escritor de `pin`; `obtenerPedido` retorna copia frozen. Test nuevo: *"pin inmutable desde fuera"* en `tests/modulos.test.js`.
+- V-03: métodos de intención `confirmarPago/marcarListo/confirmarEntrega` en Pedidos; Pagos/Entrega ya no invocan `cambiarEstado` con el nombre del estado.
+- `npm test`: 14/14 verde. `node scripts/medir-aislamiento.js`: 0/300 (sin regresión de RES-05).
+- Detalle completo en `docs/dominio/auditoria-modularidad.md` (V-01, V-03) y en la sección "Actualización" de `docs/adr/0005-reajuste-contextos-propiedad.md`.
+- SonarCloud sigue pendiente (ver arriba): fuera del alcance de lo que se puede corregir sin acceso a la cuenta del equipo.
 
 ---
  
