@@ -125,36 +125,49 @@ Los prototipos de interfaz están planeados para el Corte 2 (contendores App/Web
   ├── jsconfig.json
   ├── package.json 
   ├── package-lock.json
-  ├── app/
-  │   └── health/
-  │          └── route.js        # GET /health (Next.js API Route, App Router)
+├── app/
+  │   └── api/v1/
+  │         ├── health/route.js        # GET /api/v1/health
+  │         ├── catalogo/productos/[productoId]/route.js
+  │         ├── catalogo/tiendas/[tiendaId]/productos/route.js
+  │         ├── pedidos/route.js
+  │         ├── pedidos/[pedidoId]/route.js
+  │         ├── pagos/[pedidoId]/confirmar/route.js
+  │         ├── entrega/[pedidoId]/listo/route.js
+  │         ├── entrega/[pedidoId]/validar/route.js
+  │         ├── notificaciones/route.js
+  │         └── notificaciones/[pedidoId]/route.js   # capa HTTP del contrato openapi.yaml
+  ├── openapi.yaml              # Contrato OpenAPI 3.1 (v1)
   ├── scripts/
   │   └── medir-aislamiento.js   # Medición reproducible de RES-05 (0 accesos cruzados)
   ├── src/
   │   ├── health.js              # Lógica pura del endpoint /health
   │   ├── corte-vertical.js      # Corte vertical ejecutable (flujo completo con tiendaId)
   │   └── modules/
-  │          ├── catalogo/
-  │          │      └── index.js
-  │          ├── entrega/
-  │          │      └── index.js
-  │          ├── notificaciones/
-  │          │      └── index.js
-  │          ├── pagos/
-  │          │      └── index.js
-  │          └── pedidos/
-  │                 └── index.js
+  │         ├── catalogo/
+  │         │      └── index.js
+  │         ├── entrega/
+  │         │      └── index.js
+  │         ├── notificaciones/
+  │         │      └── index.js
+  │         ├── pagos/
+  │         │      └── index.js
+  │         └── pedidos/
+  │                └── index.js
   ├── tests/
   │      ├── health.test.js
   │      ├── modulos.test.js
   │      ├── corte-vertical.test.js
-  │      └── aislamiento.test.js
+  │      ├── aislamiento.test.js
+  │      └── contract-openapi.test.js
   └── docs/
         ├── adr/
         │     ├── 0001-adopcion-monolito-modular.md
         │     ├── 0002-ratificacion-monolito-modular.md
         │     ├── 0003-despliegue-railway-docker-sonarcloud.md
-        │     └── 0004-aislamiento-por-establecimiento.md
+        │     ├── 0004-aislamiento-por-establecimiento.md
+        │     ├── 0005-reajuste-contextos-propiedad.md
+        │     └── 0006-estrategia-integracion-sincrona.md
         ├── arc42/
         │    ├── images/
         │    │     └── arc42-logo.png
@@ -207,8 +220,17 @@ La documentación del proyecto sigue rigurosamente los lineamientos del curso y 
 * Tabla dueño único + auditoría V-01…V-06 con plan ([`docs/dominio/propiedad-de-datos.md`](docs/dominio/propiedad-de-datos.md), [`docs/dominio/auditoria-modularidad.md`](docs/dominio/auditoria-modularidad.md))
 * C4 nivel 3 ([`docs/c4/componentes.md`](docs/c4/componentes.md)) + ADR-0005 de reajuste; contenedores intactos
 * Trazabilidad Aspecto→Contexto en [`docs/aspectos.md`](docs/aspectos.md); correcciones en [`correcciones.md`](correcciones.md)
-* V-01 y V-03 ya implementados en código el mismo día (`pedidos.asignarPin` único escritor de `pin`; métodos de intención `confirmarPago/marcarListo/confirmarEntrega`), sin romper `corte-1` (`npm test` 14/14, aislamiento 0/300) — detalle en `correcciones.md` y ADR-0005
+* V-01 y V-03 ya implementados en código el mismo día (`pedidos.asignarPin` único escritor de `pin`; métodos de intención `confirmarPago/marcarListo/confirmarEntrega`), sin romper `corte-1` (`npm test` 14/14, aislamiento 0/300) — detalle en `correcciones.md` y ADR-0007
 * Pendiente: `SONAR_TOKEN`/organización de SonarCloud (requiere que el equipo cree el proyecto en sonarcloud.io con su cuenta)
+
+**Semana 7 — Contrato de API y prueba de contrato (16-17/09/2026)**
+* Contrato OpenAPI 3.1 versionado en [`openapi.yaml`](openapi.yaml): **10 paths / 11 operaciones REST** (health, catálogo, pedidos, pagos, entrega, notificaciones) con esquemas de request/response
+* Prueba de contrato ([`tests/contract-openapi.test.js`](tests/contract-openapi.test.js), 23 tests) que valida que los módulos cumplen el contrato, que cada path tiene su `route.js`, y **falla ante cambios incompatibles**; job `contract-test` en [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
+* ADR de integración síncrona in-process ([`docs/adr/0006-estrategia-integracion-sincrona.md`](docs/adr/0006-estrategia-integracion-sincrona.md))
+* Rutas HTTP en `app/api/v1/*` que delegan en `src/modules/*` (dominio puro, ADR-0001): la capa HTTP es solo el adaptador del contrato, sin lógica de negocio
+* arc42 §6 con flujos de interacción por protocolo/formato; C4 de componentes/contenedores con etiquetas HTTP REST/JSON; aspecto A-07 en [`docs/aspectos.md`](docs/aspectos.md)
+* Suites en verde: 35 pruebas (`npm test`) y `npm run contract-test` (22/22)
+* Nota: Railway está documentado en ADR-0003 como **decisión de despliegue**, pero **no está desplegado**; por eso el contrato solo expone el servidor local (`/api/v1`)
 
 ---
 

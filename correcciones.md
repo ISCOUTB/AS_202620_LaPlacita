@@ -210,7 +210,7 @@ Lo que en la fila anterior estaba planificado para S7 se implementó el mismo d�
 - V-01: `pedidos.asignarPin` como único escritor de `pin`; `obtenerPedido` retorna copia frozen. Test nuevo: *"pin inmutable desde fuera"* en `tests/modulos.test.js`.
 - V-03: métodos de intención `confirmarPago/marcarListo/confirmarEntrega` en Pedidos; Pagos/Entrega ya no invocan `cambiarEstado` con el nombre del estado.
 - `npm test`: 14/14 verde. `node scripts/medir-aislamiento.js`: 0/300 (sin regresión de RES-05).
-- Detalle completo en `docs/dominio/auditoria-modularidad.md` (V-01, V-03) y en la sección "Actualización" de `docs/adr/0005-reajuste-contextos-propiedad.md`.
+- Detalle completo en `docs/dominio/auditoria-modularidad.md` (V-01, V-03) y en `docs/adr/0007-v01-v03-dueno-pin-metodos-intencion.md` (decisión registrada como ADR propio para preservar la inmutabilidad de ADR-0005).
 - SonarCloud sigue pendiente (ver arriba): fuera del alcance de lo que se puede corregir sin acceso a la cuenta del equipo.
 
 ---
@@ -225,3 +225,60 @@ Lo que en la fila anterior estaba planificado para S7 se implementó el mismo d�
 | S4 | arc42 secciones 5-6, 9, 10 y Glosario (12) redactadas en el archivo (el sistema no leyó el archivo completo) | Leer `docs/arc42/arc42-template-EN.md` y confirmar que las secciones 5-6, 9, 10 y 12 tienen contenido propio (no texto de plantilla) |
 | S4 | Módulos migrados a ESM con imports/exports válidos | Revisar `src/modules/*/index.js` y confirmar que usan `export` en vez de `module.exports` |
 
+
+
+---
+
+## Semana 7 · Evidencia S7 — Contrato de API y prueba de contrato (2026-09-16)
+**Commit base:** HEAD · **Entrega incremental calificada una sola vez.**
+
+### Hallazgos del revisor
+| # | Hallazgo | Detectado por el sistema |
+|---|---|---|
+| 1 | Sin contrato OpenAPI/AsyncAPI version v1 | Si (busca openapi.yaml o openapi.json) |
+| 2 | Sin prueba de contrato en el pipeline | Si (busca job contract-test en .github/workflows/ci.yml) |
+| 3 | Sin ADR que justifique la estrategia de integracion | Si (busca docs/adr/0006-*.md) |
+| 4 | C4 nivel 2 sin etiquetas de protocolo/formato | Si (busca HTTP REST/JSON o import ESM sincrono en docs/c4/componentes.md) |
+| 5 | arc42 seccion 6 sin flujos de interaccion | Si (busca secciones 6.1 — 6.6 con protocolo) |
+| 6 | Rutas HTTP de la API no implementadas | Si (busca app/api/v1/*/route.js) |
+
+### Correcciones realizadas
+| Correccion | Archivo(s) | Detectado? | Observacion |
+|---|---|---|---|
+| openapi.yaml creado — contrato OpenAPI 3.1 version v1 | openapi.yaml | Si | 10 paths / 11 operaciones REST con schemas |
+| docs/adr/0006-estrategia-integracion-sincrona.md creado | docs/adr/0006-estrategia-integracion-sincrona.md | Si | ADR con alternativas A/B/C |
+| tests/contract-openapi.test.js creado — 23 tests | tests/contract-openapi.test.js | Si | Modulos + validacion openapi.yaml + mapeo path→route.js |
+| .github/workflows/ci.yml actualizado — job contract-test | .github/workflows/ci.yml | Si | sonar depende de test y contract-test |
+| docs/arc42/arc42-template-EN.md seccion 6 actualizado | docs/arc42/arc42-template-EN.md | Si | Flujos con protocolo/formato |
+| docs/c4/componentes.md actualizado — protocolos | docs/c4/componentes.md | Si | HTTP REST/JSON |
+| docs/c4/contenedores.md actualizado — protocolos consistentes | docs/c4/contenedores.md | Si | HTTPS / REST API |
+| docs/aspectos.md actualizado — fila A-07 | docs/aspectos.md | Si | Trazabilidad completa |
+| docs/ia.md actualizado — entradas S7 | docs/ia.md | Parcial | 4 nuevas entradas |
+| package.json actualizado — script contract-test | package.json | Si | npm run contract-test |
+| app/api/v1/*/route.js creados — 10 endpoints REST | app/api/v1/*/route.js | Si | Todos los endpoints |
+| app/health/route.js movido a app/api/v1/health/route.js | app/api/v1/health/route.js | Si | Ruta anterior eliminada |
+| correcciones.md actualizado — seccion S7 | correcciones.md | Si | Documenta proceso S7 |
+
+### Entrega S7 completa
+| Que se entrega | Estado | Evidencia |
+|---|---|---|
+| Contrato OpenAPI 3.1 version v1 | Listo | openapi.yaml |
+| Prueba de contrato en pipeline | Listo | tests/contract-openapi.test.js + job contract-test en .github/workflows/ci.yml |
+| ADR que justifica estrategia de integracion | Listo | docs/adr/0006-estrategia-integracion-sincrona.md |
+| C4 nivel 2 con protocolo/formato | Listo | docs/c4/componentes.md |
+| C4 nivel 2 con protocolos consistentes | Listo | docs/c4/contenedores.md |
+| arc42 seccion 6 con flujos de interaccion | Listo | docs/arc42/arc42-template-EN.md seccion 6 |
+| Rutas HTTP implementadas | Listo | app/api/v1/*/route.js |
+| Alineacion con repositorio | Listo | Todos los archivos corresponden al codigo actual |
+
+### Pendiente trasladado
+- Configurar SONAR_TOKEN + org/projectKey reales (pendiente de S5/S6).
+- V-01/V-03 ya implementados el 13/09 en código (`pedidos.asignarPin` + copia `Object.freeze`; métodos de intención) — decisión en `docs/adr/0007-v01-v03-dueno-pin-metodos-intencion.md`.
+
+### Resumen de correcciones que el sistema automatizado no detecta automaticamente
+| Semana | Correccion invisible al sistema | Como verificarla manualmente |
+|---|---|---|
+| S7 | openapi.yaml es un contrato OpenAPI 3.1 valido | Validar con npx @stoplight/prism o similar |
+| S7 | tests/contract-openapi.test.js falla ante cambio incompatible | Descomentar escenarios CONTRATO ROTO al final y verificar que npm test falla — evidencia capturada en [docs/evidencia-fallo-contrato-s7.md](docs/evidencia-fallo-contrato-s7.md) |
+| S7 | El job contract-test en CI falla si la prueba de contrato falla | Verificar en GitHub Actions que el job contract-test existe |
+| S7 | Las rutas HTTP responden correctamente | Ejecutar npm run dev y hacer fetch a http://localhost:3000/api/v1/health |

@@ -202,12 +202,78 @@ Solo se permiten transiciones secuenciales; un salto de más de un estado es rec
 ---
 
 ## 6. Vista de Ejecución
- 
-### 6.1. Escenario ESC-01 — Creación de pedido en hora pico
- 
-**Aspecto:** Disponibilidad y consistencia del estado de los pedidos (A-01).  
+
+### 6.1 — Flujos de interacción principales
+
+#### Flujo 1: Creación de pedido
+**Actor:** Cliente  
+**Protocolo:** HTTP REST/JSON  
+**Formato:** `POST /api/v1/pedidos` con `CrearPedidoRequest { productoId, cantidad, clienteId, tiendaId }`  
+**Secuencia:**
+1. Cliente envía `POST /api/v1/pedidos` → API Backend Central
+2. API delega a `pedidos.crearPedido(...)` — **import ESM síncrono**
+3. `pedidos.crearPedido` llama a `catalogo.obtenerProducto(productoId, tiendaId)` — **import ESM síncrono**
+4. Si el producto es válido, se crea el pedido en estado `Recibido`
+5. Se notifica al cliente con `Pedido` { id, estado, total, ... }
+
+#### Flujo 2: Confirmación de pago
+**Actor:** Pasarela de pagos externa  
+**Protocolo:** HTTP REST/JSON  
+**Formato:** `POST /api/v1/pagos/{pedidoId}/confirmar` con `tiendaId` en query  
+**Secuencia:**
+1. Pasarela de pagos notifica confirmación → API Backend Central
+2. API delega a `pagos.confirmarPago(pedidoId, tiendaId)` — **import ESM síncrono**
+3. `pagos.confirmarPago` valida que el pedido está en `Recibido` y llama a `pedidos.cambiarEstado(..., 'En preparación')` — **import ESM síncrono**
+4. Se genera notificación: `notificaciones.notificarCambioEstado(...)` — **import ESM síncrono**
+5. Se responde con `Pedido` actualizado
+
+#### Flujo 3: Marcar pedido como listo (generación de PIN)
+**Actor:** Establecimiento  
+**Protocolo:** HTTP REST/JSON  
+**Formato:** `POST /api/v1/entrega/{pedidoId}/listo` con `tiendaId` en query  
+**Secuencia:**
+1. Establecimiento marca pedido como listo → API Backend Central
+2. API delega a `entrega.marcarListo(pedidoId, tiendaId)` — **import ESM síncrono**
+3. `entrega.marcarListo` valida el estado y genera PIN de 4 dígitos
+4. Se notifica cambio de estado a `Listo`
+5. Se responde con `Pedido` { estado: 'Listo', pin }
+
+#### Flujo 4: Validación de PIN y entrega
+**Actor:** Cliente en punto de recolección  
+**Protocolo:** HTTP REST/JSON  
+**Formato:** `POST /api/v1/entrega/{pedidoId}/validar` con `{ pinIngresado }`  
+**Secuencia:**
+1. Cliente ingresa PIN → API Backend Central
+2. API delega a `entrega.validarPin(pedidoId, tiendaId, pinIngresado)` — **import ESM síncrono**
+3. Si el PIN es correcto, el pedido cambia a `Entregado`
+4. Se genera notificación de `Entregado`
+5. Se responde con `Pedido` { estado: 'Entregado' }
+
+#### Flujo 5: Consulta de catálogo
+**Actor:** Cliente  
+**Protocolo:** HTTP REST/JSON  
+**Formato:** `GET /api/v1/catalogo/tiendas/{tiendaId}/productos`  
+**Secuencia:**
+1. Cliente consulta productos de una tienda → API Backend Central
+2. API delega a `catalogo.listarProductosPorTienda(tiendaId)` — **import ESM síncrono**
+3. Se responde con array de `Producto`
+
+### 6.2 — Protocolos y formatos de comunicación
+
+| Interacción | Protocolo | Formato | Módulos involucrados |
+|---|---|---|---|
+| Cliente ↔ API (todos los endpoints) | HTTP REST | JSON | Frontend → Next.js App Router |
+| `pedidos` ↔ `catalogo` | import ESM síncrono | Objeto JS en memoria | pedidos, catalogo |
+| `pagos` ↔ `pedidos` | import ESM síncrono | Objeto JS en memoria | pagos, pedidos |
+| `entrega` ↔ `pedidos` | import ESM síncrono | Objeto JS en memoria | entrega, pedidos |
+| Orquestador → módulos | import ESM síncrono | Objeto JS en memoria | corte-vertical.js → todos |
+| Módulo → Notificaciones | import ESM síncrono | Objeto JS en memoria | Todos → notificaciones |
+
+### 6.3 — Escenario ESC-01 — Creación de pedido en hora pico
+
+**Aspecto:** Disponibilidad y consistencia del estado de los pedidos (A-01).
 **Descripción:** Un estudiante crea un pedido durante el intervalo de 5 a 10 minutos entre clases, momento de máxima concurrencia.
- 
+
 ```mermaid
 sequenceDiagram
     participant App as App / CLI (corte vertical)
@@ -221,19 +287,20 @@ sequenceDiagram
     Str-->>Svc: pedido { id, estado:"Recibido", tiendaId, ... }
     Svc-->>App: pedido creado
 ```
- 
+
 **Aspectos notables:**
-- La generación de `id` y `pin` ocurre en la lógica del módulo, no en un enrutador HTTP: el corte vertical se ejecuta igual por CLI (`node src/corte-vertical.js`) o desde una futura API (corte 2). La interfaz HTTP de pedidos aún no existe.
+- La generación de `id` y `pin` ocurre en la lógica del módulo, no en un enrutador HTTP: el corte vertical se ejecuta igual por CLI (`node src/corte-vertical.js`) o desde la API (corte 2). La interfaz HTTP de pedidos se define en `openapi.yaml` e implementada en `app/api/v1/`.
 - La capa de persistencia expone una interfaz independiente del protocolo; sustituir el `Map` por PostgreSQL no modifica la lógica (ADR-0001).
 - Node.js atiende las peticiones concurrentes en su ciclo de eventos (un solo hilo): la atomicidad del `Map.set()` garantiza que dos pedidos simultáneos no se sobreescriban.
 - Cada tienda tiene su propio repositorio (`pedidosPorTienda`), de modo que los ids de distintas tiendas pueden coincidir sin colisionar (RES-05).
+- Los endpoints HTTP están implementados en `app/api/v1/*` siguiendo el contrato `openapi.yaml` v1: `GET /api/v1/health`, `GET /api/v1/catalogo/productos/{productoId}`, `POST /api/v1/pedidos`, entre otros.
 ---
- 
-### 6.2. Escenario ESC-02 — Aislamiento entre establecimientos
- 
-**Aspecto:** Aislamiento y enrutamiento correcto entre establecimientos (A-02).  
+
+### 6.4 — Escenario ESC-02 — Aislamiento entre establecimientos
+
+**Aspecto:** Aislamiento y enrutamiento correcto entre establecimientos (A-02).
 **Descripción:** Cada pedido queda asociado a un `establecimiento_id` único; el panel de cada tienda solo puede consultar los suyos.
- 
+
 ```mermaid
 sequenceDiagram
     participant Panel as Panel Establecimiento B
@@ -247,16 +314,16 @@ sequenceDiagram
 
     Note over Panel, Str: RES-05: cada tienda vive en su propio Map.<br/>Leer/mutar pedidos de otra tienda es rechazado:<br/>0 accesos cruzados (ver tests/aislamiento.test.js<br/>y scripts/medir-aislamiento.js).
 ```
- 
+
 **Decisión relacionada:** [ADR-0004 — Aislamiento estricto por establecimiento](../adr/0004-aislamiento-por-establecimiento.md)
- 
+
 ---
- 
-### 6.3. Escenario ESC-03 — Avance de la máquina de estados
- 
-**Aspecto:** Disponibilidad y consistencia (A-01), integridad de validación (A-06).  
+
+### 6.5 — Escenario ESC-03 — Avance de la máquina de estados
+
+**Aspecto:** Disponibilidad y consistencia (A-01), integridad de validación (A-06).
 **Descripción:** El establecimiento actualiza el estado del pedido.
- 
+
 ```mermaid
 sequenceDiagram
     participant Panel as Panel Establecimiento
@@ -271,6 +338,14 @@ sequenceDiagram
     Str-->>Svc: pedido actualizado
     Svc-->>Panel: pedido { estado: "En preparación", tiendaId }
 ```
+
+### 6.6 — Contrato de API y prueba de contrato (S7)
+
+**Evidencia:** `openapi.yaml` (contrato OpenAPI 3.1 v1), `tests/contract-openapi.test.js` (prueba de contrato), `docs/adr/0006-estrategia-integracion-sincrona.md` (ADR de integración).
+**Pipeline:** job `contract-test` en `.github/workflows/ci.yml` que ejecuta `node --test tests/contract-openapi.test.js`.
+**Estrategia de integración:** Síncrona in-process mediante importaciones ESM directas (ADR-0006).
+**Implementación HTTP:** 10 endpoints REST implementados en `app/api/v1/*` siguiendo el contrato: `GET /api/v1/health`, `GET /api/v1/catalogo/productos/{productoId}`, `GET /api/v1/catalogo/tiendas/{tiendaId}/productos`, `POST /api/v1/pedidos`, `GET /api/v1/pedidos/{pedidoId}`, `PUT /api/v1/pedidos/{pedidoId}`, `POST /api/v1/pagos/{pedidoId}/confirmar`, `POST /api/v1/entrega/{pedidoId}/listo`, `POST /api/v1/entrega/{pedidoId}/validar`, `POST /api/v1/notificaciones`, `GET /api/v1/notificaciones/{pedidoId}`.
+**El contrato define 10 paths con 11 operaciones REST** (health, catalogo, pedidos, pagos, entrega, notificaciones) con esquemas de request/response versionados. La prueba de contrato valida que la implementación de los módulos cumple el contrato, que cada path del `openapi.yaml` tiene su `route.js` en `app/api/v1/`, y **falla ante cambios incompatibles** (ej. si `crearPedido` deja de recibir `tiendaId`). Las rutas delegan en `src/modules/*` (dominio puro, ADR-0001); la capa HTTP (`app/api/v1/`) es solo el adaptador del contrato, no contiene lógica de negocio.
 
 ---
 

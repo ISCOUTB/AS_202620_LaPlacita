@@ -23,17 +23,17 @@ flowchart TD
     pago["<b>Pasarela de Pagos</b><br/>[Software System]<br/><i>Procesamiento PCI-DSS</i>"]:::extSystem
     push["<b>Servicio Push</b><br/>[Software System]<br/><i>Envío de alertas móviles</i>"]:::extSystem
 
-    usuario -->|Ordena y consulta PIN<br/>HTTPS / JSON| app_user
-    establecimiento -->|Recibe orden y valida PIN<br/>HTTPS / JSON| app_local
+    usuario -->|Ordena y consulta PIN<br/>HTTPS / REST API| app_user
+    establecimiento -->|Recibe orden y valida PIN<br/>HTTPS / REST API| app_local
 
     app_user -->|Solicitudes de compra y pago<br/>HTTPS / REST API| api
     app_local -->|Actualiza orden y valida PIN<br/>HTTPS / REST API| api
 
-    api -->|Consulta y persiste información<br/>ORM / TCP| db
-    api -->|Almacena PINs y encola tareas<br/>RESP / TCP| cache
+    api -->|Consulta y persiste información<br/>HTTP REST/JSON| db
+    api -->|Almacena PINs y encola tareas<br/>HTTP REST/JSON| cache
 
-    api -->|Inicia cobro y confirma<br/>JSON / HTTPS| pago
-    api -->|Solicita envío de alerta<br/>JSON / HTTPS| push
+    api -->|Inicia cobro y confirma<br/>HTTPS / JSON| pago
+    api -->|Solicita envío de alerta<br/>HTTPS / JSON| push
 
     push -.->|Entrega notificación al celular<br/>Push / HTTPS| usuario
 

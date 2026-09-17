@@ -1,0 +1,499 @@
+openapi: 3.1.0
+info:
+  title: LaPlacita API
+  description: |
+    API principal de LaPlacita — plataforma de pre-pedidos y recolección (Click & Collect).
+    Sistema de monolito modular con 5 dominios: Catálogo, Pedidos, Pagos, Entrega y Notificaciones.
+    Cada módulo opera en el contexto de una tienda (`tiendaId`) garantizando aislamiento estricto.
+  version: v1
+  contact:
+    name: Equipo LaPlacita
+  license:
+    name: Propietario
+
+servers:
+  - url: /api/v1
+    description: Servidor local de desarrollo (Next.js App Router)
+
+tags:
+  - name: health
+    description: Estado de salud del backend
+  - name: catalogo
+    description: Catálogo de productos por tienda
+  - name: pedidos
+    description: Ciclo de vida del pedido
+  - name: pagos
+    description: Confirmación de pagos
+  - name: entrega
+    description: Validación de entrega por PIN
+  - name: notificaciones
+    description: Notificaciones de cambio de estado
+
+paths:
+  /health:
+    get:
+      tags: [health]
+      summary: Estado de salud del backend
+      operationId: getHealth
+      responses:
+        '200':
+          description: Backend operativo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+
+  /catalogo/productos/{productoId}:
+    get:
+      tags: [catalogo]
+      summary: Obtener un producto por su ID y tienda
+      operationId: obtenerProducto
+      parameters:
+        - name: productoId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID del producto
+        - name: tiendaId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: ID de la tienda propietaria
+      responses:
+        '200':
+          description: Producto encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Producto'
+        '404':
+          description: Producto no encontrado o no pertenece a la tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Producto no disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /catalogo/tiendas/{tiendaId}/productos:
+    get:
+      tags: [catalogo]
+      summary: Listar productos de una tienda
+      operationId: listarProductosPorTienda
+      parameters:
+        - name: tiendaId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de productos de la tienda
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Producto'
+
+  /pedidos:
+    post:
+      tags: [pedidos]
+      summary: Crear un nuevo pedido
+      operationId: crearPedido
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearPedidoRequest'
+      responses:
+        '201':
+          description: Pedido creado en estado Recibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pedido'
+        '400':
+          description: Datos de entrada inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /pedidos/{pedidoId}:
+    get:
+      tags: [pedidos]
+      summary: Obtener un pedido por ID y tienda
+      operationId: obtenerPedido
+      parameters:
+        - name: pedidoId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: tiendaId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Pedido encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pedido'
+        '404':
+          description: Pedido no encontrado en la tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags: [pedidos]
+      summary: Cambiar el estado de un pedido
+      operationId: cambiarEstado
+      parameters:
+        - name: pedidoId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: tiendaId
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CambiarEstadoRequest'
+      responses:
+        '200':
+          description: Estado actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pedido'
+        '404':
+          description: Pedido no encontrado en la tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Transición de estado inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /pagos/{pedidoId}/confirmar:
+    post:
+      tags: [pagos]
+      summary: Confirmar pago de un pedido
+      operationId: confirmarPago
+      parameters:
+        - name: pedidoId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: tiendaId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Pago confirmado, pedido en En preparación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pedido'
+        '400':
+          description: Pedido no está en estado Recibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Pedido no encontrado en la tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /entrega/{pedidoId}/listo:
+    post:
+      tags: [entrega]
+      summary: Marcar pedido como listo y generar PIN
+      operationId: marcarListo
+      parameters:
+        - name: pedidoId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: tiendaId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Pedido listo con PIN generado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pedido'
+        '404':
+          description: Pedido no encontrado en la tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /entrega/{pedidoId}/validar:
+    post:
+      tags: [entrega]
+      summary: Validar PIN de entrega
+      operationId: validarPin
+      parameters:
+        - name: pedidoId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: tiendaId
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidarPinRequest'
+      responses:
+        '200':
+          description: PIN válido, pedido entregado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pedido'
+        '400':
+          description: PIN incorrecto o pedido no está Listo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Pedido no encontrado en la tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /notificaciones:
+    post:
+      tags: [notificaciones]
+      summary: Notificar cambio de estado de un pedido
+      operationId: notificarCambioEstado
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificarCambioEstadoRequest'
+      responses:
+        '201':
+          description: Notificación generada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notificacion'
+
+  /notificaciones/{pedidoId}:
+    get:
+      tags: [notificaciones]
+      summary: Obtener notificaciones de un pedido por tienda
+      operationId: obtenerNotificaciones
+      parameters:
+        - name: pedidoId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: tiendaId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de notificaciones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notificacion'
+
+components:
+  schemas:
+    Health:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok]
+      required:
+        - status
+
+    Producto:
+      type: object
+      properties:
+        id:
+          type: string
+        tiendaId:
+          type: string
+        nombre:
+          type: string
+        precio:
+          type: number
+          minimum: 0
+        disponible:
+          type: boolean
+      required:
+        - id
+        - tiendaId
+        - nombre
+        - precio
+        - disponible
+
+    Pedido:
+      type: object
+      properties:
+        id:
+          type: string
+        clienteId:
+          type: string
+        tiendaId:
+          type: string
+        productoId:
+          type: string
+        cantidad:
+          type: integer
+          minimum: 1
+        total:
+          type: number
+          minimum: 0
+        estado:
+          type: string
+          enum: [Recibido, En preparación, Listo, Entregado]
+        pin:
+          type: string
+          nullable: true
+          minLength: 4
+          maxLength: 4
+      required:
+        - id
+        - clienteId
+        - tiendaId
+        - productoId
+        - cantidad
+        - total
+        - estado
+
+    CrearPedidoRequest:
+      type: object
+      properties:
+        productoId:
+          type: string
+        cantidad:
+          type: integer
+          minimum: 1
+        clienteId:
+          type: string
+        tiendaId:
+          type: string
+      required:
+        - productoId
+        - cantidad
+        - clienteId
+        - tiendaId
+
+    CambiarEstadoRequest:
+      type: object
+      properties:
+        nuevoEstado:
+          type: string
+          enum: [Recibido, En preparación, Listo, Entregado]
+      required:
+        - nuevoEstado
+
+    ValidarPinRequest:
+      type: object
+      properties:
+        pinIngresado:
+          type: string
+          minLength: 4
+          maxLength: 4
+      required:
+        - pinIngresado
+
+    NotificarCambioEstadoRequest:
+      type: object
+      properties:
+        pedidoId:
+          type: string
+        estado:
+          type: string
+          enum: [Recibido, En preparación, Listo, Entregado]
+        tiendaId:
+          type: string
+      required:
+        - pedidoId
+        - estado
+        - tiendaId
+
+    Notificacion:
+      type: object
+      properties:
+        pedidoId:
+          type: string
+        tiendaId:
+          type: string
+        estado:
+          type: string
+        mensaje:
+          type: string
+        enviadaEn:
+          type: string
+          format: date-time
+      required:
+        - pedidoId
+        - tiendaId
+        - estado
+        - mensaje
+        - enviadaEn
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error

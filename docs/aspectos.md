@@ -14,6 +14,7 @@
 | A-04     | Protección de datos personales y de pago                   | RF-04    |   [ESC-04](arc42/arc42-template-EN.md#esc-04--protección-del-pago)    | [Contexto](c4/contexto.md), [Contenedores](c4/contenedores.md) | [ADR-0001](adr/0001-adopcion-monolito-modular.md) | [`src/modules/pagos/index.js`](../src/modules/pagos/index.js) — `confirmarPago(pedidoId, tiendaId)` con clave `tienda:pedido` | [`tests/modulos.test.js`](../tests/modulos.test.js) — confirmación de pago por tienda | `npm test` (test de pagos en verde) |
 | A-05     | Simplicidad del flujo de navegación y pedido | RF-05    |   [ESC-05](arc42/arc42-template-EN.md#esc-05--compra-rápida)    | [Contexto](c4/contexto.md), [Contenedores](c4/contenedores.md) | [ADR-0001](adr/0001-adopcion-monolito-modular.md) | [`src/corte-vertical.js`](../src/corte-vertical.js) — flujo completo catálogo → pedidos → pagos → entrega → notificaciones | [`tests/corte-vertical.test.js`](../tests/corte-vertical.test.js) — flujo end-to-end | `node src/corte-vertical.js` (pedido en 4 pasos de dominio, sin pantallas redundantes) |
 | A-06     | Integridad en la validación de identidad en el punto de recolección | RF-06   |    [ESC-03](arc42/arc42-template-EN.md#esc-03--validación-de-entrega-mediante-pin)    | [Contexto](c4/contexto.md), [Contenedores](c4/contenedores.md) | [ADR-0001](adr/0001-adopcion-monolito-modular.md) | [`src/modules/entrega/index.js`](../src/modules/entrega/index.js) — `marcarListo`, `validarPin(pedidoId, tiendaId, pin)` | [`tests/modulos.test.js`](../tests/modulos.test.js), [`tests/corte-vertical.test.js`](../tests/corte-vertical.test.js) — PIN correcto/incorrecto por tienda | `npm test` (validación PIN en verde) |
+| A-07     | Contrato de API versión 1 y prueba de contrato | RF-07 | [ESC-01..ESC-05](arc42/arc42-template-EN.md#6--vista-de-ejecución) | [Contexto](c4/contexto.md), [Contenedores](c4/contenedores.md), [Componentes](c4/componentes.md) | [ADR-0006](../adr/0006-estrategia-integracion-sincrona.md) | [`openapi.yaml` (contrato v1), `src/modules/*/index.js` (funciones exportadas), `app/api/v1/*/route.js` (endpoints HTTP) | [`tests/contract-openapi.test.js`](../tests/contract-openapi.test.js) — valida que módulos cumplen contrato, que cada path tiene su `route.js`, y falla ante cambio incompatible | `npm run contract-test` (23/23 prueba de contrato en verde); `npm test` (37/37 incluyendo contrato); job `contract-test` en `.github/workflows/ci.yml`; endpoints accesibles en `http://localhost:3000/api/v1/*` |
 
 ## Mapa Aspecto -> Contexto 
 | Aspecto | Contexto(s) | Mapa | C4-3 | ADR |
@@ -24,8 +25,11 @@
 | A-04 | Pagos (+ACL pasarela) | [mapa](dominio/mapa-de-contextos.md) | [componentes](c4/componentes.md) | ADR-0001 |
 | A-05 | Orquestador (composición) | [mapa](dominio/mapa-de-contextos.md) | [componentes](c4/componentes.md) | ADR-0001 |
 | A-06 | Entrega (concepto) + Pedidos (almacén PIN) | [mapa](dominio/mapa-de-contextos.md) | [componentes](c4/componentes.md) | ADR-0001, ADR-0005 (V-01) |
+| A-07 | Contrato de API (todos los módulos) | [mapa](dominio/mapa-de-contextos.md) | [componentes](c4/componentes.md) | ADR-0006 |
 
---- 
+---
+
+# 2. Descripción de Aspectos 
 
 # 2. Descripción de Aspectos
 
