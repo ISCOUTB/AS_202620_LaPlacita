@@ -141,7 +141,7 @@ Los prototipos de interfaz están planeados para el Corte 2 (contendores App/Web
   ├── scripts/
   │   └── medir-aislamiento.js   # Medición reproducible de RES-05 (0 accesos cruzados)
   ├── src/
-  │   ├── health.js              # Lógica pura del endpoint /health
+  │   ├── health.js              # Lógica pura del endpoint /api/v1/health
   │   ├── corte-vertical.js      # Corte vertical ejecutable (flujo completo con tiendaId)
   │   └── modules/
   │         ├── catalogo/
@@ -167,14 +167,17 @@ Los prototipos de interfaz están planeados para el Corte 2 (contendores App/Web
         │     ├── 0003-despliegue-railway-docker-sonarcloud.md
         │     ├── 0004-aislamiento-por-establecimiento.md
         │     ├── 0005-reajuste-contextos-propiedad.md
-        │     └── 0006-estrategia-integracion-sincrona.md
+        │     ├── 0006-estrategia-integracion-sincrona.md
+        │     ├── 0007-v01-v03-dueno-pin-metodos-intencion.md
+        │     └── 0008-ratificacion-estrategia-integracion-sincrona.md
         ├── arc42/
         │    ├── images/
         │    │     └── arc42-logo.png
         │    └── arc42-template-EN.md
         ├── c4/
         │    ├── contexto.md 
-        │    └── contenedores.md
+        │    ├── contenedores.md
+        │    └── componentes.md
         ├── dominio/
         │    ├── contextos-delimitados.md
         │    ├── mapa-de-contextos.md
@@ -226,10 +229,10 @@ La documentación del proyecto sigue rigurosamente los lineamientos del curso y 
 **Semana 7 — Contrato de API y prueba de contrato (16-17/09/2026)**
 * Contrato OpenAPI 3.1 versionado en [`openapi.yaml`](openapi.yaml): **10 paths / 11 operaciones REST** (health, catálogo, pedidos, pagos, entrega, notificaciones) con esquemas de request/response
 * Prueba de contrato ([`tests/contract-openapi.test.js`](tests/contract-openapi.test.js), 23 tests) que valida que los módulos cumplen el contrato, que cada path tiene su `route.js`, y **falla ante cambios incompatibles**; job `contract-test` en [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
-* ADR de integración síncrona in-process ([`docs/adr/0006-estrategia-integracion-sincrona.md`](docs/adr/0006-estrategia-integracion-sincrona.md))
+* ADR de integración síncrona in-process ([`docs/adr/0006-estrategia-integracion-sincrona.md`](docs/adr/0006-estrategia-integracion-sincrona.md)), ratificado por [`docs/adr/0008-ratificacion-estrategia-integracion-sincrona.md`](docs/adr/0008-ratificacion-estrategia-integracion-sincrona.md)
 * Rutas HTTP en `app/api/v1/*` que delegan en `src/modules/*` (dominio puro, ADR-0001): la capa HTTP es solo el adaptador del contrato, sin lógica de negocio
 * arc42 §6 con flujos de interacción por protocolo/formato; C4 de componentes/contenedores con etiquetas HTTP REST/JSON; aspecto A-07 en [`docs/aspectos.md`](docs/aspectos.md)
-* Suites en verde: 35 pruebas (`npm test`) y `npm run contract-test` (22/22)
+* Suites en verde: **37 pruebas** (`npm test`) y `npm run contract-test` (**23/23**)
 * Nota: Railway está documentado en ADR-0003 como **decisión de despliegue**, pero **no está desplegado**; por eso el contrato solo expone el servidor local (`/api/v1`)
 
 ---
@@ -239,11 +242,17 @@ La documentación del proyecto sigue rigurosamente los lineamientos del curso y 
 Requiere **Node.js 22 o superior** (el proyecto usa JavaScript ESM nativo). El backend está construido sobre **Next.js** (API Routes, App Router).
 
 ```bash
+npm install && npm run dev   # comando único de arranque (instala y levanta el backend)
+```
+
+Equivalente en dos pasos:
+
+```bash
 npm install
 npm run dev
 ```
 
-El servidor arranca en `http://localhost:3000` con un endpoint de verificación en `/health`.
+El servidor arranca en `http://localhost:3000` con un endpoint de verificación en `/api/v1/health`.
 
 Para producción:
 
@@ -317,7 +326,7 @@ Salida esperada: `accesosCruzadosLogrados: 0`, cumple umbral → termina con có
 5. **Verificar que el servidor responde correctamente**
    Abre en el navegador (o con `curl`) la siguiente URL:
    ```
-   http://localhost:3000/health
+   http://localhost:3000/api/v1/health
    ```
    Deberías ver la respuesta:
    ```json
@@ -329,7 +338,7 @@ Salida esperada: `accesosCruzadosLogrados: 0`, cumple umbral → termina con có
    ```bash
    npm test
    ```
-   Debería mostrar la prueba de `/health` en verde. Estas mismas pruebas corren automáticamente en cada push o pull request mediante GitHub Actions.
+   Debería mostrar la prueba de `/api/v1/health` en verde. Estas mismas pruebas corren automáticamente en cada push o pull request mediante GitHub Actions.
 
 7. **(Opcional) Ejecutar el corte vertical**
    Para ver el flujo completo de dominio (catálogo → pedidos → pagos → entrega → notificaciones) simulado por consola:

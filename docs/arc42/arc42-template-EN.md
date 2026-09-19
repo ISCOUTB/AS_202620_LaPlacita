@@ -134,7 +134,7 @@ LaPlacita se despliega como un **monolito modular**: un único proceso Next.js q
  
 ```mermaid
 graph TD
-    API["API Backend (Next.js App Router)\napp/health/route.js\nEndpoint /health"]
+    API["API Backend (Next.js App Router)\napp/api/v1/health/route.js\nEndpoint /api/v1/health"]
     CV["Corte vertical ejecutable\nsrc/corte-vertical.js\nFlujo catálogo → pedidos → pagos\n→ entrega → notificaciones"]
 
     CAT["catalogo\nsrc/modules/catalogo/\nMenús, productos e inventario\npor establecimiento (tiendaId)"]
@@ -341,10 +341,10 @@ sequenceDiagram
 
 ### 6.6 — Contrato de API y prueba de contrato (S7)
 
-**Evidencia:** `openapi.yaml` (contrato OpenAPI 3.1 v1), `tests/contract-openapi.test.js` (prueba de contrato), `docs/adr/0006-estrategia-integracion-sincrona.md` (ADR de integración).
+**Evidencia:** `openapi.yaml` (contrato OpenAPI 3.1 v1), `tests/contract-openapi.test.js` (prueba de contrato), `docs/adr/0006-estrategia-integracion-sincrona.md` (ADR de integración) ratificado por `docs/adr/0008-ratificacion-estrategia-integracion-sincrona.md`.
 **Pipeline:** job `contract-test` en `.github/workflows/ci.yml` que ejecuta `node --test tests/contract-openapi.test.js`.
 **Estrategia de integración:** Síncrona in-process mediante importaciones ESM directas (ADR-0006).
-**Implementación HTTP:** 10 endpoints REST implementados en `app/api/v1/*` siguiendo el contrato: `GET /api/v1/health`, `GET /api/v1/catalogo/productos/{productoId}`, `GET /api/v1/catalogo/tiendas/{tiendaId}/productos`, `POST /api/v1/pedidos`, `GET /api/v1/pedidos/{pedidoId}`, `PUT /api/v1/pedidos/{pedidoId}`, `POST /api/v1/pagos/{pedidoId}/confirmar`, `POST /api/v1/entrega/{pedidoId}/listo`, `POST /api/v1/entrega/{pedidoId}/validar`, `POST /api/v1/notificaciones`, `GET /api/v1/notificaciones/{pedidoId}`.
+**Implementación HTTP:** 11 operaciones REST (10 paths) implementadas en `app/api/v1/*` siguiendo el contrato: `GET /api/v1/health`, `GET /api/v1/catalogo/productos/{productoId}`, `GET /api/v1/catalogo/tiendas/{tiendaId}/productos`, `POST /api/v1/pedidos`, `GET /api/v1/pedidos/{pedidoId}`, `PUT /api/v1/pedidos/{pedidoId}`, `POST /api/v1/pagos/{pedidoId}/confirmar`, `POST /api/v1/entrega/{pedidoId}/listo`, `POST /api/v1/entrega/{pedidoId}/validar`, `POST /api/v1/notificaciones`, `GET /api/v1/notificaciones/{pedidoId}`.
 **El contrato define 10 paths con 11 operaciones REST** (health, catalogo, pedidos, pagos, entrega, notificaciones) con esquemas de request/response versionados. La prueba de contrato valida que la implementación de los módulos cumple el contrato, que cada path del `openapi.yaml` tiene su `route.js` en `app/api/v1/`, y **falla ante cambios incompatibles** (ej. si `crearPedido` deja de recibir `tiendaId`). Las rutas delegan en `src/modules/*` (dominio puro, ADR-0001); la capa HTTP (`app/api/v1/`) es solo el adaptador del contrato, no contiene lógica de negocio.
 
 ---

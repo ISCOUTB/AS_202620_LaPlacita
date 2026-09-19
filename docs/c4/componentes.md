@@ -31,13 +31,13 @@ flowchart TB
     CV -.->|orquestación| PAG
     CV -.->|orquestación| ENT
     CV -.->|orquestación| NOT
-    PED -->|"C/S obtenerProducto()<br/>HTTP REST/JSON"| CAT
-    PAG -->|"C/S obtenerPedido()/cambiarEstado()<br/>HTTP REST/JSON"| PED
-    ENT -->|"C/S + V-01 pin directo<br/>HTTP REST/JSON"| PED
-    PED -.->|"OHS notificarCambioEstado()<br/>HTTP REST/JSON"| NOT
-    PAG -.->|"OHS notificarCambioEstado()<br/>HTTP REST/JSON"| NOT
-    ENT -.->|"OHS notificarCambioEstado()<br/>HTTP REST/JSON"| NOT
-    PAG -->|"ACL futura<br/>HTTPS / JSON"| PASAREGA
+    PED -->|"C/S obtenerProducto()<br/>import ESM síncrono"| CAT
+    PAG -->|"C/S obtenerPedido()/cambiarEstado()<br/>import ESM síncrono"| PED
+    ENT -->|"C/S + V-01 pin directo<br/>import ESM síncrono"| PED
+    PED -.->|"OHS notificarCambioEstado()<br/>import ESM síncrono"| NOT
+    PAG -.->|"OHS notificarCambioEstado()<br/>import ESM síncrono"| NOT
+    ENT -.->|"OHS notificarCambioEstado()<br/>import ESM síncrono"| NOT
+    PAG -->|"ACL futura<br/>HTTPS / JSON"| PASARELA
     CAT --> S_CAT
     PED --> S_PED
     PAG --> S_PAG
@@ -55,11 +55,5 @@ flowchart TB
 | Azul medio (`containerDb`) | Almacén interno del contexto (`Map` / array en memoria). |
 | Azul petróleo (`appService`) | Orquestador / Application Service — no es un contexto de dominio. |
 | Azul claro (`planned`) | Contenedor **planeado (Corte 2)**: aún sin implementación, se documenta su rol previsto. |
-<<<<<<< HEAD
-| Gris (`System_Ext`) | Servicio externo integrado fuera del control del equipo. |
-| Línea delimitadora (`System_Boundary`) | Frontera lógica que agrupa los contenedores internos de La Placita. |
-| $\rightarrow$ Flechas con etiqueta | Relación de comunicación; la etiqueta indica qué se intercambia y el protocolo (HTTP REST/JSON, import ESM síncrono, REST, SQL, TCP). |
-=======
 | Gris (`extSystem`) | Sistema externo integrado fuera del control del equipo. |
 | $\rightarrow$ Flechas con etiqueta | Relación de comunicación; la etiqueta indica qué se intercambia y el patrón (C/S, OHS, ACL). |
->>>>>>> e706ab1 (Ajuste de colometria de c4, componentes.md)

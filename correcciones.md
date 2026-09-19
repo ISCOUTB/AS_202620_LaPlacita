@@ -200,10 +200,10 @@
 | `docs/aspectos.md` relacionable: tabla Aspecto→Contexto(s) + columna Contexto | `docs/aspectos.md` | Sí | A-01→Pedidos, A-02→todos (SK), A-03→Notificaciones, A-04→Pagos, A-05→orquestador, A-06→Entrega+Pedidos |
 | `docs/ia.md` al día: cierre de "pendientes" 30/08 y 06/09 + filas 13/09 con Rechazado y motivo | `docs/ia.md` | Parcial | Columna Validación incluye "Se rechazó … porque …" |
 | `README.md`: árbol + estado S6 + enlaces | `README.md` | Sí | Enlace `correcciones.md` ya no roto |
-| SonarCloud | — | No resuelto | Sin `SONAR_TOKEN` no hay análisis en vivo; queda como pendiente declarado. No bloquea S6 pero resta en transversal. |
+| SonarCloud | `sonar-project.properties` | Config parcial | Org/projectKey reales (`isco-utb` / `ISCOUTB_AS_202620_LaPlacita`); falta el secreto `SONAR_TOKEN` para el análisis en vivo. No bloquea S6 pero resta en transversal. |
 
 ### Pendiente trasladado (fuera de S6)
-- Configurar `SONAR_TOKEN` + org/projectKey reales (dueño: equipo, antes de S7). `sonar-project.properties` todavía tiene los placeholders `REEMPLAZAR-POR-ORGANIZACION-SONARCLOUD`/`REEMPLAZAR-POR-PROJECTKEY-SONARCLOUD`: requiere que alguien del equipo cree/vincule el proyecto en sonarcloud.io con su cuenta de GitHub y genere el token — no es algo que se pueda completar sin esas credenciales.
+- **SonarCloud:** `sonar-project.properties` ya usa los datos reales (`isco-utb` / `ISCOUTB_AS_202620_LaPlacita`), por lo que solo falta el secreto `SONAR_TOKEN` en GitHub Actions. Requiere que alguien del equipo genere el token en sonarcloud.io con su cuenta de GitHub — no es algo que se pueda completar sin esas credenciales.
 
 ### Actualización (13/09/2026) — cierre de deuda de código V-01/V-03
 Lo que en la fila anterior estaba planificado para S7 se implementó el mismo día, sin romper `corte-1`:
@@ -230,7 +230,7 @@ Lo que en la fila anterior estaba planificado para S7 se implementó el mismo d�
 ---
 
 ## Semana 7 · Evidencia S7 — Contrato de API y prueba de contrato (2026-09-16)
-**Commit base:** HEAD · **Entrega incremental calificada una sola vez.**
+**Commit base:** `90f510e` (2026-09-17) · **Entrega incremental calificada una sola vez.**
 
 ### Hallazgos del revisor
 | # | Hallazgo | Detectado por el sistema |
@@ -259,6 +259,21 @@ Lo que en la fila anterior estaba planificado para S7 se implementó el mismo d�
 | app/health/route.js movido a app/api/v1/health/route.js | app/api/v1/health/route.js | Si | Ruta anterior eliminada |
 | correcciones.md actualizado — seccion S7 | correcciones.md | Si | Documenta proceso S7 |
 
+### Actualización (17/09/2026) — cierre y alineación de la evidencia S7
+Al integrar los cambios llegados del remoto se completó la evidencia y se corrigió el desfase entre el contrato y las rutas:
+
+**Pipeline verificado (18/09/2026):** en el commit evaluado `90f510e` (run [35181554516](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/35181554516)) los jobs `test` y `contract-test` pasan; en el commit intermedio `63141232` (run [35383329950](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/35383329950)) también. Conteos locales verificados: `npm test` **37/37** y `npm run contract-test` **23/23**.
+| Correccion | Archivo(s) | Detectado? | Observacion |
+|---|---|---|---|
+| Rutas alineadas al contrato — `pedidoId`/`productoId` desde el path param y `tiendaId` desde el query | app/api/v1/*/route.js | Si | Antes se leían del query/body |
+| Catalogo con rutas dinamicas reales de Next.js | app/api/v1/catalogo/tiendas/[tiendaId]/productos/route.js | Si | Ya no reimplementa el enrutado a mano |
+| openapi.yaml sin servidor de Railway | openapi.yaml | Si | Railway no esta desplegado (no declarar produccion inexistente) |
+| docs/adr/0007-v01-v03-dueno-pin-metodos-intencion.md creado | docs/adr/0007-v01-v03-dueno-pin-metodos-intencion.md | Si | Registra V-01/V-03 sin reescribir ADR-0005 |
+| ADR-0005 restaurado a su estado aceptado | docs/adr/0005-reajuste-contextos-propiedad.md | Si | Se retiro la seccion "Actualización" (ADR inmutable) |
+| docs/evidencia-fallo-contrato-s7.md creado | docs/evidencia-fallo-contrato-s7.md | Si | Run en rojo reproducible del contrato |
+| Conteos al día en documentacion (37/37 test, 23/23 contrato) | README.md, docs/aspectos.md, docs/ia.md | Si | A-07 y README alineados |
+| Prueba de contrato ajustada por V-01 (`obtenerPedido` devuelve copia `Object.freeze`) | tests/contract-openapi.test.js | Si | Se lee el PIN con `pedidos.obtenerPedido(...)` |
+
 ### Entrega S7 completa
 | Que se entrega | Estado | Evidencia |
 |---|---|---|
@@ -272,7 +287,7 @@ Lo que en la fila anterior estaba planificado para S7 se implementó el mismo d�
 | Alineacion con repositorio | Listo | Todos los archivos corresponden al codigo actual |
 
 ### Pendiente trasladado
-- Configurar SONAR_TOKEN + org/projectKey reales (pendiente de S5/S6).
+- **SonarCloud (PENDIENTE REAL — provoca CI en rojo):** el secreto `SONAR_TOKEN` **ya está cargado** (el paso "Análisis estático con SonarCloud" se ejecuta y no se omite), pero el job `sonar` **falla en ~11 s** en `90f510e` y en el commit intermedio `63141232`. Causa más probable: la organización/proyecto `isco-utb` / `ISCOUTB_AS_202620_LaPlacita` no está creado o no está vinculado a la cuenta dueña del token en sonarcloud.io. Acción del equipo (ver `docs/evidencia-contrato-s7.md` §11): (1) crear/vincular el proyecto en sonarcloud.io con org `isco-utb`; (2) instalar la GitHub App de SonarCloud en el repo; (3) regenerar `SONAR_TOKEN` desde esa cuenta; (4) re-correr y citar el run verde + URL del Quality Gate.
 - V-01/V-03 ya implementados el 13/09 en código (`pedidos.asignarPin` + copia `Object.freeze`; métodos de intención) — decisión en `docs/adr/0007-v01-v03-dueno-pin-metodos-intencion.md`.
 
 ### Resumen de correcciones que el sistema automatizado no detecta automaticamente
