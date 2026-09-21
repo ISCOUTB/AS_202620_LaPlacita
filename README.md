@@ -125,7 +125,7 @@ Los prototipos de interfaz están planeados para el Corte 2 (contendores App/Web
   ├── jsconfig.json
   ├── package.json 
   ├── package-lock.json
-├── app/
+  ├── app/
   │   └── api/v1/
   │         ├── health/route.js        # GET /api/v1/health
   │         ├── catalogo/productos/[productoId]/route.js
