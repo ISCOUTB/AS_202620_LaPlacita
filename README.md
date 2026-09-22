@@ -4,13 +4,6 @@
 ![Estado](https://img.shields.io/badge/Estado-En%20desarrollo-yellow)
 ![Click & Collect](https://img.shields.io/badge/Click%20%26%20Collect-Pre--Pedidos-success)
 
-## Arranque rápido (un solo comando)
-
-```bash
-npm install && npm run dev
-```
-
-Servidor en `http://localhost:3000` (verificación en `/api/v1/health`). Pruebas: `npm test` (37) y `npm run contract-test` (23).
 --- 
 
 ## Índice
