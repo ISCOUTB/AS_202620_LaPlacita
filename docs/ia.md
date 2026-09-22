@@ -1,6 +1,18 @@
 # Registro de uso de Inteligencia Artificial (IA)
 > Este documento registra de manera transparente el uso de de herramientas de Inteligencia Artificial durante el desarrollo del proyecto **LaPlacita**, con el propósito de mantener la transparencia en el proceso de elaboración de la documentación, diseño y desarrollo del sistema, bajo la supervisión directa del equipo de desarrollo.
 
+## Resumen: qué se aceptó y qué se rechazó
+
+- Entradas registradas: 25 (06/08/2026 al 18/09/2026).
+- Aceptadas y verificadas por el equipo: 19 (columna Validación con ejecución o confirmación).
+- Aceptadas con ajustes del equipo: 3 entradas.
+- Entradas con propuestas rechazadas y justificadas: 6 (8 propuestas en total).
+- Propuestas rechazadas: ampliar C4 a más detalle; restaurar Árbol de Utilidad en aspectos.md;
+  auto-corregir V-01/V-03 el mismo día; microservicios o renombrar módulos;
+  declarar corte-vertical.js como sexto contexto; run en rojo en master;
+  editar el ADR-0006 ya aceptado; párrafos no sustentables por el equipo.
+- Detalle completo por fecha y herramienta en la bitácora (§1).
+
 ---
 
 # 1. Bitácora de Interacciones y Resultados
