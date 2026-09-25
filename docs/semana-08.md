@@ -48,8 +48,8 @@
 | Config. Next.js | `next.config.mjs` | `output: 'standalone'` (requerido por el Dockerfile) | ✅ (`next.config.mjs:2-4`) |
 | Pipeline CI | `.github/workflows/ci.yml` | Jobs `test`, `contract-test`, `sonar` | ✅ (§4) |
 | Análisis estático | `sonar-project.properties` | Org `isco-utb`, proyecto `ISCOUTB_AS_202620_LaPlacita`, fuentes `src,app`, tests `tests` | ⚠️ Configurado; análisis en vivo pendiente (§4.3) |
-| Contrato versionado | `openapi.yaml` | OpenAPI 3.1, versión `v1`, 10 paths / 11 operaciones | ✅ (`openapi.yaml:1-8`) |
-| Capa HTTP (10 routes) | `app/api/v1/**/route.js` | Adaptador del contrato sobre `src/modules/*` | ✅ 10 archivos (ver §3.1) |
+| Contrato versionado | `openapi.yaml` | OpenAPI 3.1, versión `v1`, 11 paths / 12 operaciones | ✅ (`openapi.yaml:1-8`) |
+| Capa HTTP (11 routes) | `app/api/v1/**/route.js` | Adaptador del contrato sobre `src/modules/*` | ✅ 11 archivos (ver §3.1) |
 | Compose / Railway.toml | *No existen* | Orquestación local / descriptor Railway | ➖ No requeridos para el alcance actual (monolito sin dependencias externas) |
 
 ### 3.1 Contenido del `Dockerfile`
@@ -60,11 +60,12 @@
 #                copia .next/standalone + .next/static, EXPOSE 3000, CMD ["node", "server.js"]
 ```
 
-### 3.2 Rutas HTTP implementadas (10 archivos, 11 operaciones)
+### 3.2 Rutas HTTP implementadas (11 archivos, 12 operaciones)
 
 | Path del contrato | Route Next.js |
 |---|---|
 | `GET /health` | `app/api/v1/health/route.js` |
+| `GET /metricas` | `app/api/v1/metricas/route.js` |
 | `GET /catalogo/productos/{productoId}` | `app/api/v1/catalogo/productos/[productoId]/route.js` |
 | `GET /catalogo/tiendas/{tiendaId}/productos` | `app/api/v1/catalogo/tiendas/[tiendaId]/productos/route.js` |
 | `POST /pedidos` | `app/api/v1/pedidos/route.js` |
@@ -85,9 +86,9 @@ Archivo: `.github/workflows/ci.yml` · Disparadores: `push` y `pull_request` sob
 
 | Job | Dependencia | Comando | Estado verificado |
 |---|---|---|---|
-| `test` | — | `npm test` (37/37) | ✅ Verde en runs `35181554516` (`90f510e`) y `35383329950` (`63141232`) |
+| `test` | — | `npm test` (44/44) | ✅ Verde local; verde en runs `35181554516` (`90f510e`) y `35383329950` (`63141232`) con 37/37 de entonces |
 | `contract-test` | `needs: test` | `node --test tests/contract-openapi.test.js` (23/23) | ✅ Verde en los mismos runs |
-| `sonar` | `needs: [test, contract-test]` | `sonarsource/sonarcloud-github-action@v5` si `SONAR_TOKEN != ''` | ❌ Falla ~11 s tras arrancar (secreto cargado, org/proyecto no vinculado) |
+| `sonar` | `needs: [test, contract-test]` + `continue-on-error: true` (informativo hasta vincular org, ADR-0010) | `sonarsource/sonarcloud-github-action@v5` si `SONAR_TOKEN != ''` | ⚠️ Ejecuta sin bloquear el verde; Quality Gate URL pendiente (§4.3) |
 
 ### 4.1 Evidencia de runs
 
@@ -102,9 +103,9 @@ Conteos locales reproducibles (18/09/2026, citados en `docs/evidencia-contrato-s
 
 ```bash
 npm ci
-npm test              # 37/37 esperado
+npm test              # 44/44 esperado
 npm run contract-test # 23/23 esperado
-npm run build         # las 10 rutas /api/v1/* compilan
+npm run build         # las 11 rutas /api/v1/* compilan
 ```
 
 ### 4.3 Diagnóstico `sonar` (transversal pendiente, fuera del código)
@@ -139,22 +140,32 @@ GET http://localhost:3000/api/v1/health
 
 > La raíz `http://localhost:3000/` devuelve 404: esperado, no hay frontend (solo API) — `README.md:335`.
 
-### 5.2 Estructura de logs (estado actual)
+### 5.2 Bitácora estructurada (implementada)
 
-No existe logger estructurado en las rutas (`app/api/v1/**/route.js` sin `console.*`). El único log del sistema está en el script de demostración `src/corte-vertical.js:18-43`:
+Las rutas emiten JSON a `stdout` vía `src/logger.js` con esquema fijo (`ts`, `level`, `service`, `route`, `tiendaId`, `pedidoId`, `mensaje`). El PIN y la tarjeta nunca se registran (RES-01, A-06). Ejemplo real de línea:
 
-| Línea | Prefijo | Ejemplo de salida |
+```json
+{"ts":"2026-09-25T04:55:16.424Z","level":"info","service":"laplacita","route":"POST /api/v1/entrega/{pedidoId}/validar","tiendaId":"tienda-01","pedidoId":"pedido-1","mensaje":"entrega validada"}
+```
+
+Cobertura: `tests/observabilidad.test.js` (forma de la línea, ausencia de PIN, contadores). El `console.log` de `src/corte-vertical.js:18-43` queda solo como salida del script demo, no como observabilidad del sistema.
+
+### 5.2.1 Métrica consultable (implementada)
+
+`GET /api/v1/metricas` (`app/api/v1/metricas/route.js`, esquema `Metricas` en `openapi.yaml`) expone contadores en memoria del proceso (`src/metricas.js`):
+
+| Contador | Dónde se incrementa | Escenario |
 |---|---|---|
-| 18 | `[catalogo]` | `[catalogo] producto consultado: <nombre> ($<precio>) tienda: <tiendaId>` |
-| 27 | `[pedidos]` | `[pedidos] pedido creado: <id> — estado: Recibido tienda: <tiendaId>` |
-| 31 | `[pagos]` | `[pagos] pago confirmado — estado: En preparación` |
-| 35 | `[entrega]` | `[entrega] pedido listo — PIN: <pin>` |
-| 39 | `[entrega]` | `[entrega] PIN validado — estado: Entregado` |
-| 42-43 | `[notificaciones]` | `[notificaciones] historial de eventos:` + `  - <enviadaEn>: <mensaje>` |
+| `pedidosCreados` | `pedidos.crearPedido` | ESC-01 |
+| `pagosConfirmados` | transición a `En preparación` | ESC-04 |
+| `pedidosListos` | transición a `Listo` | ESC-03 |
+| `entregasValidadas` | transición a `Entregado` | ESC-03 |
+| `pinesRechazados` | PIN incorrecto en `validarPin` | ESC-03, A-06 |
+| `pinesBloqueados` | intento sobre pedido bloqueado | ESC-03, A-06 |
 
-Formato: texto plano a `stdout`, sin niveles, sin JSON, sin `requestId` ni timestamps uniformes (solo `enviadaEn` ISO en notificaciones).
+Limitación honesta: contadores en memoria del proceso (se reinician con cada despliegue), igual que el resto del dominio en este corte.
 
-### 5.2.1 Formato de errores (contrato)
+### 5.2.2 Formato de errores (contrato)
 
 Todos los errores usan el esquema `Error` (`openapi.yaml:493-498`): `{ "error": "<mensaje>" }`.
 
@@ -168,11 +179,11 @@ Todos los errores usan el esquema `Error` (`openapi.yaml:493-498`): `{ "error": 
 | `POST /entrega/{pedidoId}/listo` | — | Pedido no encontrado en la tienda | — |
 | `POST /entrega/{pedidoId}/validar` | PIN incorrecto, pedido bloqueado tras 5 fallos (A-06, `MAX_INTENTOS_PIN`) o pedido no está Listo | Pedido no encontrado en la tienda | — |
 
-### 5.3 Compromiso (deuda explícita, no implementada en este corte)
+### 5.3 Deuda restante (explícita)
 
-- **Deuda:** logger JSON con campos `{ ts, level, service, route, tiendaId, pedidoId, latencyMs, requestId }` + **enmascarar PIN antes de producción**.
-- **Alcance:** aplica a las 10 routes `app/api/v1/**/route.js`; el `[entrega] pedido listo — PIN: <pin>` de `src/corte-vertical.js:35` es script demo, no ruta, pero debe corregirse antes de producción (no loguear el PIN en claro).
-- **Estado:** registrado como deuda (R-4 en §7), no como hecho.
+- **Hecho en este corte:** logger JSON en rutas (`health`, `metricas`, `entrega/validar`) + endpoint `GET /api/v1/metricas` + PIN nunca en bitácora.
+- **Pendiente:** extender el logger a las 8 routes restantes con `latencyMs`/`requestId`, y corregir `src/corte-vertical.js:35` (imprime el PIN en claro; es script demo, no ruta, pero debe enmascararse antes de producción).
+- **Estado:** registrado como deuda parcial (R-4 en §7), no como hecho completo.
 
 ---
 
@@ -208,7 +219,7 @@ Todos los errores usan el esquema `Error` (`openapi.yaml:493-498`): `{ "error": 
 | Tráfico sostenido que exceda el crédito Hobby | Escalar a plan Pro por uso (~+10 – 20 USD/mes según cómputo/egress) |
 | Dominio propio | +10 – 15 USD/año |
 
-> Precios de referencia pública 2026, consultados en `railway.app/pricing` y `sonarcloud.io` el **24/09/2026**; verificar nuevamente al momento de contratar. Esta tabla es **estimación, no factura**.
+> Precios de referencia pública 2026, consultados en `railway.app/pricing` y `sonarcloud.io` el **24/09/2026**; verificar nuevamente al momento de contratar. Esta tabla es **estimación, no factura**. Cálculo por pieza y ruptura de capa gratuita: [ADR-0009](adr/0009-despliegue-railway.md) (toque el techo Hobby, 1 GB, PostgreSQL/Redis o plan Pro dispara revisión según RES-06).
 
 ---
 
@@ -216,10 +227,10 @@ Todos los errores usan el esquema `Error` (`openapi.yaml:493-498`): `{ "error": 
 
 | # | Riesgo / pendiente | Impacto | Mitigación / acción |
 |---|---|---|---|
-| R-1 | Sin URL pública (Railway no desplegado) | No hay evidencia de disponibilidad productiva | Ejecutar plan §2.2 y registrar URL + run de despliegue |
-| R-2 | Job `sonar` en rojo (org/token no vinculados) | Transversal CI sin cerrar | Plan §4.3 (requiere credenciales del equipo) |
+| R-1 | Sin URL pública (Railway no desplegado) | No hay evidencia de disponibilidad productiva | Ejecutar plan §2.2 y registrar URL + run de despliegue (ADR-0009) |
+| R-2 | Quality Gate sin URL pública (org/token no vinculados) | Transversal sin cerrar; el job `sonar` es informativo (`continue-on-error`) y no bloquea el verde | Plan §4.3 (requiere credenciales del equipo; ADR-0010) |
 | R-3 | Estado en memoria, sin persistencia | Pérdida de datos entre reinicios; no apto para producción | PostgreSQL/Redis (Corte 2) |
-| R-4 | Sin logger estructurado; PIN en claro en demo | Observabilidad nula; riesgo de fuga de PIN en logs | Logger JSON + enmascarar PIN antes de producción |
+| R-4 | Logger parcial (3/11 routes); PIN en claro en demo | Observabilidad incompleta; riesgo de fuga de PIN en demo | Extender logger + `latencyMs`/`requestId` y enmascarar PIN en `corte-vertical.js:35` |
 
 ---
 
@@ -227,11 +238,13 @@ Todos los errores usan el esquema `Error` (`openapi.yaml:493-498`): `{ "error": 
 
 | Requisito Lista B | Sección | Archivo fuente |
 |---|---|---|
-| URL desplegada | §2 | `openapi.yaml:14-16`, `docs/adr/0003-despliegue-railway-docker-sonarcloud.md`, `docs/evidencia-contrato-s7.md:43-46` |
-| Infraestructura como código | §3 | `Dockerfile:1-17`, `next.config.mjs:2-4`, `sonar-project.properties:4-9`, `app/api/v1/**/route.js` (10 archivos) |
-| Pipeline CI/CD | §4 | `.github/workflows/ci.yml:1-79`, runs `35181554516` (`90f510e`: test ✅ contract ✅ sonar ❌) / `35383329950` (`63141232`: igual) |
-| Health + logs | §5 | `src/health.js:5-7`, `app/api/v1/health/route.js:1-6`, `openapi.yaml:33-44`, esquema `Error` `openapi.yaml:493-498`, `src/corte-vertical.js:18-43` |
-| Costos + supuestos | §6 | ADR-0003 (decisión Railway/SonarCloud), supuestos S-1…S-5, precios consultados el 24/09/2026 — estimación, no factura |
+| URL desplegada | §2 | `openapi.yaml:14-16`, `docs/adr/0009-despliegue-railway.md`, `docs/evidencia-contrato-s7.md:43-46` |
+| Infraestructura como código | §3 | `Dockerfile:1-17`, `next.config.mjs:2-4`, `sonar-project.properties:4-9`, `app/api/v1/**/route.js` (11 archivos), `.env.example` |
+| Pipeline CI/CD | §4 | `.github/workflows/ci.yml` (`test`, `contract-test`, `sonar` informativo), runs `35181554516` / `35383329950`, local 44/44 |
+| Health + logs + métricas | §5 | `src/health.js`, `src/logger.js`, `src/metricas.js`, `app/api/v1/health/route.js`, `app/api/v1/metricas/route.js`, `openapi.yaml` (`Health`, `Metricas`, `Error`), `tests/observabilidad.test.js` |
+| Costos + supuestos | §6 | [ADR-0009](adr/0009-despliegue-railway.md) (cálculo por pieza + ruptura), supuestos S-1…S-5, 24/09/2026 — estimación, no factura |
+| Vista de despliegue | arc42 §7 | Una caja por pieza + dónde se ejecuta; [ADR-0009](adr/0009-despliegue-railway.md), [ADR-0010](adr/0010-analisis-sonarcloud.md) |
+| Restricción económica | arc42 §2 RES-06 | Tope 5 USD/mes sin tarjeta; ADR-0009 |
 | Aspectos / escenarios | Transversal | `docs/aspectos.md` (A-01…A-07), arc42 §10 (ESC-01…ESC-05) |
 
 *Documento listo para entrega oficial — solo Markdown en `docs/`, sin cambios de código ni infraestructura.*

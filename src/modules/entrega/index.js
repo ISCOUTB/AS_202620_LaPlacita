@@ -10,6 +10,7 @@ import {
   marcarListo as marcarListoPedido,
   confirmarEntrega,
 } from '../pedidos/index.js';
+import { contar } from '../../metricas.js';
 
 function generarPin() {
   return String(Math.floor(1000 + Math.random() * 9000));
@@ -40,10 +41,12 @@ function validarPin(pedidoId, tiendaId, pinIngresado) {
     throw new Error(`No se puede validar entrega de un pedido en estado ${pedido.estado}`);
   }
   if ((intentosFallidos.get(claveIntentos(pedidoId, tiendaId)) ?? 0) >= MAX_INTENTOS_PIN) {
+    contar('pinesBloqueados');
     throw new Error(`Pedido ${pedidoId} bloqueado por exceso de intentos fallidos`);
   }
   if (pedido.pin !== pinIngresado) {
     intentosFallidos.set(claveIntentos(pedidoId, tiendaId), (intentosFallidos.get(claveIntentos(pedidoId, tiendaId)) ?? 0) + 1);
+    contar('pinesRechazados');
     throw new Error('PIN incorrecto');
   }
 

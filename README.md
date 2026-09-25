@@ -137,12 +137,15 @@ Los prototipos de interfaz están planeados para el Corte 2 (contendores App/Web
   │         ├── entrega/[pedidoId]/listo/route.js
   │         ├── entrega/[pedidoId]/validar/route.js
   │         ├── notificaciones/route.js
-  │         └── notificaciones/[pedidoId]/route.js   # capa HTTP del contrato openapi.yaml
+  │         ├── notificaciones/[pedidoId]/route.js
+  │         └── metricas/route.js   # GET /api/v1/metricas (capa HTTP del contrato openapi.yaml)
   ├── openapi.yaml              # Contrato OpenAPI 3.1 (v1)
   ├── scripts/
   │   └── medir-aislamiento.js   # Medición reproducible de RES-05 (0 accesos cruzados)
   ├── src/
   │   ├── health.js              # Lógica pura del endpoint /api/v1/health
+  │   ├── logger.js              # Bitácora JSON (ts, level, service, route, tiendaId, pedidoId)
+  │   ├── metricas.js            # Contadores de ESC-01/03/04 para GET /api/v1/metricas
   │   ├── corte-vertical.js      # Corte vertical ejecutable (flujo completo con tiendaId)
   │   └── modules/
   │         ├── catalogo/
@@ -160,7 +163,8 @@ Los prototipos de interfaz están planeados para el Corte 2 (contendores App/Web
   │      ├── modulos.test.js
   │      ├── corte-vertical.test.js
   │      ├── aislamiento.test.js
-  │      └── contract-openapi.test.js
+  │      ├── contract-openapi.test.js
+  │      └── observabilidad.test.js   # logger JSON + GET /metricas (6 pruebas)
   └── docs/
         ├── adr/
         │     ├── 0001-adopcion-monolito-modular.md
@@ -170,7 +174,9 @@ Los prototipos de interfaz están planeados para el Corte 2 (contendores App/Web
         │     ├── 0005-reajuste-contextos-propiedad.md
         │     ├── 0006-estrategia-integracion-sincrona.md
         │     ├── 0007-v01-v03-dueno-pin-metodos-intencion.md
-        │     └── 0008-ratificacion-estrategia-integracion-sincrona.md
+        │     ├── 0008-ratificacion-estrategia-integracion-sincrona.md
+        │     ├── 0009-despliegue-railway.md
+        │     └── 0010-analisis-sonarcloud.md
         ├── arc42/
         │    ├── images/
         │    │     └── arc42-logo.png
@@ -236,8 +242,10 @@ La documentación del proyecto sigue rigurosamente los lineamientos del curso y 
 * Suites en verde: **37 pruebas** (`npm test`) y `npm run contract-test` (**23/23**)
 * Nota: Railway está documentado en ADR-0003 como **decisión de despliegue**, pero **no está desplegado**; por eso el contrato solo expone el servidor local (`/api/v1`)
 
-**Semana 8 — Despliegue, operación y costos (24/09/2026)**
-* Evidencia S8 en [`docs/semana-08.md`](docs/semana-08.md): sin URL pública (solo `http://localhost:3000` + `/api/v1/health`); IaC trazada (`Dockerfile:1-17`, `.github/workflows/ci.yml:1-79`, `src/health.js:5-7`, `app/api/v1/health/route.js:1-6`, `openapi.yaml:33-44,493-498`); pipeline `test` ✅ `contract-test` ✅ `sonar` ❌ (runs [35181554516](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/35181554516) y [35383329950](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/35383329950)); costos 0–5 USD/mes con supuestos S-1…S-5
+**Semana 8 — Despliegue, operación y costos (24-25/09/2026)**
+* Evidencia S8 en [`docs/semana-08.md`](docs/semana-08.md): sin URL pública (solo `http://localhost:3000` + `/api/v1/health`); IaC trazada (`Dockerfile:1-17`, `.github/workflows/ci.yml`, `src/health.js`, `app/api/v1/**/route.js`, `openapi.yaml` 11 paths / 12 operaciones); pipeline `test` ✅ `contract-test` ✅ `sonar` informativo (`continue-on-error` hasta vincular org, ADR-0010); costos 0–5 USD/mes con supuestos S-1…S-5 y ruptura en [ADR-0009](docs/adr/0009-despliegue-railway.md)
+* Observabilidad: bitácora JSON en rutas ([`src/logger.js`](src/logger.js), sin PIN ni tarjeta) + `GET /api/v1/metricas` ([`src/metricas.js`](src/metricas.js): pedidos, pagos, listos, entregas, rechazos y bloqueos por ESC-01/03/04) con [`tests/observabilidad.test.js`](tests/observabilidad.test.js)
+* arc42 §7 vista de despliegue (una caja por pieza + dónde se ejecuta) y §2 RES-06 (tope 5 USD/mes sin tarjeta); suites en verde: **44 pruebas** (`npm test`) y `npm run contract-test` (**23/23**)
 * T1 (SonarCloud) queda en diagnóstico y plan, no en cumplido: falta run verde + URL del Quality Gate
 
 ---

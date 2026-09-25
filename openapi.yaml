@@ -43,6 +43,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/Health'
 
+  /metricas:
+    get:
+      tags: [health]
+      summary: Métricas de operación asociadas a los escenarios (ESC-01, ESC-03, ESC-04)
+      operationId: obtenerMetricas
+      responses:
+        '200':
+          description: Contadores en memoria del proceso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Metricas'
+
   /catalogo/productos/{productoId}:
     get:
       tags: [catalogo]
@@ -361,6 +374,41 @@ components:
           enum: [ok]
       required:
         - status
+
+    Metricas:
+      type: object
+      properties:
+        pedidosCreados:
+          type: integer
+          minimum: 0
+          description: Total de pedidos creados (ESC-01)
+        pagosConfirmados:
+          type: integer
+          minimum: 0
+          description: Transiciones a En preparación (ESC-04)
+        pedidosListos:
+          type: integer
+          minimum: 0
+          description: Transiciones a Listo (ESC-03)
+        entregasValidadas:
+          type: integer
+          minimum: 0
+          description: Transiciones a Entregado con PIN válido (ESC-03)
+        pinesRechazados:
+          type: integer
+          minimum: 0
+          description: Intentos con PIN incorrecto (ESC-03, A-06)
+        pinesBloqueados:
+          type: integer
+          minimum: 0
+          description: Intentos sobre pedidos bloqueados tras 5 fallos (ESC-03, A-06)
+      required:
+        - pedidosCreados
+        - pagosConfirmados
+        - pedidosListos
+        - entregasValidadas
+        - pinesRechazados
+        - pinesBloqueados
 
     Producto:
       type: object

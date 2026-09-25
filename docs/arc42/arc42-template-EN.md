@@ -59,6 +59,7 @@ Las siguientes restricciones condicionan las decisiones arquitectónicas de LaPl
 | RES-02 | Equipo de 4 integrantes | Organizacional | Limita las tácticas viables (por ejemplo, descarta una descomposición extensa en microservicios) |
 | RES-03 | Entrega en un semestre académico | Organizacional / temporal | Obliga a priorizar los aspectos de mayor riesgo (A-01, A-02, A-04, A-06) sobre los de prioridad media |
 | RES-04 | Aplicación móvil como canal principal | Técnica / producto | El sistema está planteado para usuarios que necesitan realizar pedidos rápidamente desde dispositivos móviles. | 
+| RES-06 | Tope de costo de hosting de 5 USD/mes en capa gratuita o de prueba, sin tarjeta asociada a la cuenta | Económica / plataforma | El despliegue (ADR-0009) debe operar dentro del crédito o trial de Railway; superar el tope o exigir tarjeta dispara revisión de alcance antes de contratar |
 
 ---
 
@@ -345,7 +346,37 @@ sequenceDiagram
 **Pipeline:** job `contract-test` en `.github/workflows/ci.yml` que ejecuta `node --test tests/contract-openapi.test.js`.
 **Estrategia de integración:** Síncrona in-process mediante importaciones ESM directas (ADR-0006).
 **Implementación HTTP:** 11 operaciones REST (10 paths) implementadas en `app/api/v1/*` siguiendo el contrato: `GET /api/v1/health`, `GET /api/v1/catalogo/productos/{productoId}`, `GET /api/v1/catalogo/tiendas/{tiendaId}/productos`, `POST /api/v1/pedidos`, `GET /api/v1/pedidos/{pedidoId}`, `PUT /api/v1/pedidos/{pedidoId}`, `POST /api/v1/pagos/{pedidoId}/confirmar`, `POST /api/v1/entrega/{pedidoId}/listo`, `POST /api/v1/entrega/{pedidoId}/validar`, `POST /api/v1/notificaciones`, `GET /api/v1/notificaciones/{pedidoId}`.
-**El contrato define 10 paths con 11 operaciones REST** (health, catalogo, pedidos, pagos, entrega, notificaciones) con esquemas de request/response versionados. La prueba de contrato valida que la implementación de los módulos cumple el contrato, que cada path del `openapi.yaml` tiene su `route.js` en `app/api/v1/`, y **falla ante cambios incompatibles** (ej. si `crearPedido` deja de recibir `tiendaId`). Las rutas delegan en `src/modules/*` (dominio puro, ADR-0001); la capa HTTP (`app/api/v1/`) es solo el adaptador del contrato, no contiene lógica de negocio.
+**El contrato define 11 paths con 12 operaciones REST** (health, métricas, catalogo, pedidos, pagos, entrega, notificaciones) con esquemas de request/response versionados. La prueba de contrato valida que la implementación de los módulos cumple el contrato, que cada path del `openapi.yaml` tiene su `route.js` en `app/api/v1/`, y **falla ante cambios incompatibles** (ej. si `crearPedido` deja de recibir `tiendaId`). Las rutas delegan en `src/modules/*` (dominio puro, ADR-0001); la capa HTTP (`app/api/v1/`) es solo el adaptador del contrato, no contiene lógica de negocio.
+**Observabilidad (S8):** `GET /api/v1/metricas` expone contadores en memoria (`pedidosCreados`, `pagosConfirmados`, `pedidosListos`, `entregasValidadas`, `pinesRechazados`, `pinesBloqueados`) asociados a ESC-01/ESC-03/ESC-04; las rutas emiten bitácora JSON (`src/logger.js`: `ts`, `level`, `service`, `route`, `tiendaId`, `pedidoId`, `mensaje`) sin registrar PIN ni tarjeta.
+
+---
+
+## 7. Vista de Despliegue
+
+Cada pieza del sistema y dónde se ejecuta (una caja por pieza):
+
+```mermaid
+flowchart TB
+    DEV["Puesto del desarrollador<br/>(Node 22, npm ci, npm run dev)"] 
+    GH["GitHub<br/>(repo + Actions runners ubuntu-latest)"]
+    RW["Railway<br/>(servicio desde Dockerfile, PORT 3000, HTTPS)"]
+    SC["SonarCloud<br/>(análisis + Quality Gate)"]
+    CLI["Cliente móvil / navegador<br/>(consume la API pública)"]
+
+    DEV -->|push a master| GH
+    GH -->|construye imagen Docker| RW
+    GH -->|análisis estático| SC
+    CLI -->|HTTPS / REST JSON| RW
+```
+
+| Pieza | Dónde se ejecuta | Evidencia |
+|---|---|---|
+| API Next.js standalone | Railway, servicio construido del `Dockerfile` (`PORT=3000`, `NODE_ENV=production`) | `Dockerfile:1-17`, `next.config.mjs:2-4`, ADR-0009 |
+| Rutas `/api/v1/*` + dominio `src/modules/*` | Dentro del contenedor anterior (mismo proceso, ESM síncrono) | `app/api/v1/**/route.js`, ADR-0001/0006 |
+| Pipeline `test` + `contract-test` | GitHub Actions runners `ubuntu-latest` + Node 22 en cada push/PR a `master` | `.github/workflows/ci.yml:12-49` |
+| Análisis estático + Quality Gate | SonarCloud, organización `isco-utb`, proyecto `ISCOUTB_AS_202620_LaPlacita` | `sonar-project.properties:4-9`, ADR-0010 |
+| Desarrollo local | Puesto del desarrollador (`npm ci` → `npm run dev` → `localhost:3000`) | `README.md`, `.env.example` |
+| Persistencia | En memoria del proceso en este corte; PostgreSQL/Redis planeados (Corte 2) | C4 contenedores, ADR-0001 |
 
 ---
 

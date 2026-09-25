@@ -51,6 +51,9 @@ jobs:
     sonar:
         runs-on: ubuntu-latest
         needs: [test, contract-test]
+        # Informativo hasta vincular org/proyecto en sonarcloud.io (ADR-0010):
+        # el fallo del scanner no bloquea el verde de test + contract-test.
+        continue-on-error: true
         env:
             SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         steps:
