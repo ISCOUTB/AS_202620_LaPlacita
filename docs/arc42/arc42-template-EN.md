@@ -59,7 +59,7 @@ Las siguientes restricciones condicionan las decisiones arquitectónicas de LaPl
 | RES-02 | Equipo de 4 integrantes | Organizacional | Limita las tácticas viables (por ejemplo, descarta una descomposición extensa en microservicios) |
 | RES-03 | Entrega en un semestre académico | Organizacional / temporal | Obliga a priorizar los aspectos de mayor riesgo (A-01, A-02, A-04, A-06) sobre los de prioridad media |
 | RES-04 | Aplicación móvil como canal principal | Técnica / producto | El sistema está planteado para usuarios que necesitan realizar pedidos rápidamente desde dispositivos móviles. | 
-| RES-06 | Tope de costo de hosting de 5 USD/mes en capa gratuita o de prueba, sin tarjeta asociada a la cuenta | Económica / plataforma | El despliegue (ADR-0009) debe operar dentro del crédito o trial de Railway; superar el tope o exigir tarjeta dispara revisión de alcance antes de contratar |
+| RES-06 | Tope de costo de hosting de 5 USD/mes en capa gratuita o de prueba, sin tarjeta asociada a la cuenta | Económica / plataforma | El despliegue (ADR-0009) debe operar dentro de la capa gratuita (Azure for Students / servidor universidad); superar el tope o exigir tarjeta dispara revisión de alcance antes de contratar |
 
 ---
 
@@ -359,24 +359,24 @@ Cada pieza del sistema y dónde se ejecuta (una caja por pieza):
 flowchart TB
     DEV["Puesto del desarrollador<br/>(Node 22, npm ci, npm run dev)"] 
     GH["GitHub<br/>(repo + Actions runners ubuntu-latest)"]
-    RW["Railway<br/>(servicio desde Dockerfile, PORT 3000, HTTPS)"]
+    RW["Azure Container Apps<br/>(imagen Docker, PORT 3000, HTTPS)"]
     SC["SonarCloud<br/>(análisis + Quality Gate)"]
     CLI["Cliente móvil / navegador<br/>(consume la API pública)"]
 
     DEV -->|push a master| GH
-    GH -->|construye imagen Docker| RW
+    GH -->|despliega contenedor| RW
     GH -->|análisis estático| SC
     CLI -->|HTTPS / REST JSON| RW
 ```
 
 | Pieza | Dónde se ejecuta | Evidencia |
 |---|---|---|
-| API Next.js standalone | Railway, servicio construido del `Dockerfile` (`PORT=3000`, `NODE_ENV=production`) | `Dockerfile:1-17`, `next.config.mjs:2-4`, ADR-0009 |
+| API Next.js standalone + sitio | Azure Container Apps, misma imagen Docker (`PORT=3000`, `NODE_ENV=production`) | `Dockerfile:1-17`, `next.config.mjs:2-4`, ADR-0009 |
 | Rutas `/api/v1/*` + dominio `src/modules/*` | Dentro del contenedor anterior (mismo proceso, ESM síncrono) | `app/api/v1/**/route.js`, ADR-0001/0006 |
 | Pipeline `test` + `contract-test` | GitHub Actions runners `ubuntu-latest` + Node 22 en cada push/PR a `master` | `.github/workflows/ci.yml:12-49` |
 | Análisis estático + Quality Gate | SonarCloud, organización `isco-utb`, proyecto `ISCOUTB_AS_202620_LaPlacita` | `sonar-project.properties:4-9`, ADR-0010 |
 | Desarrollo local | Puesto del desarrollador (`npm ci` → `npm run dev` → `localhost:3000`) | `README.md`, `.env.example` |
-| Persistencia | En memoria del proceso en este corte; PostgreSQL en Neon + Redis planeados (Corte 2) | C4 contenedores, ADR-0001, ADR-0011 |
+| Persistencia | En memoria del proceso en este corte; PostgreSQL en servidor de la universidad + Redis planeados (Corte 2) | C4 contenedores, ADR-0001, ADR-0011 |
 
 ---
 
@@ -419,9 +419,9 @@ Esta sección registra el historial de decisiones arquitectónicas significativa
 | ADR-0002 | Ratificación de la adopción del Monolito Modular con Capas Internas | Aceptado | 2026-08-24 | ESC-01…ESC-05 | [0002-ratificacion-monolito-modular.md](../adr/0002-ratificacion-monolito-modular.md) |
 | ADR-0003 | Despliegue en contenedor Docker vía Railway y análisis estático en SonarCloud | Aceptado | 2026-08-30 | ESC-01 (disponibilidad), todos | [0003-despliegue-railway-docker-sonarcloud.md](../adr/0003-despliegue-railway-docker-sonarcloud.md) |
 | ADR-0004 | Aislamiento estricto por establecimiento (RES-05) | Aceptado | 2026-09-06 | ESC-02 | [0004-aislamiento-por-establecimiento.md](../adr/0004-aislamiento-por-establecimiento.md) |
-| ADR-0009 | Despliegue de la API en Railway con costos por pieza y ruptura (precisa ADR-0003 solo en despliegue) | Aceptado | 2026-09-25 | ESC-01 | [0009-despliegue-railway.md](../adr/0009-despliegue-railway.md) |
+| ADR-0009 | Despliegue de API + sitio en Azure Container Apps con costos por pieza y ruptura (precisa ADR-0003 solo en despliegue) | Aceptado | 2026-09-25 | ESC-01 | [0009-despliegue-azure.md](../adr/0009-despliegue-azure.md) |
 | ADR-0010 | Análisis estático con SonarCloud y Quality Gate (precisa ADR-0003 solo en análisis) | Aceptado | 2026-09-25 | ESC-02…ESC-04 | [0010-analisis-sonarcloud.md](../adr/0010-analisis-sonarcloud.md) |
-| ADR-0011 | Base de datos gestionada en Neon PostgreSQL, MySQL descartado (precisa proveedor de persistencia) | Aceptado | 2026-09-25 | ESC-01, ESC-02 | [0011-base-de-datos-neon.md](../adr/0011-base-de-datos-neon.md) |
+| ADR-0011 | Base de datos PostgreSQL en el servidor de la universidad, Neon descartado (precisa proveedor de persistencia) | Aceptado | 2026-09-25 | ESC-01, ESC-02 | [0011-base-de-datos-universidad.md](../adr/0011-base-de-datos-universidad.md) |
  
 **Relación con los bloques de construcción:**
 - ADR-0001 y ADR-0002 determinan la estructura: un único proceso con módulos de dominio separados.
@@ -695,8 +695,9 @@ Resultado: **0/300 accesos cruzados** → se cumple el umbral de ESC-02.
 | **Picos de tráfico** | Intervalo de 5 a 10 minutos en los que se alcanza el valor maximo de clientes simultáneos. |
 | **PIN** | Código númerico de aproximadamente 4 dígitos generado al crear el pedido, se usa para identificar y validar al usuario en el punto de recolección (A-06). | 
 | **SonarCloud** | Plataforma de análisis estático integrada en el pipeline de CI. Detecta bugs, vulnerabilidades de seguridad, duplicación de código y mide la cobertura de pruebas. Decisión registrada en [ADR-0003](../adr/0003-despliegue-railway-docker-sonarcloud.md). |
-| **Railway** | Plataforma PaaS (Platform as a Service) que despliega la aplicación desde el repositorio GitHub mediante un contenedor Docker. Proporciona URL pública con HTTPS, reinicios automáticos y gestión de variables de entorno. Decisión registrada en [ADR-0003](../adr/0003-despliegue-railway-docker-sonarcloud.md), precisada en [ADR-0009](../adr/0009-despliegue-railway.md). |
-| **Neon** | PostgreSQL serverless gestionado (capa gratuita) elegido como proveedor de la base de datos de Corte 2; MySQL descartado. Decisión registrada en [ADR-0011](../adr/0011-base-de-datos-neon.md). |
+| **Azure Container Apps** | Plataforma serverless de contenedores (Azure for Students, sin tarjeta) donde se despliegan API + sitio con la misma imagen Docker. Decisión registrada en [ADR-0009](../adr/0009-despliegue-azure.md). |
+| **Servidor de la universidad** | Infraestructura del laboratorio donde irá PostgreSQL en Corte 2: sin tarjeta, sin medidor que romper y sin pausas. Decisión registrada en [ADR-0011](../adr/0011-base-de-datos-universidad.md). |
+| **Railway** | Plataforma PaaS alternativa, hoy solo ruta de reversión del despliegue (misma imagen). Referencia histórica en [ADR-0003](../adr/0003-despliegue-railway-docker-sonarcloud.md). |
 | **Quality Gate** | Conjunto de umbrales configurados en SonarCloud (cobertura mínima, cero vulnerabilidades críticas, etc.) que deben superarse antes de aceptar un pull request a `master`. |
 | **Ítem de catálogo** | Producto o servicio ofrecido por un establecimiento, con nombre, descripción, precio y disponibilidad |
 | **Estado del pedido** | Fase del ciclo de vida de un pedido: `Recibido` → `En preparación` → `Listo` → `Entregado` (`const ESTADOS` en `src/modules/pedidos/index.js`; transiciones solo secuenciales). |

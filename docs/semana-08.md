@@ -28,15 +28,15 @@
 |---|---|---|---|
 | Desarrollo local | `http://localhost:3000` | ✅ Operativo (`npm run dev`) | `README.md:254-255` |
 | Health local | `http://localhost:3000/api/v1/health` | ✅ Retorna `{ "status": "ok" }` | `README.md:327-334`, §5 |
-| Producción (Railway) | *Sin URL asignada* | ⏳ Decidido, no desplegado (ADR-0003) | `docs/adr/0003-despliegue-railway-docker-sonarcloud.md`, `docs/evidencia-contrato-s7.md:43-46` |
+| Producción (Azure) | *Sin URL asignada* | ⏳ Decidido, no desplegado (ADR-0009) | `docs/adr/0009-despliegue-azure.md`, taller S8 láminas 1-3 |
 | Contrato (`servers`) | `/api/v1` (relativo, sin host) | ✅ Alineado al estado real | `openapi.yaml:14-16` |
 
 ### 2.2 Plan de activación (cuando el equipo lo despliegue)
 
-1. Crear el servicio en Railway desde el repositorio `ISCOUTB/AS_202620_LaPlacita`, rama `master`, con el `Dockerfile` existente (§3).
-2. Configurar `PORT=3000` (ya fijado en `Dockerfile:16`) y variables de entorno en el panel de Railway (nunca en el repo — ADR-0003 §Riesgos).
-3. Obtener la URL pública `https://<servicio>.up.railway.app` y registrarla aquí + como segundo `servers` en `openapi.yaml` (hoy solo existe `/api/v1`).
-4. Verificar `GET <url>/api/v1/health` → `200 { "status": "ok" }` antes de declarar el despliegue como cumplido.
+1. Crear el recurso en Azure Container Apps (cuenta Azure for Students, sin tarjeta) con la imagen del `Dockerfile` existente (§3).
+2. Configurar `PORT=3000` (ya fijado en `Dockerfile:16`) y variables de entorno en el portal de Azure (nunca en el repo — ADR-0003 §Riesgos).
+3. Obtener la URL pública y registrarla aquí + como segundo `servers` en `openapi.yaml` (hoy solo existe `/api/v1`).
+4. Verificar `GET <url>/api/v1/health` → `200 { "status": "ok" }` antes de declarar el despliegue como cumplido. Reversión: misma imagen al servidor de la universidad o a Railway (ADR-0009).
 
 ---
 
@@ -189,37 +189,38 @@ Todos los errores usan el esquema `Error` (`openapi.yaml:493-498`): `{ "error": 
 
 ## 6. Estimación de costos mensuales y supuestos
 
-### 6.1 Estimación — escenario académico actual (sin tráfico productivo)
+### 6.1 Estimación — escenario académico actual (taller S8, base ESC-01)
+
+Volumen estimado: ≈55.000 solicitudes/mes, ≈17 MB/mes de logs, ≈110 MB/mes de egress, ≈4.400 vCPU-s/mes.
 
 | Concepto | Proveedor / plan | Costo mensual (USD) |
 |---|---|---|
-| Hospedaje API (Next.js standalone vía Docker) | Railway — Trial/Hobby (incluye $5 de crédito; plan Hobby $5/mes) | **0 – 5** |
+| API + sitio (Next.js standalone vía Docker) | Azure Container Apps — Azure for Students (180.000 vCPU-s + 360.000 GiB-s + 2M solicitudes/mes) | **0** |
+| Base de datos / caché | Servidor de la universidad (PostgreSQL Corte 2) + estado en memoria hoy | **0** |
 | Análisis estático | SonarCloud — plan Free para repos públicos | **0** |
 | CI (build + tests) | GitHub Actions — cuota Free para repos públicos | **0** |
-| Base de datos / caché | No desplegadas (estado en memoria; Redis/PostgreSQL marcados `planeado Corte 2` en C4) | **0** |
-| Dominio propio / TLS | No contratado (TLS gestionado por Railway cuando se despliegue) | **0** |
-| **Total estimado** | | **0 – 5** |
+| Dominio propio / TLS | No contratado (TLS gestionado por Azure cuando se despliegue) | **0** |
+| **Total estimado** | | **0** |
 
 ### 6.2 Supuestos del entorno (base de la estimación)
 
 | # | Supuesto | Justificación |
 |---|---|---|
-| S-1 | Tráfico de demostración (< 1k req/día, una sola instancia 512 MB – 1 GB) | Cabe en el tier gratuito/crédito Railway; sin autoscaling |
-| S-2 | Sin persistencia gestionada | El dominio guarda estado en `Map` en memoria (`README.md:294`); PostgreSQL/Redis son planeados, no aprovisionados |
+| S-1 | Volumen base ESC-01 (≈55.000 solicitudes, 4.400 vCPU-s, 2.200 GiB-s, 110 MB egress al mes) | Usa menos del 3 % de la capa gratuita de Azure en cada dimensión |
+| S-2 | Sin persistencia gestionada hoy | El dominio guarda estado en `Map` en memoria; PostgreSQL irá al servidor de la universidad en Corte 2 (ADR-0011) |
 | S-3 | Repositorio público | SonarCloud Free y Actions Free aplican a repos públicos |
-| S-4 | Sin dominio propio | Se usa el subdominio `*.up.railway.app` con HTTPS de la plataforma (ADR-0003) |
-| S-5 | Región única, sin SLA comercial | Aceptable para entorno académico; reinicios automáticos de Railway cubren ESC-01 a esta escala |
+| S-4 | Sin dominio propio | Se usa el dominio de Azure Container Apps con HTTPS de la plataforma (ADR-0009) |
+| S-5 | Región única, sin SLA comercial | Aceptable para entorno académico; revisiones de Container Apps cubren ESC-01 a esta escala |
 
 ### 6.3 Sensibilidad (si el alcance crece)
 
 | Cambio | Efecto aproximado |
 |---|---|
-| PostgreSQL gestionado en Neon, capa gratuita (1 GB) | +0 mientras dure el alcance; plan de pago dispara revisión RES-06 |
-| Redis gestionado | +5 – 10 USD/mes |
-| Tráfico sostenido que exceda el crédito Hobby | Escalar a plan Pro por uso (~+10 – 20 USD/mes según cómputo/egress) |
+| Volumen ×36 (2M solicitudes, dimensión más estrecha) | Se rompe la capa gratuita de Azure; excedentes por vCPU/GiB-s según tarifa vigente |
+| Redis gestionado | Costo por pieza a evaluar contra RES-06 |
 | Dominio propio | +10 – 15 USD/año |
 
-> Precios de referencia pública 2026, consultados en `railway.app/pricing` y `sonarcloud.io` el **24/09/2026**; verificar nuevamente al momento de contratar. Esta tabla es **estimación, no factura**. Cálculo por pieza y ruptura de capa gratuita: [ADR-0009](adr/0009-despliegue-railway.md) (toque el techo Hobby, 1 GB, PostgreSQL/Redis o plan Pro dispara revisión según RES-06).
+> Precios de referencia pública 2026, taller S8 del **25/09/2026**; verificar nuevamente al momento de contratar. Esta tabla es **estimación, no factura**. Cálculo por pieza y ruptura de capa gratuita: [ADR-0009](adr/0009-despliegue-azure.md) (×36 en solicitudes dispara revisión según RES-06).
 
 ---
 
@@ -242,7 +243,7 @@ Todos los errores usan el esquema `Error` (`openapi.yaml:493-498`): `{ "error": 
 | Infraestructura como código | §3 | `Dockerfile:1-17`, `next.config.mjs:2-4`, `sonar-project.properties:4-9`, `app/api/v1/**/route.js` (11 archivos), `.env.example` |
 | Pipeline CI/CD | §4 | `.github/workflows/ci.yml` (`test`, `contract-test`, `sonar` informativo), runs `35181554516` / `35383329950`, local 44/44 |
 | Health + logs + métricas | §5 | `src/health.js`, `src/logger.js`, `src/metricas.js`, `app/api/v1/health/route.js`, `app/api/v1/metricas/route.js`, `openapi.yaml` (`Health`, `Metricas`, `Error`), `tests/observabilidad.test.js` |
-| Costos + supuestos | §6 | [ADR-0009](adr/0009-despliegue-railway.md) (cálculo por pieza + ruptura), [ADR-0011](adr/0011-base-de-datos-neon.md) (Neon), supuestos S-1…S-5, 24/09/2026 — estimación, no factura |
+| Costos + supuestos | §6 | [ADR-0009](adr/0009-despliegue-azure.md) (cálculo por pieza + ruptura ×36), [ADR-0011](adr/0011-base-de-datos-universidad.md) (universidad), supuestos S-1…S-5, taller S8 25/09/2026 — estimación, no factura |
 | Vista de despliegue | arc42 §7 | Una caja por pieza + dónde se ejecuta; [ADR-0009](adr/0009-despliegue-railway.md), [ADR-0010](adr/0010-analisis-sonarcloud.md) |
 | Restricción económica | arc42 §2 RES-06 | Tope 5 USD/mes sin tarjeta; ADR-0009 |
 | Aspectos / escenarios | Transversal | `docs/aspectos.md` (A-01…A-07), arc42 §10 (ESC-01…ESC-05) |

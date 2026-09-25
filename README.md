@@ -175,9 +175,9 @@ Los prototipos de interfaz están planeados para el Corte 2 (contendores App/Web
         │     ├── 0006-estrategia-integracion-sincrona.md
         │     ├── 0007-v01-v03-dueno-pin-metodos-intencion.md
         │     ├── 0008-ratificacion-estrategia-integracion-sincrona.md
-        │     ├── 0009-despliegue-railway.md
+        │     ├── 0009-despliegue-azure.md
         │     ├── 0010-analisis-sonarcloud.md
-        │     └── 0011-base-de-datos-neon.md
+        │     └── 0011-base-de-datos-universidad.md
         ├── arc42/
         │    ├── images/
         │    │     └── arc42-logo.png
@@ -244,7 +244,7 @@ La documentación del proyecto sigue rigurosamente los lineamientos del curso y 
 * Nota: Railway está documentado en ADR-0003 como **decisión de despliegue**, pero **no está desplegado**; por eso el contrato solo expone el servidor local (`/api/v1`)
 
 **Semana 8 — Despliegue, operación y costos (24-25/09/2026)**
-* Evidencia S8 en [`docs/semana-08.md`](docs/semana-08.md): sin URL pública (solo `http://localhost:3000` + `/api/v1/health`); IaC trazada (`Dockerfile:1-17`, `.github/workflows/ci.yml`, `src/health.js`, `app/api/v1/**/route.js`, `openapi.yaml` 11 paths / 12 operaciones); pipeline `test` ✅ `contract-test` ✅ `sonar` informativo (`continue-on-error` hasta vincular org, ADR-0010); costos 0–5 USD/mes con supuestos S-1…S-5 y ruptura en [ADR-0009](docs/adr/0009-despliegue-railway.md)
+* Evidencia S8 en [`docs/semana-08.md`](docs/semana-08.md): sin URL pública (solo `http://localhost:3000` + `/api/v1/health`); IaC trazada (`Dockerfile:1-17`, `.github/workflows/ci.yml`, `src/health.js`, `app/api/v1/**/route.js`, `openapi.yaml` 11 paths / 12 operaciones); pipeline `test` ✅ `contract-test` ✅ `sonar` informativo (`continue-on-error` hasta vincular org, ADR-0010); costos **0 USD/mes** (Azure Students + universidad, ruptura ×36) con supuestos S-1…S-5 y taller S8 en [ADR-0009](docs/adr/0009-despliegue-azure.md) y [ADR-0011](docs/adr/0011-base-de-datos-universidad.md)
 * Observabilidad: bitácora JSON en rutas ([`src/logger.js`](src/logger.js), sin PIN ni tarjeta) + `GET /api/v1/metricas` ([`src/metricas.js`](src/metricas.js): pedidos, pagos, listos, entregas, rechazos y bloqueos por ESC-01/03/04) con [`tests/observabilidad.test.js`](tests/observabilidad.test.js)
 * arc42 §7 vista de despliegue (una caja por pieza + dónde se ejecuta) y §2 RES-06 (tope 5 USD/mes sin tarjeta); suites en verde: **44 pruebas** (`npm test`) y `npm run contract-test` (**23/23**)
 * T1 (SonarCloud) queda en diagnóstico y plan, no en cumplido: falta run verde + URL del Quality Gate
