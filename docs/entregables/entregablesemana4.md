@@ -34,7 +34,7 @@ https://github.com/ISCOUTB/AS_202620_LaPlacita.git
 | -------------------------------------- | ------------------------------------------------------------------ |
 | Lógica de negocio (módulos)            | `src/modules/` (catálogo, pedidos, pagos, entrega, notificaciones) |
 | Corte vertical ejecutable              | `src/corte-vertical.js`                                            |
-| Endpoint de salud migrado a Next.js    | `app/health/route.js` (histórico S4; hoy `app/api/v1/health/route.js` desde S7) |
+| Endpoint de salud migrado a Next.js    | `app/health/route.js`                                              |
 | Lógica pura del estado de salud        | `src/health.js`                                                    |
 | Configuración y scripts del backend    | `package.json`, `package-lock.json`                                |
 | Pipeline de integración continua       | `.github/workflows/ci.yml`                                         |

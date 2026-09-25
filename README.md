@@ -236,10 +236,6 @@ La documentación del proyecto sigue rigurosamente los lineamientos del curso y 
 * Suites en verde: **37 pruebas** (`npm test`) y `npm run contract-test` (**23/23**)
 * Nota: Railway está documentado en ADR-0003 como **decisión de despliegue**, pero **no está desplegado**; por eso el contrato solo expone el servidor local (`/api/v1`)
 
-**Semana 8 — Despliegue, operación y costos (24/09/2026)**
-* Evidencia S8 en [`docs/semana-08.md`](docs/semana-08.md): sin URL pública (solo `http://localhost:3000` + `/api/v1/health`); IaC trazada (`Dockerfile:1-17`, `.github/workflows/ci.yml:1-79`, `src/health.js:5-7`, `app/api/v1/health/route.js:1-6`, `openapi.yaml:33-44,493-498`); pipeline `test` ✅ `contract-test` ✅ `sonar` ❌ (runs [35181554516](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/35181554516) y [35383329950](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/35383329950)); costos 0–5 USD/mes con supuestos S-1…S-5
-* T1 (SonarCloud) queda en diagnóstico y plan, no en cumplido: falta run verde + URL del Quality Gate
-
 ---
 
 ## Cómo ejecutar

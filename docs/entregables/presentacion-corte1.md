@@ -42,7 +42,7 @@ flowchart LR
 **Ubicación de los archivos (estructura real del repo):**
 
 ```
-app/health/route.js               endpoint /health (Next.js, histórico S4; hoy app/api/v1/health/route.js desde S7)
+app/health/route.js               endpoint /health (Next.js)
 src/corte-vertical.js             corte vertical ejecutable
 src/modules/{catalogo,pedidos,pagos,entrega,notificaciones}/index.js
 scripts/medir-aislamiento.js      medición reproducible RES-05
