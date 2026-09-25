@@ -419,6 +419,8 @@ Esta sección registra el historial de decisiones arquitectónicas significativa
 | ADR-0002 | Ratificación de la adopción del Monolito Modular con Capas Internas | Aceptado | 2026-08-24 | ESC-01…ESC-05 | [0002-ratificacion-monolito-modular.md](../adr/0002-ratificacion-monolito-modular.md) |
 | ADR-0003 | Despliegue en contenedor Docker vía Railway y análisis estático en SonarCloud | Aceptado | 2026-08-30 | ESC-01 (disponibilidad), todos | [0003-despliegue-railway-docker-sonarcloud.md](../adr/0003-despliegue-railway-docker-sonarcloud.md) |
 | ADR-0004 | Aislamiento estricto por establecimiento (RES-05) | Aceptado | 2026-09-06 | ESC-02 | [0004-aislamiento-por-establecimiento.md](../adr/0004-aislamiento-por-establecimiento.md) |
+| ADR-0009 | Despliegue de la API en Railway con costos por pieza y ruptura (precisa ADR-0003 solo en despliegue) | Aceptado | 2026-09-25 | ESC-01 | [0009-despliegue-railway.md](../adr/0009-despliegue-railway.md) |
+| ADR-0010 | Análisis estático con SonarCloud y Quality Gate (precisa ADR-0003 solo en análisis) | Aceptado | 2026-09-25 | ESC-02…ESC-04 | [0010-analisis-sonarcloud.md](../adr/0010-analisis-sonarcloud.md) |
  
 **Relación con los bloques de construcción:**
 - ADR-0001 y ADR-0002 determinan la estructura: un único proceso con módulos de dominio separados.
