@@ -214,7 +214,7 @@ Todos los errores usan el esquema `Error` (`openapi.yaml:493-498`): `{ "error": 
 
 | Cambio | Efecto aproximado |
 |---|---|
-| PostgreSQL gestionado en Railway (1 GB) | +5 – 10 USD/mes |
+| PostgreSQL gestionado en Neon, capa gratuita (1 GB) | +0 mientras dure el alcance; plan de pago dispara revisión RES-06 |
 | Redis gestionado | +5 – 10 USD/mes |
 | Tráfico sostenido que exceda el crédito Hobby | Escalar a plan Pro por uso (~+10 – 20 USD/mes según cómputo/egress) |
 | Dominio propio | +10 – 15 USD/año |
@@ -242,7 +242,7 @@ Todos los errores usan el esquema `Error` (`openapi.yaml:493-498`): `{ "error": 
 | Infraestructura como código | §3 | `Dockerfile:1-17`, `next.config.mjs:2-4`, `sonar-project.properties:4-9`, `app/api/v1/**/route.js` (11 archivos), `.env.example` |
 | Pipeline CI/CD | §4 | `.github/workflows/ci.yml` (`test`, `contract-test`, `sonar` informativo), runs `35181554516` / `35383329950`, local 44/44 |
 | Health + logs + métricas | §5 | `src/health.js`, `src/logger.js`, `src/metricas.js`, `app/api/v1/health/route.js`, `app/api/v1/metricas/route.js`, `openapi.yaml` (`Health`, `Metricas`, `Error`), `tests/observabilidad.test.js` |
-| Costos + supuestos | §6 | [ADR-0009](adr/0009-despliegue-railway.md) (cálculo por pieza + ruptura), supuestos S-1…S-5, 24/09/2026 — estimación, no factura |
+| Costos + supuestos | §6 | [ADR-0009](adr/0009-despliegue-railway.md) (cálculo por pieza + ruptura), [ADR-0011](adr/0011-base-de-datos-neon.md) (Neon), supuestos S-1…S-5, 24/09/2026 — estimación, no factura |
 | Vista de despliegue | arc42 §7 | Una caja por pieza + dónde se ejecuta; [ADR-0009](adr/0009-despliegue-railway.md), [ADR-0010](adr/0010-analisis-sonarcloud.md) |
 | Restricción económica | arc42 §2 RES-06 | Tope 5 USD/mes sin tarjeta; ADR-0009 |
 | Aspectos / escenarios | Transversal | `docs/aspectos.md` (A-01…A-07), arc42 §10 (ESC-01…ESC-05) |

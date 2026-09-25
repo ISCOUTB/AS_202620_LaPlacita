@@ -376,7 +376,7 @@ flowchart TB
 | Pipeline `test` + `contract-test` | GitHub Actions runners `ubuntu-latest` + Node 22 en cada push/PR a `master` | `.github/workflows/ci.yml:12-49` |
 | Análisis estático + Quality Gate | SonarCloud, organización `isco-utb`, proyecto `ISCOUTB_AS_202620_LaPlacita` | `sonar-project.properties:4-9`, ADR-0010 |
 | Desarrollo local | Puesto del desarrollador (`npm ci` → `npm run dev` → `localhost:3000`) | `README.md`, `.env.example` |
-| Persistencia | En memoria del proceso en este corte; PostgreSQL/Redis planeados (Corte 2) | C4 contenedores, ADR-0001 |
+| Persistencia | En memoria del proceso en este corte; PostgreSQL en Neon + Redis planeados (Corte 2) | C4 contenedores, ADR-0001, ADR-0011 |
 
 ---
 
@@ -421,6 +421,7 @@ Esta sección registra el historial de decisiones arquitectónicas significativa
 | ADR-0004 | Aislamiento estricto por establecimiento (RES-05) | Aceptado | 2026-09-06 | ESC-02 | [0004-aislamiento-por-establecimiento.md](../adr/0004-aislamiento-por-establecimiento.md) |
 | ADR-0009 | Despliegue de la API en Railway con costos por pieza y ruptura (precisa ADR-0003 solo en despliegue) | Aceptado | 2026-09-25 | ESC-01 | [0009-despliegue-railway.md](../adr/0009-despliegue-railway.md) |
 | ADR-0010 | Análisis estático con SonarCloud y Quality Gate (precisa ADR-0003 solo en análisis) | Aceptado | 2026-09-25 | ESC-02…ESC-04 | [0010-analisis-sonarcloud.md](../adr/0010-analisis-sonarcloud.md) |
+| ADR-0011 | Base de datos gestionada en Neon PostgreSQL, MySQL descartado (precisa proveedor de persistencia) | Aceptado | 2026-09-25 | ESC-01, ESC-02 | [0011-base-de-datos-neon.md](../adr/0011-base-de-datos-neon.md) |
  
 **Relación con los bloques de construcción:**
 - ADR-0001 y ADR-0002 determinan la estructura: un único proceso con módulos de dominio separados.
@@ -694,7 +695,8 @@ Resultado: **0/300 accesos cruzados** → se cumple el umbral de ESC-02.
 | **Picos de tráfico** | Intervalo de 5 a 10 minutos en los que se alcanza el valor maximo de clientes simultáneos. |
 | **PIN** | Código númerico de aproximadamente 4 dígitos generado al crear el pedido, se usa para identificar y validar al usuario en el punto de recolección (A-06). | 
 | **SonarCloud** | Plataforma de análisis estático integrada en el pipeline de CI. Detecta bugs, vulnerabilidades de seguridad, duplicación de código y mide la cobertura de pruebas. Decisión registrada en [ADR-0003](../adr/0003-despliegue-railway-docker-sonarcloud.md). |
-| **Railway** | Plataforma PaaS (Platform as a Service) que despliega la aplicación desde el repositorio GitHub mediante un contenedor Docker. Proporciona URL pública con HTTPS, reinicios automáticos y gestión de variables de entorno. Decisión registrada en [ADR-0003](../adr/0003-despliegue-railway-docker-sonarcloud.md). |
+| **Railway** | Plataforma PaaS (Platform as a Service) que despliega la aplicación desde el repositorio GitHub mediante un contenedor Docker. Proporciona URL pública con HTTPS, reinicios automáticos y gestión de variables de entorno. Decisión registrada en [ADR-0003](../adr/0003-despliegue-railway-docker-sonarcloud.md), precisada en [ADR-0009](../adr/0009-despliegue-railway.md). |
+| **Neon** | PostgreSQL serverless gestionado (capa gratuita) elegido como proveedor de la base de datos de Corte 2; MySQL descartado. Decisión registrada en [ADR-0011](../adr/0011-base-de-datos-neon.md). |
 | **Quality Gate** | Conjunto de umbrales configurados en SonarCloud (cobertura mínima, cero vulnerabilidades críticas, etc.) que deben superarse antes de aceptar un pull request a `master`. |
 | **Ítem de catálogo** | Producto o servicio ofrecido por un establecimiento, con nombre, descripción, precio y disponibilidad |
 | **Estado del pedido** | Fase del ciclo de vida de un pedido: `Recibido` → `En preparación` → `Listo` → `Entregado` (`const ESTADOS` en `src/modules/pedidos/index.js`; transiciones solo secuenciales). |
