@@ -6,7 +6,9 @@
 /out/
 
 # entorno
+.env
 .env*.local
+!.env.example
 
 # logs
 npm-debug.log*
