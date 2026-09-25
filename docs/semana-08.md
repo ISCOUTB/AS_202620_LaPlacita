@@ -166,7 +166,7 @@ Todos los errores usan el esquema `Error` (`openapi.yaml:493-498`): `{ "error": 
 | `PUT /pedidos/{pedidoId}` | — | Pedido no encontrado en la tienda | Transición de estado inválida |
 | `POST /pagos/{pedidoId}/confirmar` | Pedido no está en estado Recibido | Pedido no encontrado en la tienda | — |
 | `POST /entrega/{pedidoId}/listo` | — | Pedido no encontrado en la tienda | — |
-| `POST /entrega/{pedidoId}/validar` | PIN incorrecto o pedido no está Listo | Pedido no encontrado en la tienda | — |
+| `POST /entrega/{pedidoId}/validar` | PIN incorrecto, pedido bloqueado tras 5 fallos (A-06, `MAX_INTENTOS_PIN`) o pedido no está Listo | Pedido no encontrado en la tienda | — |
 
 ### 5.3 Compromiso (deuda explícita, no implementada en este corte)
 

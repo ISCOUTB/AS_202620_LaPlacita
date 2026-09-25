@@ -32,8 +32,8 @@ flowchart TB
     CV -.->|orquestación| ENT
     CV -.->|orquestación| NOT
     PED -->|"C/S obtenerProducto()<br/>import ESM síncrono"| CAT
-    PAG -->|"C/S obtenerPedido()/cambiarEstado()<br/>import ESM síncrono"| PED
-    ENT -->|"C/S + V-01 pin directo<br/>import ESM síncrono"| PED
+    PAG -->|"C/S obtenerPedido()/confirmarPago()<br/>import ESM síncrono"| PED
+    ENT -->|"C/S obtenerPedido()/asignarPin()/marcarListo()/confirmarEntrega()<br/>import ESM síncrono"| PED
     PED -.->|"OHS notificarCambioEstado()<br/>import ESM síncrono"| NOT
     PAG -.->|"OHS notificarCambioEstado()<br/>import ESM síncrono"| NOT
     ENT -.->|"OHS notificarCambioEstado()<br/>import ESM síncrono"| NOT
