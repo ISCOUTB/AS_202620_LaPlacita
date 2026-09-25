@@ -15,21 +15,8 @@ function generarPin() {
   return String(Math.floor(1000 + Math.random() * 9000));
 }
 
-// A-06: límite de intentos fallidos (aspectos.md:134-138). Contador en memoria
-// por tienda:pedido; tras MAX_INTENTOS_PIN fallos el pedido queda bloqueado y
-// ni siquiera el PIN correcto es aceptado. La no-reutilización del PIN ya la
-// garantiza la transición a Entregado (un solo uso).
-const MAX_INTENTOS_PIN = 5;
-
-const intentosFallidos = new Map();
-
-function claveIntentos(pedidoId, tiendaId) {
-  return `${tiendaId}:${pedidoId}`;
-}
-
 function marcarListo(pedidoId, tiendaId) {
   marcarListoPedido(pedidoId, tiendaId);
-  intentosFallidos.delete(claveIntentos(pedidoId, tiendaId));
   return asignarPin(pedidoId, tiendaId, generarPin());
 }
 
@@ -39,16 +26,11 @@ function validarPin(pedidoId, tiendaId, pinIngresado) {
   if (pedido.estado !== 'Listo') {
     throw new Error(`No se puede validar entrega de un pedido en estado ${pedido.estado}`);
   }
-  if ((intentosFallidos.get(claveIntentos(pedidoId, tiendaId)) ?? 0) >= MAX_INTENTOS_PIN) {
-    throw new Error(`Pedido ${pedidoId} bloqueado por exceso de intentos fallidos`);
-  }
   if (pedido.pin !== pinIngresado) {
-    intentosFallidos.set(claveIntentos(pedidoId, tiendaId), (intentosFallidos.get(claveIntentos(pedidoId, tiendaId)) ?? 0) + 1);
     throw new Error('PIN incorrecto');
   }
 
-  intentosFallidos.delete(claveIntentos(pedidoId, tiendaId));
   return confirmarEntrega(pedidoId, tiendaId);
 }
 
-export { marcarListo, validarPin, MAX_INTENTOS_PIN };
+export { marcarListo, validarPin };
