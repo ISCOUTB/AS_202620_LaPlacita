@@ -26,12 +26,12 @@ API + sitio se despliegan en **Azure Container Apps** con la misma imagen Docker
 
 ## Costo, ruptura y reversión (base ESC-01)
 
-| Dimensión | Consumo | Capa gratuita | % usado |
-|---|---|---|---|
-| vCPU-segundo | 4.400 | 180.000 | 2,4 % |
-| GiB-segundo | 2.200 | 360.000 | 0,6 % |
-| Solicitudes | 55.000 | 2.000.000 | 2,75 % |
-| Egress | 110 MB | ≈100 GB | 0,1 % |
+| Dimensión    | Consumo | Capa gratuita | % usado |
+| ------------ | ------- | ------------- | ------- |
+| vCPU-segundo | 4.400   | 180.000       | 2,4 %   |
+| GiB-segundo  | 2.200   | 360.000       | 0,6 %   |
+| Solicitudes  | 55.000  | 2.000.000     | 2,75 %  |
+| Egress       | 110 MB  | ≈100 GB       | 0,1 %   |
 
 **Punto de ruptura:** ≈36× el volumen actual (solicitudes, la dimensión más estrecha). Después, Azure cobra excedentes de vCPU/GiB-segundo según tarifa vigente al contratar. **Reversión:** 1) activar la revisión anterior en Container Apps (sin rebuild); 2) redesplegar la misma imagen en el servidor de la universidad o en Railway; 3) el dominio no depende del proveedor.
 
