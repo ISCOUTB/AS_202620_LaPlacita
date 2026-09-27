@@ -3,7 +3,7 @@
 - **Estado:** aceptado
 - **Fecha:** 2026-09-25
 - **Decide:** Buendía Barrios Mateo, Isaza Montalvo Miguel, Jiménez Álvarez Samuel, Martínez Castillo Jorge
-- **ADR relacionado:** [ADR-0003](0003-despliegue-railway-docker-sonarcloud.md) — decisión combinada de plataforma que este registro precisa solo en análisis estático (el despliegue se precisa en el [ADR-0009](0009-despliegue-railway.md)); ADR-0003 no se modifica
+- **ADR relacionado:** [ADR-0003](0003-despliegue-railway-docker-sonarcloud.md) — decisión combinada de plataforma que este registro precisa solo en análisis estático (el despliegue se precisa en el [ADR-0009](0009-despliegue-azure.md)); ADR-0003 no se modifica
 - **Escenario de calidad relacionado:** ESC-02, ESC-03, ESC-04
 
 ---
