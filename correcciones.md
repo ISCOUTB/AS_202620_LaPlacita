@@ -103,7 +103,7 @@
 | Fila A-01 de `docs/aspectos.md` completa hasta columna Pruebas, con rutas verificables | `745e799` | Sí | Enlaza RF-01, ESC-01, C4, ADR-0001, ADR-0003, código y tests |
 | Corte vertical con prueba automatizada (`tests/corte-vertical.test.js`) en CI verde | `745e799` | Sí | Run `33352046552` success |
 | arc42 secciones 5-6, 9, 10 y Glosario (12) redactadas con contenido propio, sin texto de plantilla | `745e799` | **No automáticamente** | Verificado manualmente en `docs/arc42/arc42-template-EN.md`: s.5 (5.1/5.2 whitebox), s.6 (6.1-6.3), s.9 (tabla de ADR + §9.1 «Razonamiento resumido» en HEAD), s.10 (árbol de utilidad + ESC-01..05) y §12 Glosario con términos del dominio; filtro de plantilla sin coincidencias |
-| Migración de Node.js nativo (`http`) a Next.js App Router para el backend | `745e799` | Parcial | El `README.md` actualiza los comandos; `app/health/route.js` existe en el árbol |
+| Migración de Node.js nativo (`http`) a Next.js App Router para el backend | `745e799` | Parcial | El `README.md` actualiza los comandos; `app/health/route.js` existe en el árbol (histórico S4; hoy `app/api/v1/health/route.js` desde S7) |
 | Módulos migrados a JavaScript ESM (`import`/`export`); suite de 8 tests en verde | `745e799` | Sí | `npm test` pasa en CI |
  
 ### Pendiente trasladado a Corte 1 (Semana 5)
@@ -146,7 +146,7 @@
 | A-02 en `docs/aspectos.md`: ADR-0004, código (`tiendaId`/`pedidosPorTienda`) y evidencia 0/300 | OK | Cierra el pendiente de corte 1 |
 | Celdas Pruebas (A-02..A-06) y Evidencia (A-01..A-06) completadas | OK | Con rutas verificables a código y tests reales |
 | Columna Requisito (RF-xx) enlazada a los escenarios | OK | RF-01→ESC-01 … RF-06→ESC-03 (cierra el hallazgo S3#3) |
-| arc42 §5/§6 alineados al código real (`app/health/route.js`, `src/corte-vertical.js`, módulos con `tiendaId`) | OK | Cierra el arrastre del corte 1 (archivos inexistentes) |
+| arc42 §5/§6 alineados al código real (`app/health/route.js` — histórico S4, hoy `app/api/v1/health/route.js` —, `src/corte-vertical.js`, módulos con `tiendaId`) | OK | Cierra el arrastre del corte 1 (archivos inexistentes) |
 | arc42 §10: ESC-04/05 con categoría y artefactos correctos (módulos `pedidos`, `pagos`, … en español) | OK | Cierra el arrastre del corte 1 |
 | Glosario: duplicado de «corte vertical» eliminado y estados pegados a `ESTADOS` real | OK | Cierra el arrastre del corte 1 |
 | arc42 §11 «Reto RES-05» añadida (restricción, diagnóstico, línea base 2/2 y post-cambio 0/300, procedimiento) | OK | Casillas 2, 3 y 6 documentadas |
@@ -297,3 +297,24 @@ Al integrar los cambios llegados del remoto se completó la evidencia y se corri
 | S7 | tests/contract-openapi.test.js falla ante cambio incompatible | Descomentar escenarios CONTRATO ROTO al final y verificar que npm test falla — evidencia capturada en [docs/evidencia-fallo-contrato-s7.md](docs/evidencia-fallo-contrato-s7.md) |
 | S7 | El job contract-test en CI falla si la prueba de contrato falla | Verificar en GitHub Actions que el job contract-test existe |
 | S7 | Las rutas HTTP responden correctamente | Ejecutar npm run dev y hacer fetch a http://localhost:3000/api/v1/health |
+
+---
+
+## Semana 8 · Evidencia S8 — Despliegue, operación y costos (2026-09-24)
+
+Evidencia: [`docs/semana-08.md`](docs/semana-08.md) (Lista B — Pestaña Auditora, Pestaña 3).
+
+### Hallazgos y estado declarado
+
+| # | Ítem Lista B | Estado | Evidencia |
+|---|---|---|---|
+| B1 | Evidencia S8 commiteada y citada | OK (este commit) | `docs/semana-08.md` + cita en `README.md` (estado S8) + esta sección; trazabilidad §8 con `Dockerfile:1-17`, `ci.yml:1-79`, `src/health.js:5-7`, `app/api/v1/health/route.js:1-6`, `openapi.yaml:33-44,493-498` |
+| B2 | URLs públicas verificables | Parcial — T1 en diagnóstico y plan | Run [35181554516](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/35181554516) (`90f510e`: test ✅ contract ✅ sonar ❌) y [35383329950](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/35383329950) (`63141232`: igual); pendiente run con sonar verde + URL Quality Gate `https://sonarcloud.io/project/overview?id=ISCOUTB_AS_202620_LaPlacita` |
+| B3 | §5-logs con compromiso | OK | Tabla de prefijos `[catalogo]/[pedidos]/[pagos]/[entrega]/[notificaciones]` + formato `{ error }` 400/404/409 por operación + deuda explícita logger JSON `{ts,level,service,route,tiendaId,pedidoId,latencyMs,requestId}` + enmascarar PIN |
+| B4 | Costos fijados a fecha de contratación | OK | Tabla 0–5 USD/mes + supuestos S-1…S-5 + sensibilidad PostgreSQL/Redis/dominio; precios consultados en `railway.app/pricing` el 24/09/2026 — estimación, no factura |
+| B5 | Referencias stale a `app/health/route.js` depuradas | OK | `correcciones.md:106,149`, `entregablesemana4.md:37`, `docs/presentacion-corte1.md:45`, `docs/ia.md:20` marcadas como histórico S4 (hoy `app/api/v1/health/route.js` desde S7); `git ls-files app/` solo lista `app/api/v1/**/route.js` (10 archivos) |
+
+### Pendiente trasladado
+
+- **SonarCloud (T1):** criterio en "diagnóstico y plan", no en cumplido — requiere credenciales del equipo (§4.3 de `docs/semana-08.md`).
+- **Despliegue Railway:** decidido (ADR-0003), no desplegado — sin URL pública (§2 de `docs/semana-08.md`).

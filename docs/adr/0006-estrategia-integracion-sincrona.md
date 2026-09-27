@@ -84,9 +84,8 @@ Se adopta la **integración síncrona in-process mediante importaciones ESM dire
 Los módulos se comunican exclusivamente llamando funciones exportadas de otros módulos desde el mismo proceso Node.js:
 
 - `pedidos` → importa `obtenerProducto` de `catalogo`
-- `pedidos` → importa `confirmarPago`, `cambiarEstado` de `pagos`
-- `pagos` → importa `obtenerPedido`, `cambiarEstado` de `pedidos`
-- `entrega` → importa `obtenerPedido`, `cambiarEstado` de `pedidos`
+- `pagos` → importa `obtenerPedido` y `confirmarPago` (método de intención) de `pedidos` (V-03)
+- `entrega` → importa `obtenerPedido`, `asignarPin`, `marcarListo` y `confirmarEntrega` de `pedidos` (V-01/V-03)
 - `notificaciones` → consumidas por orquestador externo (corte-vertical.js)
 
 Toda la comunicación es síncrona, en memoria, sin red, sin serialización, sin cola de mensajes. El contexto de la tienda (`tiendaId`) se propaga como parámetro en cada llamada, garantizando el aislamiento de datos (ADR-0004).

@@ -34,6 +34,19 @@ test('entrega.validarPin rechaza un PIN incorrecto', () => {
   assert.throws(() => entrega.validarPin(pedido.id, 'tienda-01', '0000'));
 });
 
+test('entrega.validarPin bloquea tras MAX_INTENTOS_PIN fallos (A-06)', () => {
+  const pedido = pedidos.crearPedido({ productoId: 'prod-002', cantidad: 1, clienteId: 'cliente-07', tiendaId: 'tienda-01' });
+  pagos.confirmarPago(pedido.id, 'tienda-01');
+  entrega.marcarListo(pedido.id, 'tienda-01');
+  const pinReal = pedidos.obtenerPedido(pedido.id, 'tienda-01').pin;
+
+  for (let i = 0; i < entrega.MAX_INTENTOS_PIN; i++) {
+    assert.throws(() => entrega.validarPin(pedido.id, 'tienda-01', '0000'), /PIN incorrecto/);
+  }
+  assert.throws(() => entrega.validarPin(pedido.id, 'tienda-01', '0000'), /bloqueado/);
+  assert.throws(() => entrega.validarPin(pedido.id, 'tienda-01', pinReal), /bloqueado/);
+});
+
 test('pin inmutable desde fuera: mutar la copia de obtenerPedido no afecta al pedido real (V-01)', () => {
   const pedido = pedidos.crearPedido({ productoId: 'prod-002', cantidad: 1, clienteId: 'cliente-06', tiendaId: 'tienda-01' });
 

@@ -12,6 +12,7 @@
 // almacén.
 
 import { obtenerProducto } from '../catalogo/index.js';
+import { contar } from '../../metricas.js';
 
 const ESTADOS = ['Recibido', 'En preparación', 'Listo', 'Entregado'];
 
@@ -71,6 +72,7 @@ function crearPedido({ productoId, cantidad, clienteId, tiendaId }) {
   };
 
   repoTienda(tiendaId).set(pedido.id, pedido);
+  contar('pedidosCreados');
   return instantanea(pedido);
 }
 
@@ -91,6 +93,9 @@ function cambiarEstado(pedidoId, tiendaId, nuevoEstado) {
   }
 
   pedido.estado = nuevoEstado;
+  if (nuevoEstado === 'En preparación') contar('pagosConfirmados');
+  if (nuevoEstado === 'Listo') contar('pedidosListos');
+  if (nuevoEstado === 'Entregado') contar('entregasValidadas');
   return instantanea(pedido);
 }
 
