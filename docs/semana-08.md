@@ -22,21 +22,33 @@
 
 ### 2.1 Estado real
 
-> **No existe a la fecha una URL pública de producción.** El contrato solo declara el servidor local (`openapi.yaml:14-16`) y la documentación S7 lo justifica explícitamente: *"Railway no está desplegado (no declarar producción inexistente)"* (`correcciones.md:270`, `docs/evidencia-contrato-s7.md:43-46`).
+> **URL pública de producción, verificada desde fuera de la red universitaria.**
+> `https://laplacita-app.graymoss-fdd72159.canadacentral.azurecontainerapps.io`
+>
+> Comprobación del 27/09/2026 18:15 COT:
+> `GET /api/v1/health` → `http=200` en 1.01 s, `{"status":"ok"}`
+> `GET /api/v1/catalogo/tiendas/tienda-01/productos` → `http=200`
+>
+> Despliegue en Azure Container Apps (región `canadacentral`, cuenta Azure for Students sin tarjeta).
+> Ver `docs/evidencia-despliegue-azure.md` y ADR-0009.
+>
+> Hasta el 24/09/2026 el sistema estuvo sin desplegar: el contrato solo declaraba el servidor local (`openapi.yaml:14-16`) y la documentación S7 lo justificaba con *"Railway no está desplegado (no declarar producción inexistente)"* (`correcciones.md:270`, `docs/evidencia-contrato-s7.md:43-46`). Ese estado quedó superado por el despliegue del 27/09/2026.
 
 | Entorno | URL | Estado | Fuente |
 |---|---|---|---|
 | Desarrollo local | `http://localhost:3000` | ✅ Operativo (`npm run dev`) | `README.md:254-255` |
 | Health local | `http://localhost:3000/api/v1/health` | ✅ Retorna `{ "status": "ok" }` | `README.md:327-334`, §5 |
-| Producción (Azure) | *Sin URL asignada* | ⏳ Decidido, no desplegado (ADR-0009) | `docs/adr/0009-despliegue-azure.md`, taller S8 láminas 1-3 |
+| Producción (Azure) | `https://laplacita-app.graymoss-fdd72159.canadacentral.azurecontainerapps.io` | ✅ Desplegado y verificado `200` el 27/09/2026 | `docs/evidencia-despliegue-azure.md`, ADR-0009 |
 | Contrato (`servers`) | `/api/v1` (relativo, sin host) | ✅ Alineado al estado real | `openapi.yaml:14-16` |
 
-### 2.2 Plan de activación (cuando el equipo lo despliegue)
+### 2.2 Activación ejecutada (27/09/2026)
 
-1. Crear el recurso en Azure Container Apps (cuenta Azure for Students, sin tarjeta) con la imagen del `Dockerfile` existente (§3).
-2. Configurar `PORT=3000` (ya fijado en `Dockerfile:16`) y variables de entorno en el portal de Azure (nunca en el repo — ADR-0003 §Riesgos).
-3. Obtener la URL pública y registrarla aquí + como segundo `servers` en `openapi.yaml` (hoy solo existe `/api/v1`).
-4. Verificar `GET <url>/api/v1/health` → `200 { "status": "ok" }` antes de declarar el despliegue como cumplido. Reversión: misma imagen al servidor de la universidad o a Railway (ADR-0009).
+Secuencia efectivamente realizada, registrada como evidencia del procedimiento:
+
+1. ✅ Crear el recurso en Azure Container Apps (cuenta Azure for Students, sin tarjeta) con la imagen del `Dockerfile` existente (§3).
+2. ✅ Configurar `PORT=3000` (ya fijado en `Dockerfile:16`) y variables de entorno en el portal de Azure (nunca en el repo — ADR-0003 §Riesgos).
+3. 🔶 URL pública obtenida y registrada en §2.1. Queda pendiente declararla como segundo `servers` en `openapi.yaml`, que hoy solo contiene `/api/v1` relativo.
+4. ✅ Verificar `GET <url>/api/v1/health` → `200 { "status": "ok" }`. Reversión disponible: misma imagen en el servidor de la universidad o en Railway (ADR-0009).
 
 ---
 
