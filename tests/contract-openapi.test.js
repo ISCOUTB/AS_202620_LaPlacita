@@ -319,9 +319,18 @@ test('openapi.yaml: cada path del contrato tiene su route.js en app/api/v1/', ()
 
   for (const apiPath of apiPaths) {
     const archivo = 'app/api/v1' + apiPath.replace(/\{([^}]+)\}/g, '[$1]') + '/route.js';
+    const urlArchivo = new URL('../' + archivo, import.meta.url);
     assert.ok(
-      existsSync(new URL('../' + archivo, import.meta.url)),
+      existsSync(urlArchivo),
       `El path ${apiPath} no tiene su route.js: falta ${archivo}`
     );
+
+    const fuente = readFileSync(urlArchivo, 'utf-8');
+    for (const m of fuente.matchAll(/from '(\.[^']+)'/g)) {
+      assert.ok(
+        existsSync(new URL(m[1], urlArchivo)),
+        `${archivo} importa ${m[1]} — la ruta relativa no resuelve`
+      );
+    }
   }
 });
