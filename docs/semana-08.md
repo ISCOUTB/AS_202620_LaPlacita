@@ -175,7 +175,29 @@ Cobertura: `tests/observabilidad.test.js` (forma de la línea, ausencia de PIN, 
 | `pinesRechazados` | PIN incorrecto en `validarPin` | ESC-03, A-06 |
 | `pinesBloqueados` | intento sobre pedido bloqueado | ESC-03, A-06 |
 
-Limitación honesta: contadores en memoria del proceso (se reinician con cada despliegue), igual que el resto del dominio en este corte.
+Limitación honesta: contadores en memoria del proceso (se reinician con cada despliegue), igual que el resto del dominio en este corte. Con una sola réplica activa esto es suficiente para consultar la métrica; con varias réplicas cada una llevaría su propio conteo y no se agregarían entre sí.
+
+**Verificado en producción** el 2026-09-27 tras el despliegue de `f02839c` (tag `laplacita-app:s8-2`):
+
+```bash
+curl https://laplacita-app.graymoss-fdd72159.canadacentral.azurecontainerapps.io/api/v1/metricas
+→ 200
+```
+
+Ejecutando el flujo de ESC-03/ESC-04/A-06 contra la URL pública, los contadores responden en vivo:
+
+```json
+{
+  "pedidosCreados": 1,
+  "pagosConfirmados": 1,
+  "pedidosListos": 1,
+  "entregasValidadas": 0,
+  "pinesRechazados": 5,
+  "pinesBloqueados": 2
+}
+```
+
+El endpoint tiene `export const dynamic = 'force-dynamic'`. Sin esa directiva Next.js prerenderiza la ruta en el build y los contadores quedan congelados en la instantánea de compilación: el endpoint responde 200 con todos los valores en cero para siempre. Es el motivo del hallazgo registrado en `docs/ia.md` y del refuerzo en `tests/contract-openapi.test.js`, que ahora comprueba que los imports relativos de todas las rutas resuelvan.
 
 ### 5.2.2 Formato de errores (contrato)
 
@@ -194,7 +216,7 @@ Todos los errores usan el esquema `Error` (`openapi.yaml:493-498`): `{ "error": 
 ### 5.3 Deuda restante (explícita)
 
 - **Hecho en este corte:** logger JSON en rutas (`health`, `metricas`, `entrega/validar`) + endpoint `GET /api/v1/metricas` + PIN nunca en bitácora.
-- **Pendiente:** extender el logger a las 8 routes restantes con `latencyMs`/`requestId`, y corregir `src/corte-vertical.js:35` (imprime el PIN en claro; es script demo, no ruta, pero debe enmascararse antes de producción).
+- **Pendiente:** extender el logger a las 8 routes restantes con `latencyMs`/`requestId`. El PIN en claro de `src/corte-vertical.js:35` ya está corregido (27/09/2026): el log ahora indica que el PIN fue emitido sin mostrarlo.
 - **Estado:** registrado como deuda parcial (R-4 en §7), no como hecho completo.
 
 ---
