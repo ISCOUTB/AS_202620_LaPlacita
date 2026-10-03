@@ -12,6 +12,7 @@ const contadores = {
   entregasValidadas: 0,
   pinesRechazados: 0,
   pinesBloqueados: 0,
+  pedidosListados: 0,
 };
 
 function contar(evento) {

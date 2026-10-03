@@ -80,6 +80,23 @@ function obtenerPedido(pedidoId, tiendaId) {
   return instantanea(pedidoMutable(pedidoId, tiendaId));
 }
 
+function listarPorTienda(tiendaId, { limit = 50, offset = 0 } = {}) {
+  if (!tiendaId) {
+    throw new Error('tiendaId es obligatorio');
+  }
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+    throw new Error('limit debe ser un entero entre 1 y 100');
+  }
+  if (!Number.isInteger(offset) || offset < 0) {
+    throw new Error('offset debe ser un entero mayor o igual a 0');
+  }
+  const lista = Array.from(repoTienda(tiendaId).values())
+    .slice(offset, offset + limit)
+    .map(instantanea);
+  contar('pedidosListados');
+  return Object.freeze(lista);
+}
+
 function cambiarEstado(pedidoId, tiendaId, nuevoEstado) {
   const pedido = pedidoMutable(pedidoId, tiendaId);
   const indiceActual = ESTADOS.indexOf(pedido.estado);
@@ -129,6 +146,7 @@ function confirmarEntrega(pedidoId, tiendaId) {
 export {
   crearPedido,
   obtenerPedido,
+  listarPorTienda,
   cambiarEstado,
   asignarPin,
   confirmarPago,

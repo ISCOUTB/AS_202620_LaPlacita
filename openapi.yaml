@@ -116,6 +116,46 @@ paths:
                   $ref: '#/components/schemas/Producto'
 
   /pedidos:
+    get:
+      tags: [pedidos]
+      summary: Listar pedidos de una tienda con paginación (S9, ESC-01)
+      operationId: listarPedidos
+      parameters:
+        - name: tiendaId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Lista de pedidos de la tienda (copias inmutables)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pedido'
+        '400':
+          description: tiendaId ausente o paginación inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     post:
       tags: [pedidos]
       summary: Crear un nuevo pedido
@@ -402,6 +442,10 @@ components:
           type: integer
           minimum: 0
           description: Intentos sobre pedidos bloqueados tras 5 fallos (ESC-03, A-06)
+        pedidosListados:
+          type: integer
+          minimum: 0
+          description: Consultas de listado por tienda (ESC-01, S9)
       required:
         - pedidosCreados
         - pagosConfirmados
@@ -409,6 +453,7 @@ components:
         - entregasValidadas
         - pinesRechazados
         - pinesBloqueados
+        - pedidosListados
 
     Producto:
       type: object
