@@ -71,8 +71,8 @@ jobs:
         - name: Instalar dependencias
           run: npm ci
 
-        - name: Ejecutar pruebas
-          run: npm test
+        - name: Ejecutar pruebas con cobertura
+          run: node --test --experimental-test-coverage --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=lcov.info "tests/**/*.test.js"
 
         - name: Análisis estático con SonarCloud
           if: ${{ env.SONAR_TOKEN != '' }}
