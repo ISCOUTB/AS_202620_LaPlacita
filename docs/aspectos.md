@@ -20,16 +20,16 @@
 
 **Nota 2 — La columna ADR y la columna Código se rellenaron en S9.** Hasta la semana 8 ambas columnas estaban vacías para A-01 a A-06: el contenido de pruebas y de evidencia ocupaba su lugar por un desplazamiento de columnas, de modo que la cadena `aspectos.md → ADR → código → prueba → medición` no se podía recorrer para ningún aspecto salvo A-07. La corrección es de S9 y está en `docs/evidencias/evidencias-s9.md`.
 
-## Mapa Aspecto -> Contexto 
-| Aspecto | Contexto(s) | Mapa | C4-3 | ADR |
-|---|---|---|---|---|
-| A-01 | Pedidos | [mapa](dominio/mapa-de-contextos.md) | | | | | |
-| A-02 | Todos (SK `tiendaId`) | [mapa](dominio/mapa-de-contextos.md) | | | | | |
-| A-03 | Notificaciones (OHS) | [RF-03 → ESC-03](arc42/arc42-template-EN.md#esc-03--notificaci%C3%B3n-oportuna-del-cambio-de-estado) | | | | | |
-| A-04 | Pagos (+ACL pasarela) | [RF-04 → ESC-04](arc42/arc42-template-EN.md#esc-04--protecci%C3%B3n-de-datos-personales-y-de-pago) | | | | | |
-| A-05 | Orquestador (composición) | [RF-05 → ESC-05](arc42/arc42-template-EN.md#esc-05--simplicidad-del-flujo-de-navegaci%C3%B3n-y-pedido) | | | | | |
-| A-06 | Entrega (concepto) + Pedidos (almacén PIN) | [RF-06 → ESC-06](arc42/arc42-template-EN.md#esc-06--integridad-en-la-validaci%C3%B3n-de-identidad-en-el-punto-de-recolecci%C3%B3n) | | | | | |
-| A-07 | Contrato de API (todos los módulos) | [mapa](dominio/mapa-de-contextos.md) | [componentes](c4/componentes.md) | ADR-0006 |
+## Mapa Aspecto -> Contexto
+| Aspecto | Contexto(s) | Escenario de calidad (§10.2) | Mapa de contextos | C4-3 | ADR |
+|---|---|---|---|---|---|
+| A-01 | Pedidos | [ESC-01](arc42/arc42-template-EN.md#esc-01--picos-de-demanda-entre-clases) | [mapa](dominio/mapa-de-contextos.md) | | |
+| A-02 | Todos (SK `tiendaId`) | [ESC-02](arc42/arc42-template-EN.md#esc-02--aislamiento-entre-las-cinco-tiendas) | [mapa](dominio/mapa-de-contextos.md) | | |
+| A-03 | Notificaciones (OHS) | sin escenario de calidad (ver nota 1) | [mapa](dominio/mapa-de-contextos.md) | | |
+| A-04 | Pagos (+ACL pasarela) | [ESC-04](arc42/arc42-template-EN.md#esc-04--protecci%C3%B3n-del-pago) | [mapa](dominio/mapa-de-contextos.md) | | |
+| A-05 | Orquestador (composición) | [ESC-05](arc42/arc42-template-EN.md#esc-05--compra-r%C3%A1pida) | [mapa](dominio/mapa-de-contextos.md) | | |
+| A-06 | Entrega (concepto) + Pedidos (almacén PIN) | [ESC-03](arc42/arc42-template-EN.md#esc-03--validaci%C3%B3n-de-entrega-mediante-pin) | [mapa](dominio/mapa-de-contextos.md) | | |
+| A-07 | Contrato de API (todos los módulos) | [§6 Vista de ejecución](arc42/arc42-template-EN.md#6-vista-de-ejecuci%C3%B3n) | [mapa](dominio/mapa-de-contextos.md) | [componentes](c4/componentes.md) | [ADR-0006](adr/0006-estrategia-integracion-sincrona.md) |
 
 ---
 

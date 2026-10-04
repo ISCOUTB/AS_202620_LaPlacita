@@ -76,7 +76,7 @@ cumplía en el módulo y se violaba en la ruta que lo consume. Un cliente podía
 `Recibido → En preparación → Listo → Entregado` sin pago ni PIN, y como `cambiarEstado` no asigna
 `pin`, el pedido terminaba `Entregado` con `pin: null`.
 
-**La corrección.** El handler `PUT` se retiró y `cambiarEstado` dejó de exportarse al borde. Verificación:
+**La corrección.** El handler `PUT` se retiró y ninguna ruta importa ya `cambiarEstado`. Verificación:
 
 ```bash
 git grep -nIE '\.estado\s*=' -- src app | grep -v 'src/modules/pedidos/index.js'   # vacío
@@ -84,6 +84,16 @@ git grep -lE '\bcambiarEstado\b' -- app                                         
 ```
 
 Ambas vacías. El estado solo lo escribe `src/modules/pedidos/index.js`. **V-03 restaurada en el borde.**
+
+**Alcance exacto de la corrección, para que no se lea más de lo que es.** `cambiarEstado` **sigue
+exportado** por `src/modules/pedidos/index.js:148`, porque los métodos de intención lo invocan por
+dentro. Lo que se retiró fue su **exposición al borde**: ninguna ruta lo importa y el contrato ya no
+declara la operación que lo alcanzaba. La puerta que S9 cierra es la de los clientes HTTP, no la de
+cualquier módulo futuro que importara el módulo de dominio. Cerrar esa segunda puerta —dejar
+`cambiarEstado` como privado del módulo— es posible y no se hizo aquí: no cambia ningún comportamiento y
+exigiría revisar los consumidores del dominio. Queda como deuda declarada, con dos redes: la
+aserción `ninguna ruta HTTP llama cambiarEstado` de `tests/contract-openapi.test.js` falla si alguien
+vuelve a importarlo en una ruta, y el ADR-0013 lo prohíbe explícitamente.
 
 ## E-03 · ¿El `pin` sale por un canal que no sea el previsto? — **No, con una excepción deliberada**
 

@@ -46,7 +46,8 @@ docs/aspectos.md  fila A-06  →  ESC-03  →  ADR-0013  →  src/modules/pedido
 | Eslabón | Dónde | Verificación |
 |---|---|---|
 | Fila del aspecto | `docs/aspectos.md`, fila **A-06** | Enlaza ESC-03, ADR-0007 y ADR-0013, el código, las pruebas y la evidencia |
-| Escenario | `docs/arc42/arc42-template-EN.md:535` — **ESC-03 Validación de entrega mediante PIN** | Ancla verificada |
+| Escenario | `docs/arc42/arc42-template-EN.md` §10.2 — **ESC-03 Validación de entrega mediante PIN** | Ancla verificada |
+| Umbral del escenario y medición | arc42 §12.2 (umbral), §12.3 (línea base), §12.4 (post-cambio), §12.5 (reproducción) | Sección nueva en S9, espejando §11 |
 | ADR con la decisión del equipo | `docs/adr/0013-proyeccion-publica-pedido-sin-pin.md` | Cuatro alternativas con fundamento; **precisa** el ADR-0007, no lo reescribe |
 | Código | `src/modules/pedidos/index.js:92` (`vistaPublica`) | `app/api/v1/pedidos/[pedidoId]/route.js` la usa; `PUT` retirado |
 | Prueba que falla ante el defecto | `tests/contract-openapi.test.js`, aserciones `S9:` | §3 |
@@ -96,7 +97,26 @@ contenido de las respuestas. Ahora verifica respuestas.
 
 ## 4. Medición del escenario, contrastada con el umbral
 
-**Umbral ESC-03: 0.**
+**Umbral ESC-03: 0** — *0 valores de `pin` expuestos y 0 transiciones a "Entregado" sin validación
+exitosa*.
+
+El umbral no es una cifra elegida para esta entrega: es la formalización numérica de las medidas que
+§10.2 del arc42 ya exigía para ESC-03 de forma cualitativa («una validación incorrecta debe impedir la
+entrega», «el pedido solo debe pasar a estado "Entregado" después de una validación exitosa»). Se
+documentó en el propio escenario y en la sección de la medición, siguiendo la convención que el equipo
+ya usaba con ESC-02:
+
+| Dónde | Qué dice |
+|---|---|
+| `docs/arc42/arc42-template-EN.md` §10.2, ESC-03 | la medida numérica en «Medida de respuesta» |
+| `docs/arc42/arc42-template-EN.md` §12.2 | el umbral re-declarado junto al diagnóstico |
+| `docs/arc42/arc42-template-EN.md` §12.3 y §12.4 | tablas de línea base y post-cambio, con el umbral |
+| `docs/arc42/arc42-template-EN.md` §12.5 | procedimiento de reproducción |
+
+La sección §12 es nueva en S9 y sigue la estructura de §11 (restricción, diagnóstico, línea base,
+post-cambio, reproducción). Con ella, el arc42 pasa a tener las secciones 1 a 12 que el `CONTRATO.md` §2
+declara como estructura mínima. La definición del escenario de calidad **no se modificó**: solo se le
+añadió la medida que le faltaba, y el estado inicial de S8 la incumplía.
 
 `scripts/medir-exposicion-pin.js` mide en dos planos. El mismo archivo mide la línea base y el estado
 corregido, y sale con código 1 cuando no cumple.
@@ -153,7 +173,30 @@ desde fuera, no quién puede usarlo dentro.
 
 | Dependencia | Quién la propuso | Verificación | Decisión del equipo |
 |---|---|---|---|
-| `jsonwebtoken` | La herramienta, como primera propuesta para proteger el GET | No se añadió. Se verificó en el registro oficial que el nombre es legítimo antes de descartarla | **Rechazada** con motivo técnico |
+| `jsonwebtoken` | La herramienta, como primera propuesta para proteger el GET | No se añadió. Verificada en el registro oficial npm antes de descartarla (salida abajo) | **Rechazada** con motivo técnico |
+
+**Salida de la verificación en el registro oficial**, con el comando que la reproduce:
+
+```bash
+curl -s "https://registry.npmjs.org/jsonwebtoken" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+print('nombre:', d.get('name'))
+print('version:', d.get('dist-tags',{}).get('latest'))
+print('creado:', d.get('time',{}).get('created'))
+print('repo:', (d.get('repository') or {}).get('url'))"
+```
+
+```
+nombre: jsonwebtoken
+version: 9.0.3
+creado: 2013-07-01T01:48:05.300Z
+repo: git+https://github.com/auth0/node-jsonwebtoken.git
+```
+
+**Lectura del resultado:** el nombre existe y es el legítimo — no es un paquete inventado. Lo mantiene
+Auth0 (`auth0/node-jsonwebtoken`) desde 2013, con 9.0.3 como versión actual. La verificación confirma
+que la dependencia es real; **no** que sea pertinente, y el motivo del rechazo es de pertinencia:
 
 **Motivo del rechazo** (completo en `docs/ia.md`, entrada del 04/10/2026): el proyecto no tiene modelo
 de identidad de tenant — no hay emisor de token ni verificación de que el `tiendaId` de la consulta
