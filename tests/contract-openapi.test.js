@@ -301,7 +301,6 @@ test('openapi.yaml define todos los endpoints del contrato', () => {
 test('openapi.yaml define los esquemas de request y response', () => {
   const content = readFileSync(new URL('../openapi.yaml', import.meta.url), 'utf-8');
   assert.ok(content.includes('CrearPedidoRequest'), 'Falta schema CrearPedidoRequest');
-  assert.ok(content.includes('CambiarEstadoRequest'), 'Falta schema CambiarEstadoRequest');
   assert.ok(content.includes('ValidarPinRequest'), 'Falta schema ValidarPinRequest');
   assert.ok(content.includes('NotificarCambioEstadoRequest'), 'Falta schema NotificarCambioEstadoRequest');
   assert.ok(content.includes('Pedido'), 'Falta schema Pedido');

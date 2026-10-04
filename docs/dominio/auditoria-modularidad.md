@@ -44,3 +44,96 @@
 | A-05 Simplicidad flujo | Orquestador (composición) | `src/corte-vertical.js` |
 | A-06 Integridad PIN | Entrega (concepto) + Pedidos (almacén) | `src/modules/entrega/index.js`, V-01 |
 Sin aspectos huérfanos: los 6 mapean.
+---
+
+# Auditoría de erosión — S9 (2026-10-04)
+
+Esta sección audita el trabajo generado con apoyo de IA en la semana 9: **la porción de endurecimiento
+de A-06 / V-01 / V-03** (ADR-0013). La pregunta es si la generación cruzó un límite de contexto o una
+regla de propiedad de datos de la semana 6, cómo se detectó y cómo se corrigió.
+
+Todas las verificaciones son comandos reproducibles sobre la punta.
+
+## E-01 · ¿La generación escribió `pin` fuera de `asignarPin`? — **No**
+
+```bash
+git grep -nIE '\.pin\s*=' -- src app
+```
+
+Salida: `src/modules/pedidos/index.js:125` (dentro de `asignarPin`) y la línea 117, que es un
+comentario. Ningún otro módulo asigna `pin`. `entrega.marcarListo` lo pide a Pedidos mediante
+`asignarPin`, como exige V-01. **V-01 intacta.**
+
+## E-02 · ¿La generación avanzó el estado por fuera de los métodos de intención? — **No, y aquí estaba el defecto**
+
+Este hallazgo tiene dos mitades y conviene separarlas.
+
+**El defecto encontrado (preexistente, código de S7).** `app/api/v1/pedidos/[pedidoId]/route.js:31`
+llamaba `pedidos.cambiarEstado(params.pedidoId, tiendaId, nuevoEstado)` desde el borde HTTP. V-03
+enuncia que el estado solo avanza por `confirmarPago`/`marcarListo`/`confirmarEntrega`. La propiedad
+estaba correctamente implementada **dentro** del dominio y reabierta **en el borde**: el atributo se
+cumplía en el módulo y se violaba en la ruta que lo consume. Un cliente podía recorrer
+`Recibido → En preparación → Listo → Entregado` sin pago ni PIN, y como `cambiarEstado` no asigna
+`pin`, el pedido terminaba `Entregado` con `pin: null`.
+
+**La corrección.** El handler `PUT` se retiró y `cambiarEstado` dejó de exportarse al borde. Verificación:
+
+```bash
+git grep -nIE '\.estado\s*=' -- src app | grep -v 'src/modules/pedidos/index.js'   # vacío
+git grep -lE '\bcambiarEstado\b' -- app                                            # vacío
+```
+
+Ambas vacías. El estado solo lo escribe `src/modules/pedidos/index.js`. **V-03 restaurada en el borde.**
+
+## E-03 · ¿El `pin` sale por un canal que no sea el previsto? — **No, con una excepción deliberada**
+
+```bash
+git grep -niE 'pin' -- src/logger.js src/metricas.js
+```
+
+El logger declara explícitamente que nunca registra el PIN ni datos de tarjeta (`src/logger.js:4`), y
+`src/metricas.js` solo lleva los contadores `pinesRechazados`/`pinesBloqueados`, sin valores.
+
+**Excepción aceptada:** `src/corte-vertical.js:37` lee `pedido.pin` para pasarlo a
+`entrega.validarPin`. Es el script de demostración local — una CLI que no se despliega — y sin el
+valor no puede completar el flujo que demuestra. La línea 35 del mismo archivo imprime
+«PIN emitido (enmascarado por seguridad)», que es la corrección registrada en S8. No es una
+exposición por HTTP y no se considera erosión.
+
+## E-04 · ¿La generación cruzó un límite de contexto? — **No**
+
+```bash
+git grep -nIE "from '.*(catalogo|notificaciones|entrega|pagos)/index\.js'" -- src/modules/pedidos/index.js
+```
+
+Salida: una sola, `import { obtenerProducto }` desde Catálogo. Es la relación **Customer/Supplier
+declarada** en `docs/dominio/mapa-de-contextos.md:12,26`, y corresponde a la deuda V-02 que ya estaba
+registrada antes de S9.
+
+La porción de S9 **no añadió ninguna arista entre módulos**: `vistaPublica` vive dentro de Pedidos, y
+las rutas que la usan son adaptadores, capa que el ADR-0001 permite importar todos los contextos.
+Ningún import nuevo entre contextos.
+
+## E-05 · Estado de la deuda tras S9
+
+| Propiedad | Estado | Nota |
+|---|---|---|
+| V-01 dueño único de `pin` | **Intacta** | Verificada en E-01 |
+| V-03 métodos de intención | **Restaurada en el borde** | El defecto estaba en la ruta, no en el módulo (E-02) |
+| V-02 Pedidos→Catálogo sin ACL | Abierta | Sin cambios en S9; declarada como Customer/Supplier |
+| V-04 `tiendaId` kernel implícito | Abierta | Sin cambios en S9 |
+| V-05 Notificaciones solo vía orquestador | Abierta | Sin cambios en S9 |
+| V-06 Orquestador god | Abierta | Sin cambios en S9 |
+
+**Lo que S9 no cubre, y queda declarado:** `tiendaId` sigue siendo un parámetro de consulta
+suministrado por el llamante y no un claim verificado. El ADR-0013 acota la **exposición de un
+secreto**, no la **autorización**. El modelo de identidad de tenant sigue diferido a Corte 2
+(ADR-0011). Es la alternativa B del ADR-0013, rechazada con motivo en `docs/ia.md`.
+
+## Conclusión
+
+La generación **no erosionó** ninguna propiedad: respeta V-01, no añadió aristas entre contextos y no
+movió escrituras. Lo que sí hizo S9 fue **detectar y cerrar un cruce preexistente de V-03 en el borde
+HTTP**, que era invisible porque V-03 se había auditado dentro del módulo y no en sus consumidores. La
+lección para el curso: una propiedad de arquitectura verificada en su módulo no está verificada hasta
+que se comprueba en quien lo consume.
