@@ -52,6 +52,13 @@ Esta sección audita el trabajo generado con apoyo de IA en la semana 9: **la po
 de A-06 / V-01 / V-03** (ADR-0013). La pregunta es si la generación cruzó un límite de contexto o una
 regla de propiedad de datos de la semana 6, cómo se detectó y cómo se corrigió.
 
+**Dónde están escritas esas reglas de la semana 6.** No se toman de este archivo: la tabla de
+propiedad única y las relaciones entre contextos que se auditan aquí están en
+`docs/dominio/propiedad-de-datos.md` (RF-07) y `docs/dominio/mapa-de-contextos.md`, y las propiedades
+V-01…V-06 se definieron en `docs/adr/0005-reajuste-contextos-propiedad.md`, con V-01 y V-03 cerradas
+por `docs/adr/0007-v01-v03-dueno-pin-metodos-intencion.md`. Los hallazgos E-01 y E-02 de abajo se
+contrastan contra esa tabla, no contra el código aislado.
+
 Todas las verificaciones son comandos reproducibles sobre la punta.
 
 ## E-01 · ¿La generación escribió `pin` fuera de `asignarPin`? — **No**

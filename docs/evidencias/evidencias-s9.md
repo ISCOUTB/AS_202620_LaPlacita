@@ -5,11 +5,19 @@ Semana 9 · **Generación verificada y trazable** · 2026-10-04
 Este documento ata la cadena completa de la porción de S9. Cada eslabón se puede seguir hasta su
 destino con un comando.
 
+- **Repositorio:** <https://github.com/ISCOUTB/AS_202620_LaPlacita> (rama `master`)
 - **Hash de la línea base del periodo:** `b03a797` (estado calificado de S8)
-- **Commit del rojo:** `658dc8d`
-- **Commit del fix:** `e0542ce`
-- **Runs:** rojo [37224472688](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/37224472688) · verde [37225494755](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/37225494755)
 - **Cierre de la actividad S9:** `2026-10-05T05:00:00Z`
+
+Commits del periodo, en orden. Todos dentro del cierre:
+
+| Commit | Qué aporta | Run de CI |
+|---|---|---|
+| `bc4210a` | ADR-0012, ADR-0013, tres entradas en `docs/ia.md`, tabla de aspectos reparada | [37224341983](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/37224341983) ✅ |
+| `658dc8d` | cuatro aserciones negativas — **rojo intencional** | [37224472688](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/37224472688) ❌ |
+| `e0542ce` | el fix: proyección pública, retiro del `PUT`, contrato y medición | [37225494755](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/37225494755) ✅ |
+| `7a68487` | runs registrados en la evidencia | [37225771071](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/37225771071) ✅ |
+| `e1df86e` | umbral de ESC-03 anclado en §12, coherencia de la vista de ejecución | [37229050590](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/37229050590) ✅ |
 
 ---
 
@@ -52,8 +60,8 @@ docs/aspectos.md  fila A-06  →  ESC-03  →  ADR-0013  →  src/modules/pedido
 | Código | `src/modules/pedidos/index.js:92` (`vistaPublica`) | `app/api/v1/pedidos/[pedidoId]/route.js` la usa; `PUT` retirado |
 | Prueba que falla ante el defecto | `tests/contract-openapi.test.js`, aserciones `S9:` | §3 |
 | Medición | `scripts/medir-exposicion-pin.js` | §4 |
-| Registro de IA | `docs/ia.md`, tres entradas del 04/10/2026 | §5 |
-| Auditoría de erosión | `docs/dominio/auditoria-modularidad.md`, sección «Auditoría de erosión — S9» | §6 |
+| Registro de IA | `docs/ia.md`, cuatro entradas del 04/10/2026 | §5, con extracto citado |
+| Auditoría de erosión | `docs/dominio/auditoria-modularidad.md`, sección «Auditoría de erosión — S9», hallazgos E-01 a E-05 | archivo completo, citada en la tabla de propiedad de datos de S6 |
 
 ---
 
@@ -167,7 +175,65 @@ desde fuera, no quién puede usarlo dentro.
 
 ---
 
-## 5. Dependencias propuestas por la herramienta: verificación y rechazo
+## 5. Extracto de `docs/ia.md`: lo aceptado, lo corregido y lo rechazado
+
+La consigna pide las tres categorías. El registro completo está en `docs/ia.md` (cuatro entradas del
+04/10/2026, verificables con `git log --format='%h %cI' b03a797..HEAD -- docs/ia.md`); aquí se cita el
+extracto que sostiene cada categoría.
+
+### 5.0 Las tres categorías, y dónde está cada una
+
+| Categoría | Dónde está | Qué muestra |
+|---|---|---|
+| **Aceptado** | columna «Resultado obtenido» de las cuatro entradas | los dos defectos que la auditoría encontró y que se corrigieron, y el `ADR-0012` que se redactó |
+| **Corregido** | 4.ª entrada, columnas «Resultado obtenido» y «Rechazado» | dos recomendaciones **de la herramienta que el equipo corrigió**: la renumeración de `ESC-01…06` en el arc42 y el orden al escribir el umbral de ESC-03 |
+| **Rechazado con su motivo** | columna «Rechazado» de las entradas 2.ª, 3.ª y 4.ª | tres salidas rechazadas, cada una con su motivo técnico |
+
+### 5.1 Lo corregido — la entrada que faltaba
+
+> **4.ª entrada, 04/10/2026.** *La recomendación de la herramienta sobre renumerar los escenarios de
+> calidad era incorrecta y el equipo la corrigió.* La herramienta propuso reetiquetar los cinco
+> escenarios de §10.2 del arc42 como `ESC-01`…`ESC-06` para que `A-06` dejara de apuntar a un `ESC-06`
+> inexistente. Al comprobarlo sobre el historial, esa vía obligaba a editar los **11 ADR aceptados**,
+> cuya trazabilidad ya cita `ESC-01`…`ESC-05` con esa numeración […] Eso es exactamente la no
+> conformidad «ADR aceptados no reescritos» de la matriz transversal, que el repositorio arrastra
+> desde S8: una corrección de S9 la habría multiplicado por trece.
+>
+> El equipo descartó la renumeración y corrigió el síntoma donde estaba: `docs/aspectos.md` pasó a
+> enlazar el escenario que de verdad corresponde a `A-06`, que es **ESC-03 «Validación de entrega
+> mediante PIN»**, y se dejó §10.2 intacto.
+>
+> **Rechazado:** *Renumerar `ESC-01`…`ESC-05` como `ESC-01`…`ESC-06` en §10.2 del arc42* — primera
+> recomendación de la herramienta. Se rechazó por el motivo técnico descrito en la columna anterior.
+> *Escribir «Umbral ESC-03: 0» en la evidencia sin declararlo antes en el escenario*: la cifra no
+> tenía ancla en el repositorio […] El orden se corrigió: primero el arc42 (§10.2 y nueva §12,
+> siguiendo la convención que el equipo ya usaba con ESC-02) y después la evidencia.
+
+Esta entrada es la que demuestra criterio de equipo sobre salida de herramienta, que es lo que separa
+una decisión de una aceptación.
+
+### 5.2 Lo rechazado — las tres salidas, con su motivo
+
+> **2.ª entrada.** *Añadir la dependencia `jsonwebtoken` y proteger `GET /pedidos/{pedidoId}` con
+> middleware de autenticación* — la primera propuesta de la herramienta. El proyecto no tiene modelo
+> de identidad de tenant: no hay emisor de token ni verificación de que el `tiendaId` de la consulta
+> corresponda al sujeto autenticado, así que un JWT sin verificar daría una falsa sensación de
+> seguridad idéntica a la actual. Además el defecto no es «quién pregunta» sino «el campo viaja en la
+> respuesta»: el `pin` seguiría presente para cualquier portador de un token válido. **Ninguna
+> dependencia nueva se añadió al repositorio en este periodo.**
+>
+> **3.ª entrada.** *Evaluar el proveedor ahora mismo para decidir con números de costo y latencia
+> reales* — es la vía más rigurosa, pero exige una cuenta y clave de un proveedor externo y un banco
+> de pruebas anotado del dominio que el proyecto no tiene; no era ejecutable antes del cierre de
+> corte.
+>
+> **4.ª entrada.** *Ocultar el campo `pin` en el cliente* (2.ª entrada, columna «Rechazado»): el
+> defecto es del servidor —el campo sigue viajando en la respuesta HTTP y cualquier cliente lo lee con
+> `curl`—; no corrige nada.
+
+---
+
+## 6. Dependencias propuestas: verificación en el registro oficial y rechazo
 
 **Ninguna dependencia se añadió al repositorio en el periodo S9.**
 
@@ -211,7 +277,7 @@ El resto de la superficie sigue siendo `next`, `react` y `react-dom`, sin cambio
 
 ---
 
-## 6. Credenciales
+## 7. Credenciales
 
 Barrido de materializado sobre la punta del periodo, según `CONTRATO.md` §9:
 
@@ -230,7 +296,7 @@ La única mención de secreto en el código es la propia declaración de que no 
 
 ---
 
-## 7. Componente generativo
+## 8. Componente generativo
 
 El sistema **no incorpora** componente de IA generativa. La decisión está argumentada en
 `docs/adr/0012-no-incorporar-componente-generativo.md` con cuatro alternativas evaluadas.
@@ -246,7 +312,7 @@ ejecución.
 
 ---
 
-## 8. Deuda que S9 no cierra
+## 9. Deuda que S9 no cierra
 
 Se declara explícitamente para no sobreestimar el alcance:
 

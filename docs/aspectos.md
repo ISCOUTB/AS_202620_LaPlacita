@@ -20,6 +20,10 @@
 
 **Nota 2 — La columna ADR y la columna Código se rellenaron en S9.** Hasta la semana 8 ambas columnas estaban vacías para A-01 a A-06: el contenido de pruebas y de evidencia ocupaba su lugar por un desplazamiento de columnas, de modo que la cadena `aspectos.md → ADR → código → prueba → medición` no se podía recorrer para ningún aspecto salvo A-07. La corrección es de S9 y está en `docs/evidencias/evidencias-s9.md`.
 
+**Nota 3 — Por qué A-06 apunta a ESC-03 y no a un ESC-06 (decisión de S9).** Durante S9 la herramienta propuso renumerar los escenarios de calidad de §10.2 del arc42 como `ESC-01`…`ESC-06`, para que `A-06` dejara de apuntar a un `ESC-06` que no existe. **El equipo descartó esa vía.** Reetiquetar §10.2 obligaba a editar los **11 ADR aceptados**, cuya trazabilidad ya cita `ESC-01`…`ESC-05` con esa numeración (entre ellos ADR-0002, ADR-0006, ADR-0007, ADR-0009, ADR-0010 y ADR-0011, y la tabla de §9 del arc42). Eso es la no conformidad «ADR aceptados no reescritos» de la matriz transversal, que el repositorio arrastra desde S8: una corrección de S9 la habría multiplicado por trece.
+
+La corrección se hizo donde estaba el síntoma, no donde estaba la consecuencia: la fila `A-06` de la tabla principal enlaza el escenario que le corresponde realmente, **ESC-03 «Validación de entrega mediante PIN»**, que es el que declara el aspecto `A-06`; §10.2 queda intacto y sigue siendo la numeración canónica. Además se repararon cuatro anclas muertas y el desajuste de columnas de la tabla «Mapa Aspecto -> Contexto», y se desambiguaron los casos de uso de §6 con prefijo `UC-nn` porque se autonombraban `ESC-01`…`ESC-03` igual que §10.2. El registro completo de la decisión está en `docs/ia.md` (04/10/2026) y en `docs/evidencias/evidencias-s9.md`.
+
 ## Mapa Aspecto -> Contexto
 | Aspecto | Contexto(s) | Escenario de calidad (§10.2) | Mapa de contextos | C4-3 | ADR |
 |---|---|---|---|---|---|
