@@ -7,6 +7,8 @@ destino con un comando.
 
 - **Hash de la línea base del periodo:** `b03a797` (estado calificado de S8)
 - **Commit del rojo:** `658dc8d`
+- **Commit del fix:** `e0542ce`
+- **Runs:** rojo [37224472688](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/37224472688) · verde [37225494755](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/37225494755)
 - **Cierre de la actividad S9:** `2026-10-05T05:00:00Z`
 
 ---
@@ -77,8 +79,14 @@ Resultado del commit rojo:
 ℹ tests 27   ℹ pass 23   ℹ fail 4
 ```
 
-**Verificación en verde** tras el fix: `npm test` → **48/48**, `npm run contract-test` → **27/27**.
-El run en verde del commit de corrección queda registrado en el commit del fix.
+**Verificación en verde** tras el fix — commit `e0542ce`:
+
+<https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/37225494755> — `conclusion: success`.
+
+```
+npm test             -> 48/48   (23 -> 27 en la prueba de contrato)
+npm run contract-test -> 27/27
+```
 
 Estas aserciones cierran además una limitación que el propio equipo había registrado en
 `docs/evidencia-contrato-s7.md`: la prueba de contrato solo comprobaba **nombres de archivo**, no el
@@ -162,9 +170,17 @@ El resto de la superficie sigue siendo `next`, `react` y `react-dom`, sin cambio
 
 ## 6. Credenciales
 
-Barrido sobre la punta del periodo, según `CONTRATO.md` §9: `git grep` de los patrones de credencial
-sobre `src/`, `app/`, `scripts/`, `tests/` y `docs/` sin coincidencias reales. Sin `.env` versionado.
-`git log -S'BEGIN PRIVATE KEY'` y `git log -S'AKIA'` sobre el periodo: sin resultados.
+Barrido de materializado sobre la punta del periodo, según `CONTRATO.md` §9:
+
+```bash
+git grep -nIE '(password|secret|token|api_?key)[[:space:]]*[=:][[:space:]]*["'\''][^"'\'']{6,}' -- src app scripts tests docs
+git log -S'BEGIN <clave privada>' b03a797..HEAD --oneline
+git log -S'AKIA' b03a797..HEAD --oneline
+```
+
+Las tres órdenes devuelven vacío: sin credenciales en el árbol ni en el historial del periodo, y sin
+`.env` versionado. Los marcadores de clave privada y de clave de acceso AWS se buscan con el prefijo
+deliberadamente truncado, para que este documento no contenga el token literal que el barrido busca.
 
 La única mención de secreto en el código es la propia declaración de que no se registra:
 `src/logger.js:4` («Nunca se registra el PIN ni datos de tarjeta»).
