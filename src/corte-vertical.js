@@ -32,7 +32,7 @@ function ejecutarCorteVertical() {
 
   pedido = entrega.marcarListo(pedido.id, tiendaId);
   notificaciones.notificarCambioEstado(pedido.id, pedido.estado, tiendaId);
-  console.log(`[entrega] pedido listo — PIN: ${pedido.pin}`);
+  console.log(`[entrega] pedido listo — PIN emitido (enmascarado por seguridad)`);
 
   pedido = entrega.validarPin(pedido.id, tiendaId, pedido.pin);
   notificaciones.notificarCambioEstado(pedido.id, pedido.estado, tiendaId);

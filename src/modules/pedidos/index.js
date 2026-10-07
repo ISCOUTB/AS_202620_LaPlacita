@@ -97,6 +97,21 @@ function listarPorTienda(tiendaId, { limit = 50, offset = 0 } = {}) {
   return Object.freeze(lista);
 }
 
+// S9 · ADR-0013: proyección pública del pedido. Es la única función que el
+// borde HTTP debe usar para leer un pedido, y devuelve la instantánea sin
+// `pin`. El PIN es el mecanismo de validación del punto de recolección (A-06,
+// ESC-03) y no debe ser legible por una vía de lectura: si el llamante puede
+// leerlo, no necesita adivinarlo ni la validación del mostrador pierde sentido.
+//
+// `obtenerPedido` se conserva sin cambios porque el dominio la necesita
+// legítimamente: `entrega.validarPin` lee el `pin` para compararlo. Lo que
+// cambia es quién puede verlo desde fuera, no quién puede usarlo dentro.
+function vistaPublica(pedidoId, tiendaId) {
+  const publico = { ...pedidoMutable(pedidoId, tiendaId) };
+  delete publico.pin;
+  return Object.freeze(publico);
+}
+
 function cambiarEstado(pedidoId, tiendaId, nuevoEstado) {
   const pedido = pedidoMutable(pedidoId, tiendaId);
   const indiceActual = ESTADOS.indexOf(pedido.estado);
@@ -147,6 +162,7 @@ export {
   crearPedido,
   obtenerPedido,
   listarPorTienda,
+  vistaPublica,
   cambiarEstado,
   asignarPin,
   confirmarPago,

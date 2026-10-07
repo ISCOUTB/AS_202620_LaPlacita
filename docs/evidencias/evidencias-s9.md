@@ -1,0 +1,326 @@
+# Evidencias S9 — Porción real del sistema construida con apoyo de IA
+
+Semana 9 · **Generación verificada y trazable** · 2026-10-04
+
+Este documento ata la cadena completa de la porción de S9. Cada eslabón se puede seguir hasta su
+destino con un comando.
+
+- **Repositorio:** <https://github.com/ISCOUTB/AS_202620_LaPlacita> (rama `master`)
+- **Hash de la línea base del periodo:** `b03a797` (estado calificado de S8)
+- **Cierre de la actividad S9:** `2026-10-05T05:00:00Z`
+
+Commits del periodo, en orden. Todos dentro del cierre:
+
+| Commit | Qué aporta | Run de CI |
+|---|---|---|
+| `bc4210a` | ADR-0012, ADR-0013, tres entradas en `docs/ia.md`, tabla de aspectos reparada | [37224341983](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/37224341983) ✅ |
+| `658dc8d` | cuatro aserciones negativas — **rojo intencional** | [37224472688](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/37224472688) ❌ |
+| `e0542ce` | el fix: proyección pública, retiro del `PUT`, contrato y medición | [37225494755](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/37225494755) ✅ |
+| `7a68487` | runs registrados en la evidencia | [37225771071](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/37225771071) ✅ |
+| `e1df86e` | umbral de ESC-03 anclado en §12, coherencia de la vista de ejecución | [37229050590](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/37229050590) ✅ |
+
+---
+
+## 1. Qué se construyó y por qué
+
+La porción es el **endurecimiento de la validación de identidad en el punto de recolección**: cerrar
+la exposición del PIN de validación y el bypass de la máquina de estados en el borde HTTP.
+
+No es un ejercicio aparte. Es la ruta de entrega real del sistema, y lo que hace es cerrar dos
+defectos que **anulaban propiedades que el propio equipo había aceptado**:
+
+| Defecto | Anulaba | Efecto explotable |
+|---|---|---|
+| `GET /pedidos/{pedidoId}` devolvía el `pin` en la respuesta | **A-06** y la decisión de diseño de la ficha del problema §4.1 | Con `pedido-1` (predecible) y `tiendaId` se **lee** el PIN; no hace falta adivinarlo. Anula el control de seguridad que la ficha declara concentrado en el mostrador. |
+| `PUT /pedidos/{pedidoId}` llamaba a `pedidos.cambiarEstado` | **V-03** del ADR-0007 | Se recorre `Recibido → En preparación → Listo → Entregado` sin pago y sin PIN; el pedido llega `Entregado` con `pin: null`. |
+
+El segundo es el más instructivo: **V-03 estaba correctamente implementada dentro del módulo y
+reabierta en la ruta que lo consume.** Una propiedad verificada en su módulo no está verificada hasta
+que se comprueba en quien lo usa.
+
+Ninguno de los dos estaba en la tabla de riesgos de `docs/semana-08.md` (R-1…R-6).
+
+---
+
+## 2. La cadena, eslabón por eslabón
+
+```
+docs/aspectos.md  fila A-06  →  ESC-03  →  ADR-0013  →  src/modules/pedidos/index.js:92
+                                                            →  app/api/v1/pedidos/[pedidoId]/route.js
+                                                            →  tests/contract-openapi.test.js
+                                                            →  scripts/medir-exposicion-pin.js
+```
+
+| Eslabón | Dónde | Verificación |
+|---|---|---|
+| Fila del aspecto | `docs/aspectos.md`, fila **A-06** | Enlaza ESC-03, ADR-0007 y ADR-0013, el código, las pruebas y la evidencia |
+| Escenario | `docs/arc42/arc42-template-EN.md` §10.2 — **ESC-03 Validación de entrega mediante PIN** | Ancla verificada |
+| Umbral del escenario y medición | arc42 §12.2 (umbral), §12.3 (línea base), §12.4 (post-cambio), §12.5 (reproducción) | Sección nueva en S9, espejando §11 |
+| ADR con la decisión del equipo | `docs/adr/0013-proyeccion-publica-pedido-sin-pin.md` | Cuatro alternativas con fundamento; **precisa** el ADR-0007, no lo reescribe |
+| Código | `src/modules/pedidos/index.js:92` (`vistaPublica`) | `app/api/v1/pedidos/[pedidoId]/route.js` la usa; `PUT` retirado |
+| Prueba que falla ante el defecto | `tests/contract-openapi.test.js`, aserciones `S9:` | §3 |
+| Medición | `scripts/medir-exposicion-pin.js` | §4 |
+| Registro de IA | `docs/ia.md`, cuatro entradas del 04/10/2026 | §5, con extracto citado |
+| Auditoría de erosión | `docs/dominio/auditoria-modularidad.md`, sección «Auditoría de erosión — S9», hallazgos E-01 a E-05 | archivo completo, citada en la tabla de propiedad de datos de S6 |
+
+---
+
+## 3. La prueba que falla ante el defecto que cubre
+
+**Commit:** `658dc8d` — intencionadamente rojo.
+
+**Run en rojo (CI):**
+<https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/37224472688> — `conclusion: failure`
+sobre `658dc8d`.
+
+Las cuatro aserciones que fallan:
+
+| Aserción | Por qué falla antes del fix |
+|---|---|
+| `pedidos.vistaPublica existe y no expone el pin` | La función no existía |
+| `el contrato no declara pin en el esquema de lectura del pedido` | `Pedido` declaraba `pin` (`openapi.yaml:454`) |
+| `el contrato no expone un setter genérico de estado` | `/pedidos/{pedidoId}` declaraba `put:` |
+| `ninguna ruta HTTP llama cambiarEstado` | La ruta `PUT` lo llamaba |
+
+Resultado del commit rojo:
+
+```
+ℹ tests 27   ℹ pass 23   ℹ fail 4
+```
+
+**Verificación en verde** tras el fix — commit `e0542ce`:
+
+<https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/37225494755> — `conclusion: success`.
+
+```
+npm test             -> 48/48   (23 -> 27 en la prueba de contrato)
+npm run contract-test -> 27/27
+```
+
+Estas aserciones cierran además una limitación que el propio equipo había registrado en
+`docs/evidencia-contrato-s7.md`: la prueba de contrato solo comprobaba **nombres de archivo**, no el
+contenido de las respuestas. Ahora verifica respuestas.
+
+---
+
+## 4. Medición del escenario, contrastada con el umbral
+
+**Umbral ESC-03: 0** — *0 valores de `pin` expuestos y 0 transiciones a "Entregado" sin validación
+exitosa*.
+
+El umbral no es una cifra elegida para esta entrega: es la formalización numérica de las medidas que
+§10.2 del arc42 ya exigía para ESC-03 de forma cualitativa («una validación incorrecta debe impedir la
+entrega», «el pedido solo debe pasar a estado "Entregado" después de una validación exitosa»). Se
+documentó en el propio escenario y en la sección de la medición, siguiendo la convención que el equipo
+ya usaba con ESC-02:
+
+| Dónde | Qué dice |
+|---|---|
+| `docs/arc42/arc42-template-EN.md` §10.2, ESC-03 | la medida numérica en «Medida de respuesta» |
+| `docs/arc42/arc42-template-EN.md` §12.2 | el umbral re-declarado junto al diagnóstico |
+| `docs/arc42/arc42-template-EN.md` §12.3 y §12.4 | tablas de línea base y post-cambio, con el umbral |
+| `docs/arc42/arc42-template-EN.md` §12.5 | procedimiento de reproducción |
+
+La sección §12 es nueva en S9 y sigue la estructura de §11 (restricción, diagnóstico, línea base,
+post-cambio, reproducción). Con ella, el arc42 pasa a tener las secciones 1 a 12 que el `CONTRATO.md` §2
+declara como estructura mínima. La definición del escenario de calidad **no se modificó**: solo se le
+añadió la medida que le faltaba, y el estado inicial de S8 la incumplía.
+
+`scripts/medir-exposicion-pin.js` mide en dos planos. El mismo archivo mide la línea base y el estado
+corregido, y sale con código 1 cuando no cumple.
+
+```bash
+node scripts/medir-exposicion-pin.js                                    # dominio + contrato
+npm run build && npm start                                              # en otra terminal
+node scripts/medir-exposicion-pin.js --url http://localhost:3000        # + HTTP real
+```
+
+### Línea base (commit `658dc8d`, servidor construido)
+
+```
+proyeccionPublicaExiste=false
+lecturasPublicasConPin=100
+esquemaPedidoDeclaraPin=true
+contratoExponePut=true
+rutasQueUsanCambiarEstado=1
+getQueDevuelvenPin=100/100
+putQueTienenEfecto=100/100
+
+exposicionesIntentadas=200   exposicionesLogradas=303   cumple=false
+resultado: INCUMPLE el umbral          (exit 1)
+```
+
+### Estado corregido
+
+```
+proyeccionPublicaExiste=true
+lecturasPublicasConPin=0
+esquemaPedidoDeclaraPin=false
+contratoExponePut=false
+rutasQueUsanCambiarEstado=0
+rutaAutorizadaADevolverPin=1 (POST /entrega/{pedidoId}/listo)
+getQueDevuelvenPin=0/100
+putQueTienenEfecto=0/100
+
+exposicionesIntentadas=200   exposicionesLogradas=0   cumple=true
+resultado: cumple el umbral          (exit 0)
+```
+
+**Contraste: 303 → 0.** El único cambio es la porción descrita en §1; el resto del sistema es el
+mismo.
+
+Nota de alcance: `pinPresenteEnElDominio=100/100` en ambos estados, y es lo correcto. El PIN **debe**
+existir en el dominio porque `entrega.validarPin` lo compara. Lo que se corrige es quién puede verlo
+desde fuera, no quién puede usarlo dentro.
+
+---
+
+## 5. Extracto de `docs/ia.md`: lo aceptado, lo corregido y lo rechazado
+
+La consigna pide las tres categorías. El registro completo está en `docs/ia.md` (cuatro entradas del
+04/10/2026, verificables con `git log --format='%h %cI' b03a797..HEAD -- docs/ia.md`); aquí se cita el
+extracto que sostiene cada categoría.
+
+### 5.0 Las tres categorías, y dónde está cada una
+
+| Categoría | Dónde está | Qué muestra |
+|---|---|---|
+| **Aceptado** | columna «Resultado obtenido» de las cuatro entradas | los dos defectos que la auditoría encontró y que se corrigieron, y el `ADR-0012` que se redactó |
+| **Corregido** | 4.ª entrada, columnas «Resultado obtenido» y «Rechazado» | dos recomendaciones **de la herramienta que el equipo corrigió**: la renumeración de `ESC-01…06` en el arc42 y el orden al escribir el umbral de ESC-03 |
+| **Rechazado con su motivo** | columna «Rechazado» de las entradas 2.ª, 3.ª y 4.ª | tres salidas rechazadas, cada una con su motivo técnico |
+
+### 5.1 Lo corregido — la entrada que faltaba
+
+> **4.ª entrada, 04/10/2026.** *La recomendación de la herramienta sobre renumerar los escenarios de
+> calidad era incorrecta y el equipo la corrigió.* La herramienta propuso reetiquetar los cinco
+> escenarios de §10.2 del arc42 como `ESC-01`…`ESC-06` para que `A-06` dejara de apuntar a un `ESC-06`
+> inexistente. Al comprobarlo sobre el historial, esa vía obligaba a editar los **11 ADR aceptados**,
+> cuya trazabilidad ya cita `ESC-01`…`ESC-05` con esa numeración […] Eso es exactamente la no
+> conformidad «ADR aceptados no reescritos» de la matriz transversal, que el repositorio arrastra
+> desde S8: una corrección de S9 la habría multiplicado por trece.
+>
+> El equipo descartó la renumeración y corrigió el síntoma donde estaba: `docs/aspectos.md` pasó a
+> enlazar el escenario que de verdad corresponde a `A-06`, que es **ESC-03 «Validación de entrega
+> mediante PIN»**, y se dejó §10.2 intacto.
+>
+> **Rechazado:** *Renumerar `ESC-01`…`ESC-05` como `ESC-01`…`ESC-06` en §10.2 del arc42* — primera
+> recomendación de la herramienta. Se rechazó por el motivo técnico descrito en la columna anterior.
+> *Escribir «Umbral ESC-03: 0» en la evidencia sin declararlo antes en el escenario*: la cifra no
+> tenía ancla en el repositorio […] El orden se corrigió: primero el arc42 (§10.2 y nueva §12,
+> siguiendo la convención que el equipo ya usaba con ESC-02) y después la evidencia.
+
+Esta entrada es la que demuestra criterio de equipo sobre salida de herramienta, que es lo que separa
+una decisión de una aceptación.
+
+### 5.2 Lo rechazado — las tres salidas, con su motivo
+
+> **2.ª entrada.** *Añadir la dependencia `jsonwebtoken` y proteger `GET /pedidos/{pedidoId}` con
+> middleware de autenticación* — la primera propuesta de la herramienta. El proyecto no tiene modelo
+> de identidad de tenant: no hay emisor de token ni verificación de que el `tiendaId` de la consulta
+> corresponda al sujeto autenticado, así que un JWT sin verificar daría una falsa sensación de
+> seguridad idéntica a la actual. Además el defecto no es «quién pregunta» sino «el campo viaja en la
+> respuesta»: el `pin` seguiría presente para cualquier portador de un token válido. **Ninguna
+> dependencia nueva se añadió al repositorio en este periodo.**
+>
+> **3.ª entrada.** *Evaluar el proveedor ahora mismo para decidir con números de costo y latencia
+> reales* — es la vía más rigurosa, pero exige una cuenta y clave de un proveedor externo y un banco
+> de pruebas anotado del dominio que el proyecto no tiene; no era ejecutable antes del cierre de
+> corte.
+>
+> **4.ª entrada.** *Ocultar el campo `pin` en el cliente* (2.ª entrada, columna «Rechazado»): el
+> defecto es del servidor —el campo sigue viajando en la respuesta HTTP y cualquier cliente lo lee con
+> `curl`—; no corrige nada.
+
+---
+
+## 6. Dependencias propuestas: verificación en el registro oficial y rechazo
+
+**Ninguna dependencia se añadió al repositorio en el periodo S9.**
+
+| Dependencia | Quién la propuso | Verificación | Decisión del equipo |
+|---|---|---|---|
+| `jsonwebtoken` | La herramienta, como primera propuesta para proteger el GET | No se añadió. Verificada en el registro oficial npm antes de descartarla (salida abajo) | **Rechazada** con motivo técnico |
+
+**Salida de la verificación en el registro oficial**, con el comando que la reproduce:
+
+```bash
+curl -s "https://registry.npmjs.org/jsonwebtoken" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+print('nombre:', d.get('name'))
+print('version:', d.get('dist-tags',{}).get('latest'))
+print('creado:', d.get('time',{}).get('created'))
+print('repo:', (d.get('repository') or {}).get('url'))"
+```
+
+```
+nombre: jsonwebtoken
+version: 9.0.3
+creado: 2013-07-01T01:48:05.300Z
+repo: git+https://github.com/auth0/node-jsonwebtoken.git
+```
+
+**Lectura del resultado:** el nombre existe y es el legítimo — no es un paquete inventado. Lo mantiene
+Auth0 (`auth0/node-jsonwebtoken`) desde 2013, con 9.0.3 como versión actual. La verificación confirma
+que la dependencia es real; **no** que sea pertinente, y el motivo del rechazo es de pertinencia:
+
+**Motivo del rechazo** (completo en `docs/ia.md`, entrada del 04/10/2026): el proyecto no tiene modelo
+de identidad de tenant — no hay emisor de token ni verificación de que el `tiendaId` de la consulta
+corresponda al sujeto autenticado—, así que un JWT sin verificar daría una falsa sensación de
+seguridad idéntica a la actual. Y el defecto no es «quién pregunta» sino «el campo viaja en la
+respuesta»: el `pin` seguiría presente para cualquier portador de un token válido. La alternativa
+elegida es la proyección en el borde, sin dependencia nueva.
+
+Precedente del equipo: el ADR-0001 registra el mismo criterio al rechazar «migrar a microservicios».
+
+El resto de la superficie sigue siendo `next`, `react` y `react-dom`, sin cambios en el periodo.
+
+---
+
+## 7. Credenciales
+
+Barrido de materializado sobre la punta del periodo, según `CONTRATO.md` §9:
+
+```bash
+git grep -nIE '(password|secret|token|api_?key)[[:space:]]*[=:][[:space:]]*["'\''][^"'\'']{6,}' -- src app scripts tests docs
+git log -S'BEGIN <clave privada>' b03a797..HEAD --oneline
+git log -S'AKIA' b03a797..HEAD --oneline
+```
+
+Las tres órdenes devuelven vacío: sin credenciales en el árbol ni en el historial del periodo, y sin
+`.env` versionado. Los marcadores de clave privada y de clave de acceso AWS se buscan con el prefijo
+deliberadamente truncado, para que este documento no contenga el token literal que el barrido busca.
+
+La única mención de secreto en el código es la propia declaración de que no se registra:
+`src/logger.js:4` («Nunca se registra el PIN ni datos de tarjeta»).
+
+---
+
+## 8. Componente generativo
+
+El sistema **no incorpora** componente de IA generativa. La decisión está argumentada en
+`docs/adr/0012-no-incorporar-componente-generativo.md` con cuatro alternativas evaluadas.
+
+La ausencia de decisión habría sido un incumplimiento; el silencio no es la decisión de no hacerlo.
+El ADR deja además los cuatro puntos que un ADR de reemplazo debe declarar si en el futuro se
+incorpora: proveedor y protocolo como contenedor externo en el C4 nivel 2 con su costo, comportamiento
+ante fallo del proveedor, conjunto de evaluación con relación con ESC-01, y la garantía de que el
+componente no consulta el `pin` ni datos de pago.
+
+La IA se usó en S9 como **apoyo a la construcción y al análisis**, no como parte del producto en
+ejecución.
+
+---
+
+## 9. Deuda que S9 no cierra
+
+Se declara explícitamente para no sobreestimar el alcance:
+
+- **`tiendaId` sigue siendo un parámetro del llamante**, no un claim verificado. El ADR-0013 acota la
+  exposición de un secreto, **no la autorización**. Modelo de identidad de tenant diferido a Corte 2
+  (ADR-0011).
+- **V-02, V-04, V-05 y V-06** siguen abiertas, sin cambios en S9.
+- **A-03 no tiene escenario de calidad.** Los cinco escenarios de §10.2 cubren A-01, A-02, A-04, A-05 y
+  A-06. Declarado en `docs/aspectos.md`, nota 1.
+- **SonarCloud sigue como paso informativo** y sin URL pública del Quality Gate; no es objeto de S9.
+- **La tabla de aspectos tenía las columnas ADR y Código vacías** hasta S9. Reparado en este periodo.

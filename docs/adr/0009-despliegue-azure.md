@@ -22,7 +22,28 @@ Descartada por motivo técnico, no de preferencia: exige tarjeta desde el alta e
 
 ## Decisión
 
-API + sitio se despliegan en **Azure Container Apps** con la misma imagen Docker del `Dockerfile` (`PORT=3000`). Activación pendiente del equipo: crear el recurso con la cuenta Azure for Students, publicar la URL y verificar `GET <url>/api/v1/health → 200 { "status": "ok" }`.
+API + sitio se despliegan en **Azure Container Apps** con la misma imagen Docker del `Dockerfile` (`PORT=3000`).
+
+**Estado real: desplegado y verificado** (2026-09-27).
+
+- Recurso: `laplacita-app` en el grupo `rg-laplacita`, región `canadacentral` (restringida por la política de región de Azure for Students).
+- URL pública: `https://laplacita-app.graymoss-fdd72159.canadacentral.azurecontainerapps.io`
+- Imagen publicada en `laplacitaacr.azurecr.io`; la revisión activa sirve el tag inmutable `laplacita-app:s8-2`.
+- Verificación: `GET /api/v1/health → 200`, `GET /api/v1/catalogo/... → 200`, `GET /api/v1/metricas → 200`.
+
+**Procedimiento operativo seguido.** ACR Tasks no está disponible en Azure for Students, así que la imagen se construye y se publica a mano:
+
+```bash
+az acr credential show --name laplacitaacr --query username -o tsv
+az containerapp show -n laplacita-app -g rg-laplacita        # leer la plantilla viva antes de tocar nada
+podman build -t laplacita-app:<tag-nuevo> .
+podman tag laplacita-app:<tag-nuevo> laplacitaacr.azurecr.io/laplacita-app:<tag-nuevo>
+podman push laplacitaacr.azurecr.io/laplacita-app:<tag-nuevo>
+az containerapp update -n laplacita-app -g rg-laplacita \
+  --image laplacitaacr.azurecr.io/laplacita-app:<tag-nuevo>
+```
+
+**Regla operativa: cada publicación usa un tag nuevo e inmutable.** La revisión activa queda fijada al digest con el que se creó; reutilizar `:latest` puede dejar la revisión apuntando al digest antiguo y desplegar código viejo sin aviso. La aplicación tampoco debe confiar en `HOSTNAME` por defecto: dentro del contenedor hay que fijarlo a `0.0.0.0` o el servidor Next.js escucha solo en loopback.
 
 ## Costo, ruptura y reversión (base ESC-01)
 
@@ -38,7 +59,7 @@ API + sitio se despliegan en **Azure Container Apps** con la misma imagen Docker
 ## Consecuencias
 
 - Positivas: sin tarjeta (RES-06 sin ambigüedad); margen ×36; una sola pieza.
-- Negativas: dependencia de Azure; requiere verificación estudiantil; sin despliegue aún no hay evidencia productiva (verdad declarada en `docs/semana-08.md` §2).
+- Negativas: dependencia de Azure; requiere verificación estudiantil; los contadores de `/api/v1/metricas` viven en memoria, así que se reinician en cada cambio de réplica o nueva revisión y no se agregan entre réplicas (suficiente para ESC-01 con una sola réplica, insuficiente para métrica distribuida).
 
 ## Trazabilidad
 

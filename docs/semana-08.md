@@ -22,21 +22,33 @@
 
 ### 2.1 Estado real
 
-> **No existe a la fecha una URL pública de producción.** El contrato solo declara el servidor local (`openapi.yaml:14-16`) y la documentación S7 lo justifica explícitamente: *"Railway no está desplegado (no declarar producción inexistente)"* (`correcciones.md:270`, `docs/evidencia-contrato-s7.md:43-46`).
+> **URL pública de producción, verificada desde fuera de la red universitaria.**
+> `https://laplacita-app.graymoss-fdd72159.canadacentral.azurecontainerapps.io`
+>
+> Comprobación del 27/09/2026 18:15 COT:
+> `GET /api/v1/health` → `http=200` en 1.01 s, `{"status":"ok"}`
+> `GET /api/v1/catalogo/tiendas/tienda-01/productos` → `http=200`
+>
+> Despliegue en Azure Container Apps (región `canadacentral`, cuenta Azure for Students sin tarjeta).
+> Ver `docs/evidencia-despliegue-azure.md` y ADR-0009.
+>
+> Hasta el 24/09/2026 el sistema estuvo sin desplegar: el contrato solo declaraba el servidor local (`openapi.yaml:14-16`) y la documentación S7 lo justificaba con *"Railway no está desplegado (no declarar producción inexistente)"* (`correcciones.md:270`, `docs/evidencia-contrato-s7.md:43-46`). Ese estado quedó superado por el despliegue del 27/09/2026.
 
 | Entorno | URL | Estado | Fuente |
 |---|---|---|---|
 | Desarrollo local | `http://localhost:3000` | ✅ Operativo (`npm run dev`) | `README.md:254-255` |
 | Health local | `http://localhost:3000/api/v1/health` | ✅ Retorna `{ "status": "ok" }` | `README.md:327-334`, §5 |
-| Producción (Azure) | *Sin URL asignada* | ⏳ Decidido, no desplegado (ADR-0009) | `docs/adr/0009-despliegue-azure.md`, taller S8 láminas 1-3 |
+| Producción (Azure) | `https://laplacita-app.graymoss-fdd72159.canadacentral.azurecontainerapps.io` | ✅ Desplegado y verificado `200` el 27/09/2026 | `docs/evidencia-despliegue-azure.md`, ADR-0009 |
 | Contrato (`servers`) | `/api/v1` (relativo, sin host) | ✅ Alineado al estado real | `openapi.yaml:14-16` |
 
-### 2.2 Plan de activación (cuando el equipo lo despliegue)
+### 2.2 Activación ejecutada (27/09/2026)
 
-1. Crear el recurso en Azure Container Apps (cuenta Azure for Students, sin tarjeta) con la imagen del `Dockerfile` existente (§3).
-2. Configurar `PORT=3000` (ya fijado en `Dockerfile:16`) y variables de entorno en el portal de Azure (nunca en el repo — ADR-0003 §Riesgos).
-3. Obtener la URL pública y registrarla aquí + como segundo `servers` en `openapi.yaml` (hoy solo existe `/api/v1`).
-4. Verificar `GET <url>/api/v1/health` → `200 { "status": "ok" }` antes de declarar el despliegue como cumplido. Reversión: misma imagen al servidor de la universidad o a Railway (ADR-0009).
+Secuencia efectivamente realizada, registrada como evidencia del procedimiento:
+
+1. ✅ Crear el recurso en Azure Container Apps (cuenta Azure for Students, sin tarjeta) con la imagen del `Dockerfile` existente (§3).
+2. ✅ Configurar `PORT=3000` (ya fijado en `Dockerfile:16`) y variables de entorno en el portal de Azure (nunca en el repo — ADR-0003 §Riesgos).
+3. 🔶 URL pública obtenida y registrada en §2.1. Queda pendiente declararla como segundo `servers` en `openapi.yaml`, que hoy solo contiene `/api/v1` relativo.
+4. ✅ Verificar `GET <url>/api/v1/health` → `200 { "status": "ok" }`. Reversión disponible: misma imagen en el servidor de la universidad o en Railway (ADR-0009).
 
 ---
 
@@ -163,7 +175,29 @@ Cobertura: `tests/observabilidad.test.js` (forma de la línea, ausencia de PIN, 
 | `pinesRechazados` | PIN incorrecto en `validarPin` | ESC-03, A-06 |
 | `pinesBloqueados` | intento sobre pedido bloqueado | ESC-03, A-06 |
 
-Limitación honesta: contadores en memoria del proceso (se reinician con cada despliegue), igual que el resto del dominio en este corte.
+Limitación honesta: contadores en memoria del proceso (se reinician con cada despliegue), igual que el resto del dominio en este corte. Con una sola réplica activa esto es suficiente para consultar la métrica; con varias réplicas cada una llevaría su propio conteo y no se agregarían entre sí.
+
+**Verificado en producción** el 2026-09-27 tras el despliegue de `f02839c` (tag `laplacita-app:s8-2`):
+
+```bash
+curl https://laplacita-app.graymoss-fdd72159.canadacentral.azurecontainerapps.io/api/v1/metricas
+→ 200
+```
+
+Ejecutando el flujo de ESC-03/ESC-04/A-06 contra la URL pública, los contadores responden en vivo:
+
+```json
+{
+  "pedidosCreados": 1,
+  "pagosConfirmados": 1,
+  "pedidosListos": 1,
+  "entregasValidadas": 0,
+  "pinesRechazados": 5,
+  "pinesBloqueados": 2
+}
+```
+
+El endpoint tiene `export const dynamic = 'force-dynamic'`. Sin esa directiva Next.js prerenderiza la ruta en el build y los contadores quedan congelados en la instantánea de compilación: el endpoint responde 200 con todos los valores en cero para siempre. Es el motivo del hallazgo registrado en `docs/ia.md` y del refuerzo en `tests/contract-openapi.test.js`, que ahora comprueba que los imports relativos de todas las rutas resuelvan.
 
 ### 5.2.2 Formato de errores (contrato)
 
@@ -182,7 +216,7 @@ Todos los errores usan el esquema `Error` (`openapi.yaml:493-498`): `{ "error": 
 ### 5.3 Deuda restante (explícita)
 
 - **Hecho en este corte:** logger JSON en rutas (`health`, `metricas`, `entrega/validar`) + endpoint `GET /api/v1/metricas` + PIN nunca en bitácora.
-- **Pendiente:** extender el logger a las 8 routes restantes con `latencyMs`/`requestId`, y corregir `src/corte-vertical.js:35` (imprime el PIN en claro; es script demo, no ruta, pero debe enmascararse antes de producción).
+- **Pendiente:** extender el logger a las 8 routes restantes con `latencyMs`/`requestId`. El PIN en claro de `src/corte-vertical.js:35` ya está corregido (27/09/2026): el log ahora indica que el PIN fue emitido sin mostrarlo.
 - **Estado:** registrado como deuda parcial (R-4 en §7), no como hecho completo.
 
 ---
@@ -228,10 +262,12 @@ Volumen estimado: ≈55.000 solicitudes/mes, ≈17 MB/mes de logs, ≈110 MB/mes
 
 | # | Riesgo / pendiente | Impacto | Mitigación / acción |
 |---|---|---|---|
-| R-1 | Sin URL pública (Railway no desplegado) | No hay evidencia de disponibilidad productiva | Ejecutar plan §2.2 y registrar URL + run de despliegue (ADR-0009) |
+| R-1 | ~~Sin URL pública~~ **Resuelto 27/09/2026** | — | Desplegado en Azure Container Apps y verificado. Evidencia en `docs/evidencia-despliegue-azure.md` |
 | R-2 | Quality Gate sin URL pública (org/token no vinculados) | Transversal sin cerrar; el job `sonar` es informativo (`continue-on-error`) y no bloquea el verde | Plan §4.3 (requiere credenciales del equipo; ADR-0010) |
 | R-3 | Estado en memoria, sin persistencia | Pérdida de datos entre reinicios; no apto para producción | PostgreSQL/Redis (Corte 2) |
-| R-4 | Logger parcial (3/11 routes); PIN en claro en demo | Observabilidad incompleta; riesgo de fuga de PIN en demo | Extender logger + `latencyMs`/`requestId` y enmascarar PIN en `corte-vertical.js:35` |
+| R-4 | Logger parcial (3/11 routes) | Observabilidad incompleta | Extender logger + `latencyMs`/`requestId`. El PIN en claro de `corte-vertical.js:35` ya está corregido |
+| R-5 | `npm audit`: 1 crítica + 1 alta, ambas de `next@14.2.5` (`postcss` transitivo) | Superficie de ataque conocida en el framework | **No se corrige en S8 a propósito.** El parche exige `next@16.3.6` con React 19: son dos versiones mayores, no un parche. Migrar con el cierre a horas sería arriesgar un entregable ya desplegado y verificado. Plan: migración programada tras S8, con revalidación del contrato y del `output: standalone` |
+| R-6 | Métricas en memoria, no agregadas entre réplicas | Con más de una réplica cada una lleva su conteo propio | Hoy hay 1 réplica. Si se escala, migrar a backend compartido (misma vía que R-3) |
 
 ---
 
@@ -239,12 +275,12 @@ Volumen estimado: ≈55.000 solicitudes/mes, ≈17 MB/mes de logs, ≈110 MB/mes
 
 | Requisito Lista B | Sección | Archivo fuente |
 |---|---|---|
-| URL desplegada | §2 | `openapi.yaml:14-16`, `docs/adr/0009-despliegue-railway.md`, `docs/evidencia-contrato-s7.md:43-46` |
+| URL desplegada | §2 | `openapi.yaml:14-16`, `docs/adr/0009-despliegue-azure.md`, `docs/evidencia-contrato-s7.md:43-46` |
 | Infraestructura como código | §3 | `Dockerfile:1-17`, `next.config.mjs:2-4`, `sonar-project.properties:4-9`, `app/api/v1/**/route.js` (11 archivos), `.env.example` |
 | Pipeline CI/CD | §4 | `.github/workflows/ci.yml` (`test`, `contract-test`, `sonar` informativo), runs `35181554516` / `35383329950`, local 44/44 |
 | Health + logs + métricas | §5 | `src/health.js`, `src/logger.js`, `src/metricas.js`, `app/api/v1/health/route.js`, `app/api/v1/metricas/route.js`, `openapi.yaml` (`Health`, `Metricas`, `Error`), `tests/observabilidad.test.js` |
 | Costos + supuestos | §6 | [ADR-0009](adr/0009-despliegue-azure.md) (cálculo por pieza + ruptura ×36), [ADR-0011](adr/0011-base-de-datos-universidad.md) (universidad), supuestos S-1…S-5, taller S8 25/09/2026 — estimación, no factura |
-| Vista de despliegue | arc42 §7 | Una caja por pieza + dónde se ejecuta; [ADR-0009](adr/0009-despliegue-railway.md), [ADR-0010](adr/0010-analisis-sonarcloud.md) |
+| Vista de despliegue | arc42 §7 | Una caja por pieza + dónde se ejecuta; [ADR-0009](adr/0009-despliegue-azure.md), [ADR-0010](adr/0010-analisis-sonarcloud.md) |
 | Restricción económica | arc42 §2 RES-06 | Tope 5 USD/mes sin tarjeta; ADR-0009 |
 | Aspectos / escenarios | Transversal | `docs/aspectos.md` (A-01…A-07), arc42 §10 (ESC-01…ESC-05) |
 

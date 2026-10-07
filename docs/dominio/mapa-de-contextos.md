@@ -10,8 +10,8 @@ graph TB
     Orquestador["Orquestador<br/>(src/corte-vertical.js)"]
 
     Pedidos -->|"Customer/Supplier<br/>obtenerProducto()"| Catalogo
-    Pagos -->|"Customer/Supplier<br/>obtenerPedido(), cambiarEstado()"| Pedidos
-    Entrega -->|"Customer/Supplier<br/>obtenerPedido(), cambiarEstado()"| Pedidos
+    Pagos -->|"Customer/Supplier<br/>obtenerPedido(), confirmarPago()"| Pedidos
+    Entrega -->|"Customer/Supplier<br/>obtenerPedido(), asignarPin(), marcarListo(), confirmarEntrega()"| Pedidos
     Orquestador -.->|"invoca tras cada cambio"| Notificaciones
     Orquestador -.-> Catalogo
     Orquestador -.-> Pedidos
@@ -24,8 +24,8 @@ graph TB
 | Relación | Patrón DDD | Descripción |
 | --- | --- | --- |
 | Pedidos → Catálogo | Customer/Supplier | Pedidos consulta `obtenerProducto` para validar precio y pertenencia a tienda antes de crear el pedido. |
-| Pagos → Pedidos | Customer/Supplier | Pagos lee el pedido y solo puede avanzar su estado a "En preparación" vía `cambiarEstado`. |
-| Entrega → Pedidos | Customer/Supplier | Entrega lee el pedido y avanza su estado a "Listo"/"Entregado" vía `cambiarEstado`. |
+| Pagos → Pedidos | Customer/Supplier | Pagos lee el pedido y solo puede avanzar su estado a "En preparación" invocando `pedidos.confirmarPago` (V-03). |
+| Entrega → Pedidos | Customer/Supplier | Entrega lee el pedido, pide el `pin` con `pedidos.asignarPin` (V-01) y avanza su estado a "Listo"/"Entregado" invocando `pedidos.marcarListo` y `pedidos.confirmarEntrega` (V-03). |
 | Notificaciones | Open Host Service | Expone `notificarCambioEstado` sin depender de ningún otro contexto; no es invocada directamente por Pedidos/Pagos/Entrega, sino por el orquestador. |
 
 ## Nota

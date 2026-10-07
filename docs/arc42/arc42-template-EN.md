@@ -224,7 +224,7 @@ Solo se permiten transiciones secuenciales; un salto de más de un estado es rec
 **Secuencia:**
 1. Pasarela de pagos notifica confirmación → API Backend Central
 2. API delega a `pagos.confirmarPago(pedidoId, tiendaId)` — **import ESM síncrono**
-3. `pagos.confirmarPago` valida que el pedido está en `Recibido` y llama a `pedidos.cambiarEstado(..., 'En preparación')` — **import ESM síncrono**
+3. `pagos.confirmarPago` valida que el pedido está en `Recibido` y llama al método de intención `pedidos.confirmarPago(pedidoId, tiendaId)`, que es quien aplica `Recibido → En preparación` — **import ESM síncrono**
 4. Se genera notificación: `notificaciones.notificarCambioEstado(...)` — **import ESM síncrono**
 5. Se responde con `Pedido` actualizado
 
@@ -270,7 +270,7 @@ Solo se permiten transiciones secuenciales; un salto de más de un estado es rec
 | Orquestador → módulos | import ESM síncrono | Objeto JS en memoria | corte-vertical.js → todos |
 | Módulo → Notificaciones | import ESM síncrono | Objeto JS en memoria | Todos → notificaciones |
 
-### 6.3 — Escenario ESC-01 — Creación de pedido en hora pico
+### 6.3 — Caso de uso UC-01 — Creación de pedido en hora pico
 
 **Aspecto:** Disponibilidad y consistencia del estado de los pedidos (A-01).
 **Descripción:** Un estudiante crea un pedido durante el intervalo de 5 a 10 minutos entre clases, momento de máxima concurrencia.
@@ -297,7 +297,7 @@ sequenceDiagram
 - Los endpoints HTTP están implementados en `app/api/v1/*` siguiendo el contrato `openapi.yaml` v1: `GET /api/v1/health`, `GET /api/v1/catalogo/productos/{productoId}`, `POST /api/v1/pedidos`, entre otros.
 ---
 
-### 6.4 — Escenario ESC-02 — Aislamiento entre establecimientos
+### 6.4 — Caso de uso UC-02 — Aislamiento entre establecimientos
 
 **Aspecto:** Aislamiento y enrutamiento correcto entre establecimientos (A-02).
 **Descripción:** Cada pedido queda asociado a un `establecimiento_id` único; el panel de cada tienda solo puede consultar los suyos.
@@ -320,7 +320,13 @@ sequenceDiagram
 
 ---
 
-### 6.5 — Escenario ESC-03 — Avance de la máquina de estados
+### 6.5 — Caso de uso UC-03 — Avance de la máquina de estados
+
+> **Nota de identificadores (S9):** los casos de uso de esta vista de ejecución se identifican como
+> `UC-nn`. Los escenarios de calidad de §10.2 se identifican como `ESC-nn` y son un conjunto
+> distinto: hasta S9, esta vista reutilizaba las etiquetas `ESC-01`…`ESC-03`, lo que hacía que
+> «ESC-03» designara dos cosas a la vez —avance de la máquina de estados aquí y validación por PIN en
+> §10.2—. La numeración de §10.2 es la canónica y no se modificó.
 
 **Aspecto:** Disponibilidad y consistencia (A-01), integridad de validación (A-06).
 **Descripción:** El establecimiento actualiza el estado del pedido.
@@ -328,26 +334,32 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant Panel as Panel Establecimiento
-    participant Svc as pedidos/index.js<br/>cambiarEstado()
+    participant Svc as pedidos/index.js<br/>método de intención
     participant Str as pedidosPorTienda
 
-    Panel->>Svc: cambiarEstado(pedidoId, tiendaId, "En preparación")
+    Panel->>Svc: confirmarPago(pedidoId, tiendaId)
     Svc->>Str: buscar(pedidoId) en el Map de la tienda
     Str-->>Svc: pedido { estado: "Recibido" }
     Svc->>Svc: valida Recibido → En preparación (transición secuencial)
     Svc->>Str: guardar(pedido { estado: "En preparación" })
     Str-->>Svc: pedido actualizado
-    Svc-->>Panel: pedido { estado: "En preparación", tiendaId }
+    Svc-->>Panel: vista pública { estado: "En preparación", tiendaId }
 ```
+
+**Sin setter genérico en el borde (S9, ADR-0013):** el estado no avanza por una operación genérica que
+el cliente pueda invocar con cualquier estado destino. Cada transición tiene un método de intención
+propio del dueño (`confirmarPago`, `marcarListo`, `confirmarEntrega`) y solo el que corresponde a la
+transición invocada puede produzirla. `cambiarEstado` permanece como interno de Pedidos y ninguna ruta
+HTTP lo importa; la respuesta del borde es la vista pública, sin `pin`.
 
 ### 6.6 — Contrato de API y prueba de contrato (S7)
 
 **Evidencia:** `openapi.yaml` (contrato OpenAPI 3.1 v1), `tests/contract-openapi.test.js` (prueba de contrato), `docs/adr/0006-estrategia-integracion-sincrona.md` (ADR de integración) ratificado por `docs/adr/0008-ratificacion-estrategia-integracion-sincrona.md`.
 **Pipeline:** job `contract-test` en `.github/workflows/ci.yml` que ejecuta `node --test tests/contract-openapi.test.js`.
 **Estrategia de integración:** Síncrona in-process mediante importaciones ESM directas (ADR-0006).
-**Implementación HTTP:** 13 operaciones REST (11 paths) implementadas en `app/api/v1/*` siguiendo el contrato: `GET /api/v1/health`, `GET /api/v1/metricas`, `GET /api/v1/catalogo/productos/{productoId}`, `GET /api/v1/catalogo/tiendas/{tiendaId}/productos`, `POST /api/v1/pedidos`, `GET /api/v1/pedidos`, `GET /api/v1/pedidos/{pedidoId}`, `PUT /api/v1/pedidos/{pedidoId}`, `POST /api/v1/pagos/{pedidoId}/confirmar`, `POST /api/v1/entrega/{pedidoId}/listo`, `POST /api/v1/entrega/{pedidoId}/validar`, `POST /api/v1/notificaciones`, `GET /api/v1/notificaciones/{pedidoId}`.
-**El contrato define 11 paths con 13 operaciones REST** (health, métricas, catalogo, pedidos, pagos, entrega, notificaciones) con esquemas de request/response versionados. La prueba de contrato valida que la implementación de los módulos cumple el contrato, que cada path del `openapi.yaml` tiene su `route.js` en `app/api/v1/`, y **falla ante cambios incompatibles** (ej. si `crearPedido` deja de recibir `tiendaId`). Las rutas delegan en `src/modules/*` (dominio puro, ADR-0001); la capa HTTP (`app/api/v1/`) es solo el adaptador del contrato, no contiene lógica de negocio.
-**Observabilidad (S8):** `GET /api/v1/metricas` expone contadores en memoria (`pedidosCreados`, `pagosConfirmados`, `pedidosListos`, `entregasValidadas`, `pinesRechazados`, `pinesBloqueados`) asociados a ESC-01/ESC-03/ESC-04; las rutas emiten bitácora JSON (`src/logger.js`: `ts`, `level`, `service`, `route`, `tiendaId`, `pedidoId`, `mensaje`) sin registrar PIN ni tarjeta.
+**Implementación HTTP:** 12 operaciones REST (11 paths) implementadas en `app/api/v1/*` siguiendo el contrato: `GET /api/v1/health`, `GET /api/v1/metricas`, `GET /api/v1/catalogo/productos/{productoId}`, `GET /api/v1/catalogo/tiendas/{tiendaId}/productos`, `POST /api/v1/pedidos`, `GET /api/v1/pedidos`, `GET /api/v1/pedidos/{pedidoId}`, `POST /api/v1/pagos/{pedidoId}/confirmar`, `POST /api/v1/entrega/{pedidoId}/listo`, `POST /api/v1/entrega/{pedidoId}/validar`, `POST /api/v1/notificaciones`, `GET /api/v1/notificaciones/{pedidoId}`. Desde S9 el contrato solo declara métodos `get` y `post`: el `PUT /api/v1/pedidos/{pedidoId}` se retiró con ADR-0013.
+**El contrato define 11 paths con 12 operaciones REST** (health, métricas, catalogo, pedidos, pagos, entrega, notificaciones) con esquemas de request/response versionados. La prueba de contrato valida que la implementación de los módulos cumple el contrato, que cada path del `openapi.yaml` tiene su `route.js` en `app/api/v1/`, y **falla ante cambios incompatibles** (ej. si `crearPedido` deja de recibir `tiendaId`). Las rutas delegan en `src/modules/*` (dominio puro, ADR-0001); la capa HTTP (`app/api/v1/`) es solo el adaptador del contrato, no contiene lógica de negocio.
+**Observabilidad (S8-S9):** `GET /api/v1/metricas` expone contadores en memoria (`pedidosCreados`, `pagosConfirmados`, `pedidosListos`, `entregasValidadas`, `pinesRechazados`, `pinesBloqueados`, `pedidosListados`) asociados a ESC-01/ESC-03/ESC-04; las rutas emiten bitácora JSON (`src/logger.js`: `ts`, `level`, `service`, `route`, `tiendaId`, `pedidoId`, `mensaje`) sin registrar PIN ni tarjeta.
 
 ---
 
@@ -422,8 +434,9 @@ Esta sección registra el historial de decisiones arquitectónicas significativa
 | ADR-0009 | Despliegue de API + sitio en Azure Container Apps con costos por pieza y ruptura (precisa ADR-0003 solo en despliegue) | Aceptado | 2026-09-25 | ESC-01 | [0009-despliegue-azure.md](../adr/0009-despliegue-azure.md) |
 | ADR-0010 | Análisis estático con SonarCloud y Quality Gate (precisa ADR-0003 solo en análisis) | Aceptado | 2026-09-25 | ESC-02…ESC-04 | [0010-analisis-sonarcloud.md](../adr/0010-analisis-sonarcloud.md) |
 | ADR-0011 | Base de datos PostgreSQL en el servidor de la universidad, Neon descartado (precisa proveedor de persistencia) | Aceptado | 2026-09-25 | ESC-01, ESC-02 | [0011-base-de-datos-universidad.md](../adr/0011-base-de-datos-universidad.md) |
-| ADR-0012 | Listado paginado de pedidos por tienda (porción S9) | Aceptado | 2026-10-03 | ESC-01 | [0012-listar-pedidos-por-tienda.md](../adr/0012-listar-pedidos-por-tienda.md) |
-| ADR-0013 | No incorporación de componente generativo al producto | Aceptado | 2026-10-03 | ESC-04, ESC-05 | [0013-sin-componente-generativo.md](../adr/0013-sin-componente-generativo.md) |
+| ADR-0012 | No incorporar componente generativo en el corte actual | Aceptado | 2026-10-04 | ESC-01, ESC-04 | [0012-no-incorporar-componente-generativo.md](../adr/0012-no-incorporar-componente-generativo.md) |
+| ADR-0013 | Proyección pública del pedido sin `pin` y retiro del setter genérico | Aceptado | 2026-10-04 | ESC-03 | [0013-proyeccion-publica-pedido-sin-pin.md](../adr/0013-proyeccion-publica-pedido-sin-pin.md) |
+| ADR-0015 | Listado paginado de pedidos por tienda (porción S9 del branch) | Aceptado | 2026-10-03 | ESC-01 | [0015-listar-pedidos-por-tienda.md](../adr/0015-listar-pedidos-por-tienda.md) |
 | ADR-0014 | Ratificación de cambios post-aceptación en ADR-0003/0009/0010 | Aceptado | 2026-10-03 | Transversal | [0014-ratificacion-cambios-post-aceptacion.md](../adr/0014-ratificacion-cambios-post-aceptacion.md) |
  
 **Relación con los bloques de construcción:**
@@ -552,12 +565,13 @@ El árbol de utilidad relaciona los objetivos generales de calidad con los atrib
 - Una validación incorrecta debe impedir la entrega.
 - El pedido solo debe pasar a estado "Entregado" después de una validación exitosa.
 - El sistema debe registrar el resultado de la validación.
+- Un cliente que consulta un pedido por una vía distinta de la emisión en el mostrador debe recibir **0 valores del `pin`**, y **0 pedidos** deben alcanzar un estado distinto de "Entregado" sin una validación exitosa.
 
 **Prioridad:** Alta importancia / Media dificultad arquitectónica.
 
 **Artefacto:** Módulo `entrega` (validación por PIN).
 
-**Decisión relacionada:** [ADR-0001 — Adopción de monolito modular](../adr/0001-adopcion-monolito-modular.md)
+**Decisión relacionada:** [ADR-0001 — Adopción de monolito modular](../adr/0001-adopcion-monolito-modular.md), [ADR-0007 — V-01/V-03 dueño único de `pin` y métodos de intención](../adr/0007-v01-v03-dueno-pin-metodos-intencion.md), [ADR-0013 — Proyección pública del pedido sin `pin`](../adr/0013-proyeccion-publica-pedido-sin-pin.md)
 
 #### ESC-04 — Protección del pago
 **Aspecto:** Protección de datos personales y de pago — A-04
@@ -680,6 +694,84 @@ Resultado: **0/300 accesos cruzados** → se cumple el umbral de ESC-02.
   2. `node scripts/medir-aislamiento.js` (imprime intentados, logrados, umbral y cumplimiento; exit 0 si cumple).
   3. `npm test` (13 pruebas, incluida `tests/aislamiento.test.js`).
 - **Evidencia:** salidas capturadas en §11.3/§11.4 y en el run de CI.
+
+---
+
+## 12. Endurecimiento de A-06 — Exposición del `pin` y bypass de la máquina de estados
+
+### 12.1. Restricción
+
+> **A-06 (integridad en la validación de identidad en el punto de recolección, semana 9):** el `pin`
+> de validación es la credencial que autoriza la entrega en el mostrador. Ningún cliente del sistema
+> puede obtenerlo por una vía distinta de su emisión, y ningún cliente puede alcanzar el estado
+> "Entregado" sin una validación exitosa.
+
+La restricción no es nueva. La ficha del problema (§4.1) ya concentraba el control de seguridad en el
+PIN del mostrador, y el ADR-0007 ya atribuía a Pedidos la propiedad única de `pin` y la transición de
+estado por métodos de intención. Lo que S9 verificó es si ambas se cumplían **en el borde HTTP**, donde
+se consumen.
+
+### 12.2. Diagnóstico — impacto localizado
+
+- **Requisito afectado:** RF-06 (integridad en la validación de identidad en el punto de recolección, aspecto `docs/aspectos.md` A-06).
+- **Escenario de calidad:** ESC-03 — umbral: **0 valores de `pin` expuestos y 0 transiciones a "Entregado" sin validación exitosa**.
+- **Elemento C4 afectado:** API Backend Central, en los controladores `app/api/v1/pedidos`, `app/api/v1/pagos` y `app/api/v1/entrega`.
+- **Código afectado (estado inicial, commit `658dc8d`):**
+  - `app/api/v1/pedidos/[pedidoId]/route.js` — `GET` devolvía la instantánea completa del agregado, incluida la propiedad `pin`; además exponía un `PUT` que llamaba a `cambiarEstado`.
+  - `app/api/v1/pedidos/route.js`, `app/api/v1/pagos/[pedidoId]/confirmar/route.js` y `app/api/v1/entrega/[pedidoId]/validar/route.js` — devolvían la instantánea completa con `pin`.
+  - `openapi.yaml` — el esquema `Pedido` declaraba `pin` como campo de la respuesta de lectura, y `/pedidos/{pedidoId}` declaraba un `put:` con el schema `CambiarEstadoRequest`.
+
+### 12.3. Línea base medida (pre-cambio)
+
+Ejecutada el 2026-10-04 sobre el commit `658dc8d` (antes del cambio). Procedimiento reproducible en §12.5.
+
+| Magnitud | Valor |
+|---|---|
+| Lecturas que devolvieron `pin` | **100/100** |
+| Transiciones a "Entregado" sin validación exitosa | **100/100** |
+| Esquemas de lectura que declaraban `pin` | 1 (`Pedido`) |
+| Operaciones de setter genérico de estado expuestas | 1 (`PUT /pedidos/{pedidoId}`) |
+| Rutas HTTP que llamaban `cambiarEstado` | 1 |
+| **Umbral ESC-03** | **0** |
+| Cumplimiento | **No** |
+
+Resultado: el estado inicial **incumplía** el umbral. Con `pedido-1` (identificador predecible) y
+`tiendaId` como parámetro de consulta bastaba para **leer** el `pin`, sin adivinarlo; y `PUT` recorría
+`Recibido → En preparación → Listo → Entregado` sin pago ni PIN, dejando el pedido `Entregado` con
+`pin: null`.
+
+### 12.4. Medición post-cambio (contrastada contra ESC-03)
+
+Ejecutada el 2026-10-04 sobre el mismo procedimiento tras implementar ADR-0013.
+
+| Magnitud | Valor |
+|---|---|
+| Carga aplicada | 100 ciclos × 2 operaciones de exposición = **200 intentos** |
+| Lecturas que devolvieron `pin` | **0/100** |
+| Transiciones a "Entregado" sin validación exitosa | **0/100** |
+| Rutas HTTP que llaman `cambiarEstado` | 0 |
+| Exposiciones logradas | **0** |
+| **Umbral ESC-03** | **0** |
+| Cumplimiento | **Sí** |
+
+Resultado: **303 → 0 exposiciones** → se cumple el umbral de ESC-03. `pinPresenteEnElDominio` sigue
+en 100/100, que es lo correcto: el PIN debe existir en el dominio porque `entrega.validarPin` lo
+compara. Lo que se corrige es quién puede verlo desde fuera, no quién puede usarlo dentro. La única
+respuesta que sigue portando `pin` es `POST /entrega/{pedidoId}/listo`, que es la emisión en el
+mostrador.
+
+### 12.5. Reproducción de la medición
+
+- **Herramienta:** `node scripts/medir-exposicion-pin.js` (Node ≥ 22, ESM).
+- **Plano 1 — dominio y contrato (por defecto):** comprueba que exista la proyección pública, que el esquema de lectura no declare `pin`, que el contrato no exponga `put:` y que ninguna ruta llame `cambiarEstado`.
+- **Plano 2 — HTTP real:** requiere el servidor construido.
+- **Carga:** 100 iteraciones; en cada una se intenta una lectura de pedido por la vía no autorizada y una transición de estado por el setter genérico.
+- **Procedimiento:**
+  1. `npm install`
+  2. `node scripts/medir-exposicion-pin.js` (imprime intentados, logrados, umbral y cumplimiento; exit 0 si cumple).
+  3. Para el plano HTTP: `npm run build && npm start`, y en otra terminal `node scripts/medir-exposicion-pin.js --url http://localhost:3000`.
+  4. `npm test` (48 pruebas, incluidas las cuatro aserciones `S9:` de `tests/contract-openapi.test.js`).
+- **Evidencia:** salidas capturadas en §12.3/§12.4, en [`docs/evidencias/evidencias-s9.md`](../evidencias/evidencias-s9.md) y en los runs de CI 37224472688 (rojo, commit `658dc8d`) y 37225494755 (verde, commit `e0542ce`).
 
 ---
 

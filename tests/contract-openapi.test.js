@@ -275,7 +275,7 @@ test('Notificaciones: obtenerNotificaciones retorna array de notificaciones del 
 // la estructura mínima requerida. Si el archivo falta o está
 // malformado, estos tests fallan.
 
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 
 test('openapi.yaml existe y es un archivo YAML válido', () => {
   const content = readFileSync(new URL('../openapi.yaml', import.meta.url), 'utf-8');
@@ -301,7 +301,6 @@ test('openapi.yaml define todos los endpoints del contrato', () => {
 test('openapi.yaml define los esquemas de request y response', () => {
   const content = readFileSync(new URL('../openapi.yaml', import.meta.url), 'utf-8');
   assert.ok(content.includes('CrearPedidoRequest'), 'Falta schema CrearPedidoRequest');
-  assert.ok(content.includes('CambiarEstadoRequest'), 'Falta schema CambiarEstadoRequest');
   assert.ok(content.includes('ValidarPinRequest'), 'Falta schema ValidarPinRequest');
   assert.ok(content.includes('NotificarCambioEstadoRequest'), 'Falta schema NotificarCambioEstadoRequest');
   assert.ok(content.includes('Pedido'), 'Falta schema Pedido');
@@ -319,9 +318,117 @@ test('openapi.yaml: cada path del contrato tiene su route.js en app/api/v1/', ()
 
   for (const apiPath of apiPaths) {
     const archivo = 'app/api/v1' + apiPath.replace(/\{([^}]+)\}/g, '[$1]') + '/route.js';
+    const urlArchivo = new URL('../' + archivo, import.meta.url);
     assert.ok(
-      existsSync(new URL('../' + archivo, import.meta.url)),
+      existsSync(urlArchivo),
       `El path ${apiPath} no tiene su route.js: falta ${archivo}`
+    );
+
+    const fuente = readFileSync(urlArchivo, 'utf-8');
+    for (const m of fuente.matchAll(/from '(\.[^']+)'/g)) {
+      assert.ok(
+        existsSync(new URL(m[1], urlArchivo)),
+        `${archivo} importa ${m[1]} — la ruta relativa no resuelve`
+      );
+    }
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// ASERCIONES NEGATIVAS DEL BORDE — S9 (ADR-0013, A-06 / ESC-03)
+// ═══════════════════════════════════════════════════════════════
+// Estas aserciones no comprueban que algo exista, sino que algo NO
+// esté expuesto. Defienden el criterio de éxito de A-06
+// (docs/aspectos.md): el PIN no debe poder obtenerse por lectura, y el
+// progreso del pedido solo debe ocurrir por los métodos de intención
+// (V-03 del ADR-0007).
+//
+// Son la regresión que acompaña al fix de S9. Antes del fix fallaban;
+// el fallo se ejecutó en CI y quedó registrado en
+// docs/evidencias/evidencias-s9.md.
+
+function rutasHttp() {
+  const base = new URL('../app/api/v1/', import.meta.url);
+  const encontradas = [];
+  (function recorrer(dir) {
+    for (const entrada of readdirSync(dir, { withFileTypes: true })) {
+      if (entrada.isDirectory()) recorrer(new URL(entrada.name + '/', dir));
+      else if (entrada.name === 'route.js') encontradas.push(new URL(entrada.name, dir));
+    }
+  })(base);
+  return encontradas;
+}
+
+test('S9: pedidos.vistaPublica existe y no expone el pin (A-06 / ESC-03)', () => {
+  assert.strictEqual(
+    typeof pedidos.vistaPublica,
+    'function',
+    'pedidos.vistaPublica no existe: el borde HTTP no tiene una proyección sin pin'
+  );
+
+  const pedido = pedidos.crearPedido({
+    productoId: 'prod-001',
+    cantidad: 1,
+    clienteId: 'cliente-s9',
+    tiendaId: 'tienda-01',
+  });
+  pagos.confirmarPago(pedido.id, 'tienda-01');
+  entrega.marcarListo(pedido.id, 'tienda-01');
+
+  const publica = pedidos.vistaPublica(pedido.id, 'tienda-01');
+  assert.strictEqual(
+    Object.prototype.hasOwnProperty.call(publica, 'pin'),
+    false,
+    `vistaPublica expone el pin del pedido: ${JSON.stringify(publica)}`
+  );
+  assert.strictEqual(publica.estado, 'Listo');
+
+  // La proyección no borra el secreto del almacén: el dominio sigue leyéndolo.
+  assert.ok(
+    pedidos.obtenerPedido(pedido.id, 'tienda-01').pin,
+    'vistaPublica no debe borrar el pin del dominio; entrega.validarPin lo necesita'
+  );
+});
+
+test('S9: el contrato no declara pin en el esquema de lectura del pedido', () => {
+  const content = readFileSync(new URL('../openapi.yaml', import.meta.url), 'utf-8');
+  const ini = content.indexOf('\n    Pedido:');
+  assert.notStrictEqual(ini, -1, 'No se encontró el esquema Pedido en openapi.yaml');
+  const fin = content.indexOf('\n    CrearPedidoRequest:', ini);
+  const bloque = content.slice(ini, fin === -1 ? undefined : fin);
+
+  assert.ok(
+    !/^\s{8}pin:/m.test(bloque),
+    'El esquema Pedido declara `pin`: GET /pedidos/{pedidoId} lo devolvería en claro'
+  );
+  assert.ok(
+    content.includes('PedidoConPin:'),
+    'Falta el esquema PedidoConPin para POST /entrega/{pedidoId}/listo, que sí debe entregar el pin'
+  );
+});
+
+test('S9: el contrato no expone un setter genérico de estado (V-03)', () => {
+  const content = readFileSync(new URL('../openapi.yaml', import.meta.url), 'utf-8');
+  const secPaths = content.slice(content.indexOf('paths:'), content.indexOf('components:'));
+  const ini = secPaths.indexOf('  /pedidos/{pedidoId}:');
+  assert.notStrictEqual(ini, -1, 'No se encontró /pedidos/{pedidoId} en el contrato');
+  const fin = secPaths.indexOf('\n  /', ini + 5);
+  const bloque = secPaths.slice(ini, fin === -1 ? undefined : fin);
+
+  assert.ok(
+    !/^\s{4}put:/m.test(bloque),
+    'El contrato declara `put` en /pedidos/{pedidoId}: expone el setter genérico de estado'
+  );
+});
+
+test('S9: ninguna ruta HTTP llama cambiarEstado con el nombre del estado (V-03)', () => {
+  const rutas = rutasHttp();
+  assert.ok(rutas.length > 0, 'No se encontró ninguna route.js en app/api/v1');
+  for (const url of rutas) {
+    const fuente = readFileSync(url, 'utf-8');
+    assert.ok(
+      !/\bcambiarEstado\b/.test(fuente),
+      `${url.pathname} usa cambiarEstado: el estado solo debe avanzar por los métodos de intención`
     );
   }
 });

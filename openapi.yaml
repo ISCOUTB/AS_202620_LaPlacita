@@ -210,47 +210,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-    put:
-      tags: [pedidos]
-      summary: Cambiar el estado de un pedido
-      operationId: cambiarEstado
-      parameters:
-        - name: pedidoId
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: tiendaId
-          in: query
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CambiarEstadoRequest'
-      responses:
-        '200':
-          description: Estado actualizado
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Pedido'
-        '404':
-          description: Pedido no encontrado en la tienda
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '409':
-          description: Transición de estado inválida
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
   /pagos/{pedidoId}/confirmar:
     post:
       tags: [pagos]
@@ -309,7 +268,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Pedido'
+                $ref: '#/components/schemas/PedidoConPin'
         '404':
           description: Pedido no encontrado en la tienda
           content:
@@ -478,6 +437,10 @@ components:
 
     Pedido:
       type: object
+      description: >-
+        Vista pública del pedido. NO incluye `pin`: la lectura de un pedido no
+        debe permitir obtener el PIN de validación del punto de recolección
+        (A-06, ESC-03). S9 / ADR-0013.
       properties:
         id:
           type: string
@@ -496,11 +459,6 @@ components:
         estado:
           type: string
           enum: [Recibido, En preparación, Listo, Entregado]
-        pin:
-          type: string
-          nullable: true
-          minLength: 4
-          maxLength: 4
       required:
         - id
         - clienteId
@@ -509,6 +467,25 @@ components:
         - cantidad
         - total
         - estado
+
+    PedidoConPin:
+      type: object
+      description: >-
+        Pedido con su PIN de validación. Solo lo devuelve
+        `POST /entrega/{pedidoId}/listo`, porque el mostrador necesita el PIN
+        para entregar. Cualquier otro endpoint que exponga el PIN por lectura
+        anula A-06. S9 / ADR-0013.
+      allOf:
+        - $ref: '#/components/schemas/Pedido'
+        - type: object
+          properties:
+            pin:
+              type: string
+              nullable: true
+              minLength: 4
+              maxLength: 4
+          required:
+            - pin
 
     CrearPedidoRequest:
       type: object
@@ -527,15 +504,6 @@ components:
         - cantidad
         - clienteId
         - tiendaId
-
-    CambiarEstadoRequest:
-      type: object
-      properties:
-        nuevoEstado:
-          type: string
-          enum: [Recibido, En preparación, Listo, Entregado]
-      required:
-        - nuevoEstado
 
     ValidarPinRequest:
       type: object

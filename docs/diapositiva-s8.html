@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LaPlacita — Sustentación S8</title>
+<style>
+  body{font-family:Arial,Helvetica,sans-serif;background:#000;color:#e2e8f0;margin:0;padding:32px}
+  .deck{max-width:1020px;margin:0 auto;display:grid;gap:24px}
+  .slide{background:#000;border:1px solid #38bdfb;border-radius:16px;padding:40px 48px;box-shadow:0 16px 48px rgba(56,189,248,.25)}
+  h1{margin:0 0 6px;font-size:32px;color:#38bdfb}
+  h2{margin:0 0 14px;font-size:24px;color:#38bdfb;border-bottom:3px solid #38bdfb;padding-bottom:8px}
+  .sub{color:#cbd5e1;margin:0 0 18px;font-size:16px}
+  ul{font-size:17px;line-height:1.6;padding-left:22px;margin:0;color:#e2e8f0}
+  table{width:100%;border-collapse:collapse;font-size:14.5px;margin-top:10px;color:#e2e8f0}
+  th,td{border:1px solid #38bdfb;padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:#0f172a;color:#38bdfb}
+  tr:nth-child(even) td{background:#111827}
+  .ok{color:#4ade80;font-weight:bold}
+  .mid{color:#fbbf24;font-weight:bold}
+  .bad{color:#f87171;font-weight:bold}
+  code{background:#1e293b;color:#38bdfb;padding:1px 6px;border-radius:6px;font-size:13.5px}
+  .foot{margin-top:16px;font-size:13px;color:#94a3b8}
+  b{color:#fff}
+  @media print{body{background:#fff;padding:0}.slide{box-shadow:none;break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="deck">
+
+  <div class="slide">
+    <h1>LaPlacita — Sustentación S8</h1>
+    <p class="sub">Despliegue, operación y costos · Click &amp; Collect · <b>38/38 pruebas en verde</b> (37 + 1 de A-06)</p>
+    <ul>
+      <li><b>Dominio cerrado:</b> bloqueo de PIN tras 5 intentos (<b>A-06</b>), ni el PIN correcto pasa bloqueado; contador por <code>tienda:pedido</code>.</li>
+      <li><b>Contrato alineado:</b> bloqueo como <b>400</b> en <code>openapi.yaml:297</code> y tabla <code>semana-08.md:169</code>.</li>
+      <li><b>Trazabilidad real:</b> C4 y ADR-0006 con métodos de intención (<code>asignarPin / confirmarPago / marcarListo / confirmarEntrega</code>).</li>
+      <li><b>Infra lista:</b> <code>Dockerfile</code> + standalone + <code>.env.example</code> + Sonar configurado.</li>
+      <li><b>Salud:</b> <code>GET /api/v1/health → {status: ok}</code> · 10 rutas ↔ 11 operaciones.</li>
+      <li><b>Costos:</b> <b>0–5 USD/mes</b>, supuestos S-1…S-5 del 24/09/2026.</li>
+      <li><b>Honesto:</b> sin URL pública ni Sonar verde (faltan despliegue y vínculo de org).</li>
+    </ul>
+    <div class="foot">Branch de evidencia: <b>auditoria/a5-bloqueo-400</b> (<code>da93a98</code>) · Base: <code>master</code> · Evidencia: <code>docs/semana-08.md</code></div>
+  </div>
+
+  <div class="slide">
+    <h2>Tabla profe vs. hecho (branch)</h2>
+    <table>
+      <tr><th>#</th><th>Pidió el profe</th><th>Hecho en el branch</th><th>Estado</th></tr>
+      <tr><td>1</td><td>URL pública o estado real</td><td><code>semana-08.md:21-32</code> declara sin URL; contrato solo <code>/api/v1</code></td><td class="ok">Bien</td></tr>
+      <tr><td>2</td><td>Infra como código</td><td><code>Dockerfile</code> + standalone + <code>.env.example</code> + Sonar</td><td class="ok">Bien</td></tr>
+      <tr><td>3</td><td>Pipeline test + contrato</td><td><code>38/38</code> y <code>23/23</code> verificados; jobs <code>test</code>/<code>contract-test</code></td><td class="ok">Bien</td></tr>
+      <tr><td>4</td><td>SonarCloud verde</td><td>Configurado; en rojo por vínculo org/token (externo)</td><td class="mid">Parcial</td></tr>
+      <tr><td>5</td><td>Health check</td><td><code>GET /api/v1/health → {status: ok}</code> + contrato + test</td><td class="ok">Bien</td></tr>
+      <tr><td>6</td><td>Logs + errores</td><td>Deuda R-4 + tabla §5.2.1 + bloqueo como 400</td><td class="ok">Bien</td></tr>
+      <tr><td>7</td><td>A-06 límite PIN</td><td><code>MAX_INTENTOS_PIN=5</code> + test de bloqueo</td><td class="ok">Bien</td></tr>
+      <tr><td>8</td><td>Trazabilidad C4/ADR</td><td>Métodos de intención V-01/V-03 en C4 y ADR-0006</td><td class="ok">Bien</td></tr>
+      <tr><td>9</td><td>Costos + supuestos</td><td>0–5 USD/mes, S-1…S-5, 24/09/2026, “no factura”</td><td class="ok">Bien</td></tr>
+      <tr><td>10</td><td>Entrega versionada</td><td>Cadena <code>766733e→3d12faa→9cfe243→da93a98</code> en branch</td><td class="ok">Bien</td></tr>
+    </table>
+    <div class="foot">Resumen: <b>9/10 bien</b>, 1 parcial externo (Sonar verde).</div>
+  </div>
+
+  <div class="slide">
+    <h2>Evidencias para mostrar al profe</h2>
+    <ul>
+      <li><b>Tests:</b> <code>node --test "tests/**/*.test.js"</code> → 38 pass / 0 fail (incluye <i>bloquea tras MAX_INTENTOS_PIN</i>).</li>
+      <li><b>Contrato:</b> <code>openapi.yaml</code> 10 paths / 11 operaciones, v1; cada path tiene su <code>route.js</code>.</li>
+      <li><b>Runs CI:</b> <code>35181554516</code> y <code>35383329950</code> (test ✅, contract ✅, sonar ❌ con diagnóstico).</li>
+      <li><b>Rate-limit:</b> <code>src/modules/entrega/index.js</code> contador por <code>tienda:pedido</code>, resetea en <code>marcarListo</code>/éxito.</li>
+      <li><b>Deriva cerrada:</b> <code>componentes.md:35-36</code> y <code>ADR-0006:86-89</code> ya dicen métodos de intención.</li>
+      <li><b>Pendientes honestos:</b> URL Railway (plan §2.2) y Sonar (crear/vincular org + token + Quality Gate).</li>
+    </ul>
+    <div class="foot">Comandos demo: <code>node src/corte-vertical.js</code> · <code>node scripts/medir-aislamiento.js</code> (0/300) · <code>GET /api/v1/health</code></div>
+  </div>
+
+</div>
+</body>
+</html>
