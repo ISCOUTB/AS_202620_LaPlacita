@@ -434,6 +434,10 @@ Esta sección registra el historial de decisiones arquitectónicas significativa
 | ADR-0009 | Despliegue de API + sitio en Azure Container Apps con costos por pieza y ruptura (precisa ADR-0003 solo en despliegue) | Aceptado | 2026-09-25 | ESC-01 | [0009-despliegue-azure.md](../adr/0009-despliegue-azure.md) |
 | ADR-0010 | Análisis estático con SonarCloud y Quality Gate (precisa ADR-0003 solo en análisis) | Aceptado | 2026-09-25 | ESC-02…ESC-04 | [0010-analisis-sonarcloud.md](../adr/0010-analisis-sonarcloud.md) |
 | ADR-0011 | Base de datos PostgreSQL en el servidor de la universidad, Neon descartado (precisa proveedor de persistencia) | Aceptado | 2026-09-25 | ESC-01, ESC-02 | [0011-base-de-datos-universidad.md](../adr/0011-base-de-datos-universidad.md) |
+| ADR-0012 | No incorporar un componente de IA generativa al backend en el corte actual | Aceptado | 2026-10-04 | ESC-01, ESC-03 | [0012-no-incorporar-componente-generativo.md](../adr/0012-no-incorporar-componente-generativo.md) |
+| ADR-0013 | Proyección pública del pedido sin `pin` y retiro del setter genérico de estado en HTTP | Aceptado | 2026-10-04 | ESC-03 | [0013-proyeccion-publica-pedido-sin-pin.md](../adr/0013-proyeccion-publica-pedido-sin-pin.md) |
+| ADR-0014 | PostgreSQL gestionado por Dokploy en la infraestructura de la universidad | Aceptado | 2026-10-11 | ESC-01, ESC-02 | [0014-base-de-datos-postgresql-dokploy.md](../adr/0014-base-de-datos-postgresql-dokploy.md) |
+| ADR-0015 | Ratificación de ediciones post-aceptación en ADR-0003, ADR-0009 y ADR-0010 | Propuesto | 2026-10-12 | Transversal | [0015-ratificacion-ediciones-post-aceptacion.md](../adr/0015-ratificacion-ediciones-post-aceptacion.md) |
  
 **Relación con los bloques de construcción:**
 - ADR-0001 y ADR-0002 determinan la estructura: un único proceso con módulos de dominio separados.
