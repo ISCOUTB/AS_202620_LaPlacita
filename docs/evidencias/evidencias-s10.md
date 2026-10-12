@@ -103,6 +103,15 @@ memoria de los identificadores previos, lo que tras un reinicio real produciría
   sin base de datos.
 - **Prueba que falla ante el defecto:** «los pedidos sobreviven al reinicio de la instancia» —
   roja contra el estado en memoria (línea base), verde con el adaptador PostgreSQL.
+- **Operación y observabilidad:** el pipeline del estado congelado queda en verde con los tres
+  jobs (`test`, `contract-test`, `sonar`); el job de análisis corre con base de datos para contar
+  la cobertura del código nuevo y espera el Quality Gate (`sonar.qualitygate.wait=true`):
+  - Quality Gate público: `https://sonarcloud.io/project/overview?id=ISCOUTB_AS_202620_LaPlacita`
+    — estado **OK** (consultado 2026-10-12T04:40Z; única condición antes en error, `new_coverage`,
+    superada con las pruebas de persistencia: 72.4 % → por encima del umbral de 80 %).
+  - Runs de CI citables: [`e01991d`](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs)
+    (test/contract/sonar ✅) y [`cbd4cf0`](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs)
+    (test/contract/sonar ✅, con cobertura de persistencia).
 
 ## 6. Resultado contrastado con el umbral
 
@@ -112,10 +121,16 @@ memoria de los identificadores previos, lo que tras un reinicio real produciría
 
 ## 7. Regresión: ESC-02 y ESC-03 intactos
 
-> **Pendiente de ejecución** — re-ejecución de `node scripts/medir-aislamiento.js` (umbral ESC-02:
-> 0 operaciones cruzadas en 100 intentos) y `node scripts/medir-exposicion-pin.js` (umbral ESC-03:
-> 0 exposiciones en 300 intentos) sobre el código con persistencia, para evidenciar que la
-> respuesta no rompió los escenarios ya cerrados.
+Re-ejecutados el 2026-10-12 (≈04:38 UTC) sobre el código con persistencia, plano de dominio y
+contrato (el plano HTTP se re-ejecutará contra el despliegue con base de datos en la Fase D):
+
+- **ESC-02 — Aislamiento (`node scripts/medir-aislamiento.js`):** 300 intentos de acceso cruzado,
+  **0 logrados** — `umbralESC02=0`, `cumple=true`.
+- **ESC-03 — PIN (`node scripts/medir-exposicion-pin.js`):** 100 exposiciones intentadas en dominio
+  y contrato, **0 logradas** — `cumple=true`.
+
+La respuesta de persistencia no reabrió ningún escenario cerrado: el módulo `pedidos` sigue
+siendo el dueño único del estado y el borde HTTP no cambió sus garantías.
 
 ## 8. Límites de validez
 

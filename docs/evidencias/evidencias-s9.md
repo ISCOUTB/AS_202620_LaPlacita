@@ -322,5 +322,5 @@ Se declara explícitamente para no sobreestimar el alcance:
 - **V-02, V-04, V-05 y V-06** siguen abiertas, sin cambios en S9.
 - **A-03 no tiene escenario de calidad.** Los cinco escenarios de §10.2 cubren A-01, A-02, A-04, A-05 y
   A-06. Declarado en `docs/aspectos.md`, nota 1.
-- **SonarCloud sigue como paso informativo** y sin URL pública del Quality Gate; no es objeto de S9.
+- **SonarCloud sigue como paso informativo** y sin URL pública del Quality Gate; no es objeto de S9. *(Corrección del 2026-10-11, S10: el `continue-on-error` se retiró en el estado calificado de S9 (`3a04706`) y este punto quedó obsoleto al día siguiente; desde `cbd4cf0` el job corre con token, cuenta cobertura y espera el Quality Gate — ver [`evidencias-s10.md`](evidencias-s10.md).)*
 - **La tabla de aspectos tenía las columnas ADR y Código vacías** hasta S9. Reparado en este periodo.

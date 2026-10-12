@@ -123,6 +123,8 @@ npm run build         # las 11 rutas /api/v1/* compilan
 ### 4.3 Diagnóstico `sonar` (transversal pendiente, fuera del código)
 
 > **Criterio T1: queda en "diagnóstico y plan", no en cumplido.** No existe aún run con `sonar` en verde ni URL pública del Quality Gate. Cuando exista, se citará aquí el run verde + `https://sonarcloud.io/project/overview?id=ISCOUTB_AS_202620_LaPlacita`.
+>
+> **Cierre (S10, 2026-10-11):** el análisis corre en verde con token y el Quality Gate es público: `https://sonarcloud.io/project/overview?id=ISCOUTB_AS_202620_LaPlacita`. El job `sonar` dejó de ser informativo (`continue-on-error` retirado en `3a04706`, condicional del token retirado en S10) y desde `cbd4cf0` el job de análisis corre con base de datos para contar la cobertura del código nuevo. Con `sonar.qualitygate.wait=true` en `sonar-project.properties`, el job espera el resultado del gate y falla si el gate falla. Detalle y runs en [`docs/evidencias/evidencias-s10.md`](evidencias/evidencias-s10.md).
 
 - `sonar-project.properties:4-9`: `organization=isco-utb`, `projectKey=ISCOUTB_AS_202620_LaPlacita`, `sources=src,app`, `tests=tests`.
 - El secreto `SONAR_TOKEN` está cargado (el paso no se omite), pero el job falla: hipótesis documentada — la cuenta dueña del token no pertenece a la org `isco-utb` o el proyecto no está creado/vinculado en sonarcloud.io (`docs/evidencia-contrato-s7.md:266-287`, `correcciones.md:290`).

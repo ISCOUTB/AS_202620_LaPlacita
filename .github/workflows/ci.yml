@@ -108,7 +108,6 @@ jobs:
           run: node --test --experimental-test-coverage --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=lcov.info "tests/**/*.test.js"
 
         - name: Análisis estático con SonarCloud
-          if: ${{ env.SONAR_TOKEN != '' }}
           uses: sonarsource/sonarcloud-github-action@v5
           env:
                 GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
