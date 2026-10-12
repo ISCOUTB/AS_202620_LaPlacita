@@ -277,6 +277,7 @@ La documentación del proyecto sigue rigurosamente los lineamientos del curso y 
 * [ADR-0015](docs/adr/0015-ratificacion-ediciones-post-aceptacion.md) ratifica las ediciones post-aceptación de ADR-0003/0009/0010 (propuesto, pendiente de validación del equipo) y declara el reemplazo de ADR-0003 por ADR-0009 en despliegue
 * [ADR-0016](docs/adr/0016-quality-gate-sonarcloud-bloqueante.md) registra la decisión vigente del análisis estático: **Quality Gate obligatorio y bloqueante**, que reemplaza al ADR-0010; cabeceras de ADR-0003 y ADR-0010 anotadas con el estado «Reemplazado», contenido histórico intacto
 * Suites en verde tras la reestructuración: **50 pruebas** (`npm test`, 2 skip sin base de datos) y `npm run contract-test` (**27/27**); `npm run build` correcto
+* **Despliegue automático** (12/10/2026): [`.github/workflows/deploy-backend.yml`](.github/workflows/deploy-backend.yml) construye la imagen en el runner, la empuja a ACR con tag inmutable por SHA y actualiza el Container App, con health check de reintentos — se dispara por push que toque `backend/**` o manualmente (`workflow_dispatch`); detalle en [`correcciones.md`](correcciones.md) §Despliegue automático
 
 ---
 

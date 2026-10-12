@@ -394,3 +394,44 @@ del revisor sigue siendo la que cierra la fila de la matriz.
 | ADR-0003/0010 reemplazados con contenido histórico intacto (solo cabecera anotada) | `git log --follow -- docs/adr/0003-*.md docs/adr/0010-*.md`: el commit de este cierre solo añade la línea de estado; ADR-0015 y ADR-0016 declaran los reemplazos |
 | División backend/frontend sin perder historial | `git log --follow -- backend/src/modules/pedidos/index.js` muestra los commits anteriores a la reestructuración |
 | Identidad de tenant declarada como plan, no como resuelta | Leer §3 de esta sección: la seguridad integral sigue sin declararse |
+
+---
+
+## Despliegue automático · CI/CD a Azure Container Apps (12/10/2026)
+
+El despliegue del backend era **manual** (Podman + push a ACR + `az containerapp update`,
+registrado en S8): producción corría la imagen `s8-2` del 27/09. Desde este cambio,
+`.github/workflows/deploy-backend.yml` despliega automáticamente:
+
+| Aspecto | Decisión |
+|---|---|
+| Disparo | Push a `master` que toque `backend/**` o el propio workflow; también `workflow_dispatch` manual |
+| Autenticación | OIDC federado (`id-token: write` + `AZURE_CLIENT_ID/TENANT_ID/SUBSCRIPTION_ID`): sin secretos de password en GitHub |
+| Build | `docker build` en el runner de GitHub con contexto `backend/` — **no ACR Tasks**, deshabilitados en Azure for Students (`TasksOperationsNotAllowed`, `docs/evidencia-despliegue-azure.md`) |
+| Etiqueta | `laplacitaacr.azurecr.io/laplacita-app:<SHA>` — tag inmutable por commit, nunca reutilizado (regla de ADR-0009) |
+| Publicación | `az containerapp update -n laplacita-app -g rg-laplacita --image <SHA>`: conserva los secretos/env del app (`DATABASE_URL` del Dokploy, `HOSTNAME`) |
+| Verificación | Health check con 12 reintentos contra `/api/v1/health`; el job falla si la revisión nueva no responde |
+| Concurrencia | Un despliegue a la vez (`concurrency` sin cancelación) |
+
+### Cómo verificar el despliegue
+
+1. Run verde en **Actions → Deploy backend** (run citable por hash de commit, CONTRATO §8).
+2. `curl https://laplacita-app.graymoss-fdd72159.canadacentral.azurecontainerapps.io/api/v1/health` → `{"status":"ok"}`.
+3. `az containerapp revision list -n laplacita-app -g rg-laplacita` → revisión activa con imagen tag `<SHA>`.
+
+### Requisitos previos (ajustes de una sola vez, fuera del repo)
+
+- Secrets de GitHub: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` + credencial
+  federada en el app registration para `repo:ISCOUTB/AS_202620_LaPlacita` (creados desde el
+  portal de Azure).
+- Permisos de la identidad: `Contributor` en `rg-laplacita` y `AcrPush` en `laplacitaacr`.
+- **Persistencia en producción:** el app solo conecta a PostgreSQL (Dokploy) si el firewall del
+  servidor universitario permite el puerto al tráfico de Azure. Mientras siga cerrado, el
+  despliegue funciona pero el app arranca en modo memoria (límite ya declarado en ADR-0014 y
+  evidencias-s10 §6 Fase D). El health check no depende de la base.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| El build ocurre en el runner (no ACR Tasks) y el tag es el SHA del commit | Log del run: paso «Build y push de la imagen» muestra `docker build -f backend/Dockerfile`; `az acr repository show-tags` lista el SHA |
+| El update conserva `DATABASE_URL` sin que el workflow lo conozca | El workflow no contiene la variable en ninguna línea; el app sigue conectado tras el despliegue (o en modo memoria con bitácora de fallos de escritura) |
