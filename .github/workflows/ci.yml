@@ -12,6 +12,25 @@ jobs:
     test:
         runs-on: ubuntu-latest
 
+        # ESC-01 · ADR-0014: la prueba de supervivencia ante reinicio necesita
+        # una base real; el servicio vive solo en el job de CI y desaparece con él.
+        services:
+            postgres:
+                image: postgres:16
+                env:
+                    POSTGRES_USER: laplacita
+                    POSTGRES_PASSWORD: laplacita_ci
+                    POSTGRES_DB: laplacita
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 5s
+                    --health-timeout 5s
+                    --health-retries 10
+        env:
+            DATABASE_URL: postgresql://laplacita:laplacita_ci@localhost:5432/laplacita
+
         steps:
         - name: Descargar código
           uses: actions/checkout@v4

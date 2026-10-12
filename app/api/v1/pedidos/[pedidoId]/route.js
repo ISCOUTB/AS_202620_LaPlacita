@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import * as pedidos from '../../../../../src/modules/pedidos/index.js';
+import { lista } from '../../../../../src/persistencia/index.js';
 
 // S9 · ADR-0013. Esta ruta usa `pedidos.vistaPublica`, no `pedidos.obtenerPedido`:
 // la respuesta de lectura no debe incluir `pin`. El PIN es el mecanismo de
@@ -13,6 +14,10 @@ import * as pedidos from '../../../../../src/modules/pedidos/index.js';
 // Recibido -> En preparación -> Listo -> Entregado sin pago ni PIN.
 export async function GET(request, { params }) {
   try {
+    // ESC-01 · ADR-0014: tras un reinicio, la primera lectura debe esperar a
+    // que el estado se rehidrate desde PostgreSQL; sin esta espera un GET
+    // temprano respondería 404 aunque el pedido exista en la base.
+    await lista();
     const { searchParams } = request.nextUrl;
     const tiendaId = searchParams.get('tiendaId');
 

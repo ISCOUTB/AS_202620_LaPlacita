@@ -13,6 +13,7 @@
 
 import { obtenerProducto } from '../catalogo/index.js';
 import { contar } from '../../metricas.js';
+import { escribirPedido, alCargar } from '../../persistencia/index.js';
 
 const ESTADOS = ['Recibido', 'En preparación', 'Listo', 'Entregado'];
 
@@ -72,6 +73,7 @@ function crearPedido({ productoId, cantidad, clienteId, tiendaId }) {
   };
 
   repoTienda(tiendaId).set(pedido.id, pedido);
+  escribirPedido(pedido);
   contar('pedidosCreados');
   return instantanea(pedido);
 }
@@ -108,6 +110,7 @@ function cambiarEstado(pedidoId, tiendaId, nuevoEstado) {
   }
 
   pedido.estado = nuevoEstado;
+  escribirPedido(pedido);
   if (nuevoEstado === 'En preparación') contar('pagosConfirmados');
   if (nuevoEstado === 'Listo') contar('pedidosListos');
   if (nuevoEstado === 'Entregado') contar('entregasValidadas');
@@ -123,6 +126,7 @@ function asignarPin(pedidoId, tiendaId, pin) {
   }
   const pedido = pedidoMutable(pedidoId, tiendaId);
   pedido.pin = pin;
+  escribirPedido(pedido);
   return instantanea(pedido);
 }
 
@@ -141,6 +145,36 @@ function confirmarEntrega(pedidoId, tiendaId) {
   return cambiarEstado(pedidoId, tiendaId, 'Entregado');
 }
 
+// Puerto de rehidratación (ESC-01, ADR-0014). Reconstruye el estado desde las
+// filas que `src/persistencia` cargó de PostgreSQL al arrancar el proceso;
+// también lo usan las pruebas de supervivencia para simular el arranque
+// posterior a un reinicio. `restaurarEstadoDesde([])` equivale a un arranque
+// en blanco: es exactamente lo que le pasa hoy a la memoria tras un reinicio
+// sin persistencia (línea base del experimento S10).
+function restaurarEstadoDesde(registros) {
+  pedidosPorTienda.clear();
+  contadoresPorTienda.clear();
+  for (const fila of registros) {
+    const pedido = {
+      id: fila.id,
+      clienteId: fila.clienteId,
+      tiendaId: fila.tiendaId,
+      productoId: fila.productoId,
+      cantidad: fila.cantidad,
+      total: fila.total,
+      estado: fila.estado,
+      pin: fila.pin ?? null,
+    };
+    repoTienda(pedido.tiendaId).set(pedido.id, pedido);
+    const numero = Number(String(pedido.id).replace(/^pedido-/, ''));
+    if (Number.isInteger(numero) && numero > (contadoresPorTienda.get(pedido.tiendaId) ?? 0)) {
+      contadoresPorTienda.set(pedido.tiendaId, numero);
+    }
+  }
+}
+
+alCargar(restaurarEstadoDesde);
+
 export {
   crearPedido,
   obtenerPedido,
@@ -150,5 +184,6 @@ export {
   confirmarPago,
   marcarListo,
   confirmarEntrega,
+  restaurarEstadoDesde,
   ESTADOS,
 };
