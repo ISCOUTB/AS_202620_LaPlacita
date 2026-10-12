@@ -249,6 +249,17 @@ La documentación del proyecto sigue rigurosamente los lineamientos del curso y 
 * arc42 §7 vista de despliegue (una caja por pieza + dónde se ejecuta) y §2 RES-06 (tope 5 USD/mes sin tarjeta); suites en verde: **44 pruebas** (`npm test`) y `npm run contract-test` (**23/23**)
 * T1 (SonarCloud) queda en diagnóstico y plan, no en cumplido: falta run verde + URL del Quality Gate *(superado en S10: run verde con token y Quality Gate público consultable — ver la sección de S10 y [`docs/evidencias/evidencias-s10.md`](docs/evidencias/evidencias-s10.md))*
 
+**Semana 10 — Segundo corte · ESC-01 disponibilidad de los datos vía persistencia (11/10/2026)**
+* Escenario operativo del corte declarado: **ESC-01 — Picos de demanda entre clases** ([`docs/evidencias/evidencias-s10.md`](docs/evidencias/evidencias-s10.md) §1), con hipótesis, montaje, variables y umbral **0 pedidos perdidos tras reinicio del contenedor**
+* Línea base medida contra el despliegue real de Azure: **3 pedidos creados y 0/3 supervivientes** tras el reinicio (`2026-10-12T04:03–04:16Z`) — el defecto del estado en memoria quedó evidenciado con horas (§4)
+* Decisión registrada en [ADR-0014](docs/adr/0014-base-de-datos-postgresql-dokploy.md): PostgreSQL gestionado por Dokploy en la infraestructura de la universidad, que **precisa el ADR-0011 sin modificarlo** (misma infraestructura y motor; Dokploy es la capa de gestión)
+* Persistencia implementada: adaptador [`src/persistencia/index.js`](src/persistencia/index.js) (UPSERT con cola de escritura serializada, DDL con advisory lock, rehidratación al arranque, escritura en segundo plano con bitácora de fallos), puerto de rehidratación `restaurarEstadoDesde` en el módulo `pedidos` y espera de rehidratación en la ruta de lectura; sin `DATABASE_URL` el sistema conserva el modo memoria y la suite corre sin base de datos
+* Prueba de supervivencia ([`tests/persistencia.test.js`](tests/persistencia.test.js)) con servicio PostgreSQL en CI; medición reproducible del experimento en [`scripts/medir-persistencia.js`](scripts/medir-persistencia.js)
+* Pipeline transversal cerrado: job `sonar` obligatorio (sin `continue-on-error` ni condicional de token) con **Quality Gate público en OK** (`https://sonarcloud.io/project/overview?id=ISCOUTB_AS_202620_LaPlacita`) y bloqueante (`sonar.qualitygate.wait=true`); runs en verde: `e01991d`, `cbd4cf0`, `d25bef4`, `fda91fd`
+* Regresiones medidas tras la persistencia: ESC-02 **0/300** accesos cruzados y ESC-03 **0/100** exposiciones (§7)
+* Suites en verde: **51 pruebas** con base de datos (50 sin ella, 1 skip condicional) y `npm run contract-test` (**27/27**)
+* Pendiente al cierre del corte: experimento post-cambio contra el despliegue con base de datos (§6, Fase D) — bloqueado por el firewall del servidor de la universidad; se ejecutará en cuanto el puerto 5433 quede accesible desde Azure
+
 ---
 
 ## Cómo ejecutar
