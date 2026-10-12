@@ -16,6 +16,13 @@ import * as persistencia from '../src/persistencia/index.js';
 
 const CON_BASE = persistencia.activa();
 
+// Determinismo: con base de datos, el arranque del proceso (esquema +
+// rehidratación) termina de forma asíncrona en cuanto se importa el módulo.
+// En CI ese SELECT puede aterrizar en mitad de las pruebas y re-disparar
+// `restaurarEstadoDesde` con filas viejas; esperándolo aquí, la rehidratación
+// de arranque siempre ocurre antes de la primera prueba (falló así en CI).
+await persistencia.lista();
+
 function crearPedidoUnico() {
   return pedidos.crearPedido({
     productoId: 'prod-001',
