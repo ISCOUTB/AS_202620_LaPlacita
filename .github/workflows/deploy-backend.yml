@@ -32,7 +32,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Login al registro
-        run: az acr login --name laplacitaacr
+        run: az acr login --name laplacita-app
 
       - name: Build y push de la imagen
         run: |
