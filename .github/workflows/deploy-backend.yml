@@ -1,3 +1,9 @@
+# Despliegue reproducible a Azure Container Apps (precisa ADR-0009 sin editarlo).
+# Azure for Students no permite ACR Tasks (TasksOperationsNotAllowed), por lo que la
+# imagen se construye en el runner y se empuja al ACR. Autenticación OIDC federada
+# (sin secrets de password). El `containerapp update --image` conserva DATABASE_URL
+# y HOSTNAME, que viven como secretos/env del Container App, nunca en este repo.
+
 name: Deploy backend
 
 on:
@@ -5,6 +11,7 @@ on:
     branches: [master]
     paths:
       - "backend/**"
+      - ".github/workflows/deploy-backend.yml"
   workflow_dispatch:
 
 permissions:
@@ -46,3 +53,14 @@ jobs:
             --name $APP_NAME \
             --resource-group $RESOURCE_GROUP \
             --image $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ github.sha }}
+
+      - name: Health check
+        run: |
+          for i in $(seq 1 12); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' \
+              https://laplacita-app.graymoss-fdd72159.canadacentral.azurecontainerapps.io/api/v1/health || true)
+            if [ "$code" = "200" ]; then echo "health=200 (intento $i)"; exit 0; fi
+            echo "intento $i: http=$code"; sleep 10
+          done
+          echo "health check agotado: la revision nueva no responde"
+          exit 1
