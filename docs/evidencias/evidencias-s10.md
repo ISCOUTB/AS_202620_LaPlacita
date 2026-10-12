@@ -58,11 +58,37 @@ respuesta de ESC-01 exige.
 
 ## 4. Línea base medida (sin persistencia)
 
-> **Pendiente de ejecución** — se registra en el siguiente commit con hora de inicio, pedidos
-> creados, hora del reinicio, hora de la verificación y salida textual completa del script.
+Ejecutada contra el despliegue real de Azure el 11 de octubre de 2026, con el código de S9
+(commit `3a04706`, estado en memoria). Comando: `node scripts/medir-persistencia.js pre 3`.
 
-Estado actual que la línea base debe evidenciar: sin `DATABASE_URL`, el módulo opera igual que en
-S9 (`Map` en memoria), así que la salida esperada de `post` es **0/N pedidos supervivientes**.
+| Momento | Hora (UTC) | Hora (COT) | Resultado |
+|---|---|---|---|
+| Fase `pre` | `2026-10-12T04:03:24.955Z` | 11 oct, 23:03 | 3/3 pedidos creados: `pedido-1`, `pedido-2`, `pedido-3`, estado `Recibido` |
+| Reinicio del contenedor desde el portal de Azure | entre fases | 11 oct, ~23:10 | acción del equipo |
+| Fase `post` | `2026-10-12T04:16:22.965Z` | 11 oct, 23:16 | **0/3 supervivientes, 3 perdidos** — los tres `GET` responden 404 |
+
+Salida del script (íntegra):
+
+```text
+pedidoPerdido=pedido-1 estadoEsperado=Recibido obtenido=404
+pedidoPerdido=pedido-2 estadoEsperado=Recibido obtenido=404
+pedidoPerdido=pedido-3 estadoEsperado=Recibido obtenido=404
+
+reinicioEntreFases=1
+pedidosCreadosEnPre=3
+pedidosSobrevivientes=0/3
+pedidosPerdidos=3
+horaPre=2026-10-12T04:03:24.955Z
+horaPost=2026-10-12T04:16:22.965Z
+cumple=false
+resultado: INCUMPLE el umbral de ESC-01
+```
+
+**Contraste con el umbral:** el escenario exige 0 pedidos perdidos; la línea base pierde 3 de 3.
+El defecto está evidenciado: sin ningún cambio de código entre `pre` y `post`, el estado del
+pedido desapareció con el proceso — los `Map` en memoria de `src/modules/pedidos/index.js:19-20`
+son el único almacén. Nótese además que el contador arrancó de nuevo en `pedido-1`: tampoco hay
+memoria de los identificadores previos, lo que tras un reinicio real produciría colisiones de id.
 
 ## 5. Respuesta: decisión e implementación
 
