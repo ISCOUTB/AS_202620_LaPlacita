@@ -38,6 +38,8 @@ test('sin DATABASE_URL la persistencia es un no-op y el dominio no cambia', asyn
     return;
   }
   assert.equal(persistencia.activa(), false);
+  // Sin base, `lista` resuelve sin tocar nada.
+  await persistencia.lista();
   const pedido = crearPedidoUnico();
   // No lanza aunque no haya base: la escritura se omite.
   persistencia.escribirPedido(pedido);
@@ -60,6 +62,10 @@ test('con persistencia, tras un reinicio los pedidos se restauran desde la base'
     t.skip('requiere DATABASE_URL (service container de PostgreSQL en CI)');
     return;
   }
+
+  // La ruta de lectura espera esta promesa en producción; aquí se comprueba
+  // que el arranque (esquema + rehidratación) ya resolvió.
+  await persistencia.lista();
 
   const pedido = crearPedidoUnico();
   pedidos.confirmarPago(pedido.id, 'tienda-01');
@@ -85,4 +91,22 @@ test('con persistencia, tras un reinicio los pedidos se restauran desde la base'
     .map((fila) => Number(fila.id.replace(/^pedido-/, '')))
     .filter((numero) => Number.isInteger(numero));
   assert.ok(numeroOtro > Math.max(0, ...numerosExistentes));
+});
+
+test('alCargar invoca de inmediato cuando la carga de arranque ya terminó', async (t) => {
+  if (!CON_BASE) {
+    t.skip('requiere DATABASE_URL (service container de PostgreSQL en CI)');
+    return;
+  }
+  await persistencia.esperarEscrituras();
+  const filas = await persistencia.cargarTodo();
+  let recibido = null;
+  persistencia.alCargar((registros) => {
+    recibido = registros;
+  });
+  // La carga de arranque ya terminó: el oyente se invoca con las filas
+  // cargadas en el momento del registro (las escrituras de este proceso aún
+  // no estaban al arrancar, así que pueden ser menos que `filas`).
+  assert.ok(Array.isArray(recibido));
+  assert.ok(recibido.length <= filas.length);
 });
