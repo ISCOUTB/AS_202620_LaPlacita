@@ -216,7 +216,7 @@ export async function esperarEscrituras() {
   if (inicio) {
     await iniciar();
   }
-  await Promise.allSettled([...escriturasEnVuelo]);
+  await Promise.allSettled(escriturasEnVuelo);
   await ultimaEscritura;
 }
 
