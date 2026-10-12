@@ -40,6 +40,11 @@ let inicio = null;
 let registrosCargados = null;
 const oyentesDeCarga = [];
 const escriturasEnVuelo = new Set();
+// Cola de escritura: UPSERTs encadenados en orden de mutación. Sin esto, tres
+// mutaciones seguidas del mismo pedido (crear → confirmarPago → asignarPin)
+// corren en paralelo y la fila puede quedar con el estado de la primera
+// escritura en terminar, no de la última mutación (defecto visto en CI).
+let ultimaEscritura = Promise.resolve();
 
 // ¿Hay base de datos configurada? Sin `DATABASE_URL` todo el módulo es no-op.
 export function activa() {
@@ -127,12 +132,14 @@ export async function lista() {
 }
 
 // Espejo de escritura: UPSERT del pedido completo. Fire-and-forget a
-// propósito — el dominio no espera la base (ADR-0001); el fallo se bitacora.
+// propósito — el dominio no espera la base (ADR-0001); el fallo se bitacora y
+// la cola sigue con la siguiente escritura.
 export function escribirPedido(pedido) {
   if (!activa()) {
     return;
   }
   const tarea = (async () => {
+    await ultimaEscritura;
     await iniciar();
     await pool.query(
       `INSERT INTO pedidos (${COLUMNAS})
@@ -156,17 +163,18 @@ export function escribirPedido(pedido) {
         pedido.pin,
       ],
     );
-  })()
-    .catch((err) => {
-      logError({
-        route: 'persistencia',
-        tiendaId: pedido.tiendaId,
-        pedidoId: pedido.id,
-        mensaje: `escritura: ${err.message}`,
-      });
-    });
+  })();
   escriturasEnVuelo.add(tarea);
-  tarea.then(() => escriturasEnVuelo.delete(tarea));
+  const silenciosa = tarea.catch((err) => {
+    logError({
+      route: 'persistencia',
+      tiendaId: pedido.tiendaId,
+      pedidoId: pedido.id,
+      mensaje: `escritura: ${err.message}`,
+    });
+  });
+  silenciosa.then(() => escriturasEnVuelo.delete(tarea));
+  ultimaEscritura = silenciosa;
 }
 
 // Espera las escrituras en vuelo (lo usan las pruebas de supervivencia para
@@ -176,6 +184,7 @@ export async function esperarEscrituras() {
     await iniciar();
   }
   await Promise.allSettled([...escriturasEnVuelo]);
+  await ultimaEscritura;
 }
 
 // Lee todas las filas tal como están en la base (lo usa la prueba que
