@@ -115,9 +115,42 @@ memoria de los identificadores previos, lo que tras un reinicio real produciría
 
 ## 6. Resultado contrastado con el umbral
 
-> **Pendiente de ejecución** — Fase D: `pre` (N/N creados) → reinicio del contenedor → `post`
-> (supervivientes). El contraste contra el umbral (0 perdidos) y los tiempos de escritura/lectura
-> se registran aquí con horas.
+> **Ejecutado el 2026-10-12 (22:07–22:10 UTC) contra el entorno de pruebas con base de datos real**
+> (`dokploy-test` en Dokploy, mismo servidor que el PostgreSQL; URL como secret `DOKPLOY_TEST_URL`,
+> no versionada). Es la **verificación intermedia** de la Fase D: el experimento contra el
+> despliegue de Azure sigue pendiente de que el firewall de la universidad habilite el puerto
+> externo de la base (límite declarado en [ADR-0014](../adr/0014-base-de-datos-postgresql-dokploy.md)).
+
+**Primera pasada (22:03–21:54 UTC) — hallazgo de un defecto real.** `pre` creó 3/3 pedidos, pero
+el despliegue asignó ids `pedido-1, pedido-1, pedido-2`: el POST de `/pedidos` no esperaba la
+rehidratación asíncrona (que al terminar limpia los mapas del dominio y restaura los contadores
+desde la BD), de modo que la segunda creación repitió el id y el UPSERT sobrescribió el primer
+pedido. **3 creados → 2 almacenados: pérdida silenciosa en la ventana de arranque** — el defecto
+que el umbral de ESC-01 existe para revelar.
+
+**Corrección (commit `105bb4b`, 12/10/2026).** `await lista()` añadido a las rutas que mutan el
+almacén persistido (`POST /pedidos`, `POST /pagos/{id}/confirmar`, `POST /entrega/{id}/listo`,
+`POST /entrega/{id}/validar`); la lectura ya lo hacía. Regresión nueva en la prueba de contrato:
+toda `route.js` que importe módulos que tocan el almacén de pedidos debe esperar la
+rehidratación (28/28 contrato; 51 tests).
+
+**Segunda pasada (verificación definitiva de esta fase):**
+
+- `pre` (2026-10-12T22:07:37Z): 3/3 pedidos creados con ids únicos `pedido-3`, `pedido-4`,
+  `pedido-5` (el contador arrancó en 3: la rehidratación restauró las 2 filas previas —
+  comportamiento correcto).
+- Reinicio del contenedor desde el panel de Dokploy entre fases.
+- `post` (2026-10-12T22:10:04Z): `pedidosSobrevivientes=3/3`, `pedidosPerdidos=0`, `cumple=true`,
+  con el estado idéntico al confirmado en `pre` (`Recibido` en los tres).
+
+**Contraste contra el umbral de ESC-01 (0 pedidos perdidos): CUMPLE** contra base de datos real.
+Flujo completo de la API verificado tras el reinicio (creación → pago → listo con PIN de 4
+dígitos → entrega validada → reuso del PIN rechazado por estado `Entregado`, protección A-06
+activa); la emisión de notificaciones en las rutas sigue siendo la deuda declarada V-05.
+
+> Queda pendiente replicar este experimento contra el despliegue de Azure cuando el puerto de la
+> base sea accesible; el procedimiento es idéntico (`scripts/medir-persistencia.js pre/post` con
+> `--url` del despliegue).
 
 ## 7. Regresión: ESC-02 y ESC-03 intactos
 

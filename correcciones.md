@@ -467,11 +467,15 @@ entorno de pruebas donde el backend corre **en el mismo servidor que la base**:
 
 1. Run verde de **Deploy dokploy-test** (gate → webhook → health).
 2. `curl <DOKPLOY_TEST_URL>/api/v1/health` → `{"status":"ok"}`.
-3. Experimento ESC-01 contra este entorno:
-   `node backend/scripts/medir-persistencia.js pre 3 --url <DOKPLOY_TEST_URL>` → reinicio del
-   contenedor en Dokploy → `node backend/scripts/medir-persistencia.js post --url <DOKPLOY_TEST_URL>`
-   → esperado **3/3 supervivientes** (umbral ESC-01: 0 pedidos perdidos).
-4. Flujos de la API contra BD real: pedido → pago → listo → PIN → notificaciones.
+3. Experimento ESC-01 contra este entorno — **ejecutado el 12/10/2026** (detalle y horas en
+   [`docs/evidencias/evidencias-s10.md`](docs/evidencias/evidencias-s10.md) §6): la primera
+   pasada **reveló un defecto real** (colisión de ids y pérdida silenciosa de pedidos en la
+   ventana de arranque: las rutas de escritura no esperaban la rehidratación); corregido en
+   `105bb4b` con regresión en la prueba de contrato, y la segunda pasada dio
+   **3/3 supervivientes, 0 perdidos, cumple=true**.
+4. Flujos de la API contra BD real — **ejecutados el 12/10/2026**: pedido → pago → listo
+   (PIN de 4 dígitos) → entrega validada; reuso del PIN rechazado por estado `Entregado`
+   (protección A-06 activa). Notificaciones vacías en el flujo HTTP: deuda declarada V-05.
 
 ### Resumen de correcciones que el sistema automatizado no detecta automáticamente
 | Corrección invisible al sistema | Cómo verificarla manualmente |
