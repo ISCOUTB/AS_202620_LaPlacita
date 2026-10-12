@@ -11,11 +11,14 @@
 //     `escribirPedido` sin esperar la confirmación de la base; los fallos de
 //     escritura se registran en la bitácora y no propagan excepciones.
 //   - Al arrancar el proceso con `DATABASE_URL`, `iniciar()` crea el esquema
-//     (idempotente), carga las filas y las entrega a los oyentes registrados
-//     con `alCargar` — así `pedidos` reconstruye sus Maps tras un reinicio.
+//     (idempotente, serializado con advisory lock entre los procesos de la
+//     suite) y carga las filas para los oyentes registrados con `alCargar` —
+//     así `pedidos` reconstruye sus Maps tras un reinicio.
 //   - Solo servidor (route handlers de Next.js): nunca importar desde código
 //     de cliente; `pg` queda externo al bundle vía
 //     `experimental.serverComponentsExternalPackages`.
+//   - Toda promesa queda manejada (await, catch o void explícito): un rechazo
+//     no observado termina el proceso en Node, y eso vencía el job `test` de CI.
 
 import { error as logError } from '../logger.js';
 
@@ -34,6 +37,10 @@ CREATE TABLE IF NOT EXISTS pedidos (
 )`;
 
 const COLUMNAS = 'tienda_id, pedido_id, cliente_id, producto_id, cantidad, total, estado, pin';
+// Llave de advisory lock para el DDL: node --test levanta un proceso por
+// archivo en paralelo y todos importan este módulo; sin la llave, dos
+// `CREATE TABLE IF NOT EXISTS` simultáneos chocan en el catálogo de PostgreSQL.
+const LLAVE_DDL = 727437;
 
 let pool = null;
 let inicio = null;
@@ -43,7 +50,7 @@ const escriturasEnVuelo = new Set();
 // Cola de escritura: UPSERTs encadenados en orden de mutación. Sin esto, tres
 // mutaciones seguidas del mismo pedido (crear → confirmarPago → asignarPin)
 // corren en paralelo y la fila puede quedar con el estado de la primera
-// escritura en terminar, no de la última mutación (defecto visto en CI).
+// escritura en terminar, no de la última mutación.
 let ultimaEscritura = Promise.resolve();
 
 // ¿Hay base de datos configurada? Sin `DATABASE_URL` todo el módulo es no-op.
@@ -64,51 +71,72 @@ function filaAPedido(fila) {
   };
 }
 
+// DDL serializado con advisory lock de sesión: el mismo cliente lo toma y lo
+// suelta, así que la tabla se crea exactamente una vez aunque compitan varios
+// procesos de la suite.
+async function crearEsquema() {
+  const cliente = await pool.connect();
+  try {
+    await cliente.query('SELECT pg_advisory_lock($1)', [LLAVE_DDL]);
+    await cliente.query(ESQUEMA);
+  } finally {
+    await cliente.query('SELECT pg_advisory_unlock($1)', [LLAVE_DDL]);
+    cliente.release();
+  }
+}
+
 // Arranque único por proceso: importa `pg` (solo cuando hay base), abre el
-// pool, crea el esquema si falta y rehidrata el estado desde las filas.
-// El import es diferido a propósito: `next build` corre sin `DATABASE_URL` y
-// así el build nunca carga el driver ni abre conexiones.
-async function iniciar() {
+// pool, crea el esquema y rehidrata el estado desde las filas. El import es
+// diferido a propósito: `next build` corre sin `DATABASE_URL` y así el build
+// nunca carga el driver ni abre conexiones.
+async function arrancar() {
+  const modulo = await import('pg');
+  // `pg` es CommonJS con module.exports dinámico: la clase llega como
+  // propiedad del objeto exportado, no como export nombrado.
+  const Pool = modulo.default?.Pool ?? modulo.Pool;
+  pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    max: 5,
+  });
+  pool.on('error', (err) => {
+    logError({ route: 'persistencia', mensaje: `pool: ${err.message}` });
+  });
+  await crearEsquema();
+  const { rows } = await pool.query(
+    `SELECT ${COLUMNAS} FROM pedidos ORDER BY actualizado_en, pedido_id`,
+  );
+  registrosCargados = rows.map(filaAPedido);
+  for (const oyente of oyentesDeCarga.splice(0)) {
+    try {
+      oyente(registrosCargados);
+    } catch (err) {
+      logError({ route: 'persistencia', mensaje: `oyente de carga: ${err.message}` });
+    }
+  }
+  return registrosCargados;
+}
+
+function iniciar() {
   if (inicio) {
     return inicio;
   }
-  inicio = (async () => {
-    // `pg` es CommonJS con module.exports dinámico: la clase llega como
-    // propiedad del objeto exportado, no como export nombrado.
-    const modulo = await import('pg');
-    const Pool = modulo.default?.Pool ?? modulo.Pool;
-    pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      max: 5,
-    });
-    pool.on('error', (err) => {
-      logError({ route: 'persistencia', mensaje: `pool: ${err.message}` });
-    });
-    await pool.query(ESQUEMA);
-    const { rows } = await pool.query(
-      `SELECT ${COLUMNAS} FROM pedidos ORDER BY actualizado_en, pedido_id`,
-    );
-    registrosCargados = rows.map(filaAPedido);
-    for (const oyente of oyentesDeCarga.splice(0)) {
-      try {
-        oyente(registrosCargados);
-      } catch (err) {
-        logError({ route: 'persistencia', mensaje: `oyente de carga: ${err.message}` });
-      }
-    }
-    return registrosCargados;
-  })();
-  inicio.catch((err) => {
+  inicio = arrancar().catch((err) => {
+    // Reinicia el intento: la próxima llamada a `iniciar()` reintenta el
+    // arranque en vez de quedarse con un arranque roto para siempre.
+    inicio = null;
     logError({ route: 'persistencia', mensaje: `inicio: ${err.message}` });
+    throw err;
   });
   return inicio;
 }
 
 // Arranque en caliente: si hay base de datos, el arranque empieza en cuanto el
 // módulo se importa (los route handlers de Next.js cargan el grafo de módulos
-// al atender la primera petición).
+// al atender la primera petición). El rechazo queda manejado dentro de
+// `iniciar()` (bitácora y reintento posterior); `void` declara que esta
+// llamada no se observa a propósito.
 if (activa()) {
-  iniciar();
+  void iniciar();
 }
 
 // Registra la función que reconstruye el estado del dominio con las filas
@@ -131,6 +159,32 @@ export async function lista() {
   await iniciar();
 }
 
+async function escribirFila(pedido) {
+  await iniciar();
+  await pool.query(
+    `INSERT INTO pedidos (${COLUMNAS})
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     ON CONFLICT (tienda_id, pedido_id) DO UPDATE
+     SET cliente_id = EXCLUDED.cliente_id,
+         producto_id = EXCLUDED.producto_id,
+         cantidad = EXCLUDED.cantidad,
+         total = EXCLUDED.total,
+         estado = EXCLUDED.estado,
+         pin = EXCLUDED.pin,
+         actualizado_en = now()`,
+    [
+      pedido.tiendaId,
+      pedido.id,
+      pedido.clienteId,
+      pedido.productoId,
+      pedido.cantidad,
+      pedido.total,
+      pedido.estado,
+      pedido.pin,
+    ],
+  );
+}
+
 // Espejo de escritura: UPSERT del pedido completo. Fire-and-forget a
 // propósito — el dominio no espera la base (ADR-0001); el fallo se bitacora y
 // la cola sigue con la siguiente escritura.
@@ -138,34 +192,7 @@ export function escribirPedido(pedido) {
   if (!activa()) {
     return;
   }
-  const tarea = (async () => {
-    await ultimaEscritura;
-    await iniciar();
-    await pool.query(
-      `INSERT INTO pedidos (${COLUMNAS})
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       ON CONFLICT (tienda_id, pedido_id) DO UPDATE
-       SET cliente_id = EXCLUDED.cliente_id,
-           producto_id = EXCLUDED.producto_id,
-           cantidad = EXCLUDED.cantidad,
-           total = EXCLUDED.total,
-           estado = EXCLUDED.estado,
-           pin = EXCLUDED.pin,
-           actualizado_en = now()`,
-      [
-        pedido.tiendaId,
-        pedido.id,
-        pedido.clienteId,
-        pedido.productoId,
-        pedido.cantidad,
-        pedido.total,
-        pedido.estado,
-        pedido.pin,
-      ],
-    );
-  })();
-  escriturasEnVuelo.add(tarea);
-  const silenciosa = tarea.catch((err) => {
+  const tarea = escribirFila(pedido).catch((err) => {
     logError({
       route: 'persistencia',
       tiendaId: pedido.tiendaId,
@@ -173,8 +200,14 @@ export function escribirPedido(pedido) {
       mensaje: `escritura: ${err.message}`,
     });
   });
-  silenciosa.then(() => escriturasEnVuelo.delete(tarea));
-  ultimaEscritura = silenciosa;
+  escriturasEnVuelo.add(tarea);
+  // El rechazo de `tarea` ya está capturado arriba; esta continuación solo
+  // limpia el registro de escrituras en vuelo.
+  void tarea.then(() => {
+    escriturasEnVuelo.delete(tarea);
+  });
+  // La cola continúa aunque esta escritura haya fallado.
+  ultimaEscritura = tarea;
 }
 
 // Espera las escrituras en vuelo (lo usan las pruebas de supervivencia para
