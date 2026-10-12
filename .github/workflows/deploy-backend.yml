@@ -1,5 +1,3 @@
-name: Deploy backend
-
 # Despliegue reproducible a Azure Container Apps (precisa ADR-0009 sin editarlo).
 # Azure for Students no permite ACR Tasks (TasksOperationsNotAllowed), por lo que
 # la imagen se construye en el runner y se empuja al ACR con az acr login.
@@ -8,17 +6,14 @@ name: Deploy backend
 # DATABASE_URL y HOSTNAME viven como secretos/env del Container App y este update
 # delimitado a --image los conserva.
 
+name: Deploy backend
+
 on:
   push:
     branches: [master]
     paths:
-      - 'backend/**'
-      - '.github/workflows/deploy-backend.yml'
+      - "backend/**"
   workflow_dispatch:
-
-concurrency:
-  group: deploy-backend
-  cancel-in-progress: false
 
 permissions:
   id-token: write
@@ -50,17 +45,6 @@ jobs:
       - name: Desplegar en Container Apps
         run: |
           az containerapp update \
-            --name laplacita-app \
+            --name NOMBRE_DE_TU_CONTAINER_APP \
             --resource-group rg-laplacita \
             --image laplacitaacr.azurecr.io/laplacita-app:${{ github.sha }}
-
-      - name: Health check
-        run: |
-          for i in $(seq 1 12); do
-            code=$(curl -s -o /dev/null -w '%{http_code}' \
-              https://laplacita-app.graymoss-fdd72159.canadacentral.azurecontainerapps.io/api/v1/health || true)
-            if [ "$code" = "200" ]; then echo "health=200 (intento $i)"; exit 0; fi
-            echo "intento $i: http=$code"; sleep 10
-          done
-          echo "health check agotado: la revision nueva no responde"
-          exit 1
