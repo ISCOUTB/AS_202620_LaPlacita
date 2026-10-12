@@ -88,7 +88,7 @@ El sistema centraliza la consulta de productos y la creación de pedidos, pero c
 
 ### 4.1. Decisión de estilo arquitectónico
 
-LaPlacita adopta **monolito modular con capas internas**, según lo registrado en [`docs/adr/0001-adopcion-monolito-modular.md`](../adr/0001-adopcion-monolito-modular.md). Los módulos se delimitan por dominio (`src/modules/*`); dentro de cada módulo, la organización interna sigue capas (presentación, lógica, datos). La comunicación entre módulos ocurre solo a través de su interfaz pública nunca cruzando directo a la capa de datos de otro módulo.
+LaPlacita adopta **monolito modular con capas internas**, según lo registrado en [`docs/adr/0001-adopcion-monolito-modular.md`](../adr/0001-adopcion-monolito-modular.md). Los módulos se delimitan por dominio (`backend/src/modules/*`); dentro de cada módulo, la organización interna sigue capas (presentación, lógica, datos). La comunicación entre módulos ocurre solo a través de su interfaz pública nunca cruzando directo a la capa de datos de otro módulo.
 
 ### 4.2. Matriz comparativa de estilos
 
@@ -135,14 +135,14 @@ LaPlacita se despliega como un **monolito modular**: un único proceso Next.js q
  
 ```mermaid
 graph TD
-    API["API Backend (Next.js App Router)\napp/api/v1/health/route.js\nEndpoint /api/v1/health"]
-    CV["Corte vertical ejecutable\nsrc/corte-vertical.js\nFlujo catálogo → pedidos → pagos\n→ entrega → notificaciones"]
+    API["API Backend (Next.js App Router)\nbackend/app/api/v1/health/route.js\nEndpoint /api/v1/health"]
+    CV["Corte vertical ejecutable\nbackend/src/corte-vertical.js\nFlujo catálogo → pedidos → pagos\n→ entrega → notificaciones"]
 
-    CAT["catalogo\nsrc/modules/catalogo/\nMenús, productos e inventario\npor establecimiento (tiendaId)"]
-    PED["pedidos\nsrc/modules/pedidos/\nCiclo de vida del pedido:\ncreación, estado, concurrencia (tiendaId)"]
-    PAG["pagos\nsrc/modules/pagos/\nIntegración con pasarela\nde pago externa (tiendaId)"]
-    ENT["entrega\nsrc/modules/entrega/\nValidación PIN en el punto\nde recolección (tiendaId)"]
-    NOT["notificaciones\nsrc/modules/notificaciones/\nAlertas de cambio de estado (tiendaId)"]
+    CAT["catalogo\nbackend/src/modules/catalogo/\nMenús, productos e inventario\npor establecimiento (tiendaId)"]
+    PED["pedidos\nbackend/src/modules/pedidos/\nCiclo de vida del pedido:\ncreación, estado, concurrencia (tiendaId)"]
+    PAG["pagos\nbackend/src/modules/pagos/\nIntegración con pasarela\nde pago externa (tiendaId)"]
+    ENT["entrega\nbackend/src/modules/entrega/\nValidación PIN en el punto\nde recolección (tiendaId)"]
+    NOT["notificaciones\nbackend/src/modules/notificaciones/\nAlertas de cambio de estado (tiendaId)"]
 
     API --> CAT
     API --> PED
@@ -162,11 +162,11 @@ graph TD
  
 | Módulo | Ruta | Responsabilidad | Escenario |
 |---|---|---|---|
-| `catalogo` | `src/modules/catalogo/` | Menús, productos e inventario por establecimiento | ESC-02, ESC-05 |
-| `pedidos`  | `src/modules/pedidos/`  | Ciclo de vida: creación, estado y concurrencia | ESC-01 |
-| `pagos`    | `src/modules/pagos/`    | Integración con la pasarela de pago externa | ESC-04 |
-| `entrega`  | `src/modules/entrega/`  | Validación PIN en el punto de recolección | ESC-03 |
-| `notificaciones` | `src/modules/notificaciones/` | Alertas de cambio de estado (fuera del alcance en esta entrega) | A-03 |
+| `catalogo` | `backend/src/modules/catalogo/` | Menús, productos e inventario por establecimiento | ESC-02, ESC-05 |
+| `pedidos`  | `backend/src/modules/pedidos/`  | Ciclo de vida: creación, estado y concurrencia | ESC-01 |
+| `pagos`    | `backend/src/modules/pagos/`    | Integración con la pasarela de pago externa | ESC-04 |
+| `entrega`  | `backend/src/modules/entrega/`  | Validación PIN en el punto de recolección | ESC-03 |
+| `notificaciones` | `backend/src/modules/notificaciones/` | Alertas de cambio de estado (fuera del alcance en esta entrega) | A-03 |
  
 **Regla de frontera:** ningún módulo importa directamente la capa de datos de otro módulo. Toda comunicación entre módulos ocurre a través de la interfaz pública de cada uno (`index.js`).
 
@@ -174,7 +174,7 @@ graph TD
 
 ### 5.2. Nivel 2 — Módulo `pedidos` (whitebox)
  
-El módulo `pedidos` es el núcleo del corte vertical y aísla su estado por tienda (RES-05). Sus tres capas internas viven en un único archivo (`src/modules/pedidos/index.js`) para mantener la lógica pura y testeable sin framework HTTP:
+El módulo `pedidos` es el núcleo del corte vertical y aísla su estado por tienda (RES-05). Sus tres capas internas viven en un único archivo (`backend/src/modules/pedidos/index.js`) para mantener la lógica pura y testeable sin framework HTTP:
  
 ```mermaid
 graph LR
@@ -188,9 +188,9 @@ graph LR
  
 | Capa | Archivo | Responsabilidad |
 |---|---|---|
-| Interfaz | `src/modules/pedidos/index.js` | Expone `crearPedido`, `obtenerPedido(pedidoId, tiendaId)`, `cambiarEstado(pedidoId, tiendaId, estado)`, `ESTADOS` |
-| Lógica | `src/modules/pedidos/index.js` | Valida cantidad/cliente/tienda, genera id por tienda, gestiona la máquina de estados y aplica reglas de negocio |
-| Persistencia | `src/modules/pedidos/index.js` | `pedidosPorTienda`: un `Map` por tienda en memoria; interfaz diseñada para sustituirse por PostgreSQL sin cambiar la lógica (ADR-0001) |
+| Interfaz | `backend/src/modules/pedidos/index.js` | Expone `crearPedido`, `obtenerPedido(pedidoId, tiendaId)`, `cambiarEstado(pedidoId, tiendaId, estado)`, `ESTADOS` |
+| Lógica | `backend/src/modules/pedidos/index.js` | Valida cantidad/cliente/tienda, genera id por tienda, gestiona la máquina de estados y aplica reglas de negocio |
+| Persistencia | `backend/src/modules/pedidos/index.js` | `pedidosPorTienda`: un `Map` por tienda en memoria; interfaz diseñada para sustituirse por PostgreSQL sin cambiar la lógica (ADR-0001) |
  
 **Máquina de estados del pedido**
  
@@ -290,11 +290,11 @@ sequenceDiagram
 ```
 
 **Aspectos notables:**
-- La generación de `id` y `pin` ocurre en la lógica del módulo, no en un enrutador HTTP: el corte vertical se ejecuta igual por CLI (`node src/corte-vertical.js`) o desde la API (corte 2). La interfaz HTTP de pedidos se define en `openapi.yaml` e implementada en `app/api/v1/`.
+- La generación de `id` y `pin` ocurre en la lógica del módulo, no en un enrutador HTTP: el corte vertical se ejecuta igual por CLI (`node backend/src/corte-vertical.js`) o desde la API (corte 2). La interfaz HTTP de pedidos se define en `backend/openapi.yaml` e implementada en `backend/app/api/v1/`.
 - La capa de persistencia expone una interfaz independiente del protocolo; sustituir el `Map` por PostgreSQL no modifica la lógica (ADR-0001).
 - Node.js atiende las peticiones concurrentes en su ciclo de eventos (un solo hilo): la atomicidad del `Map.set()` garantiza que dos pedidos simultáneos no se sobreescriban.
 - Cada tienda tiene su propio repositorio (`pedidosPorTienda`), de modo que los ids de distintas tiendas pueden coincidir sin colisionar (RES-05).
-- Los endpoints HTTP están implementados en `app/api/v1/*` siguiendo el contrato `openapi.yaml` v1: `GET /api/v1/health`, `GET /api/v1/catalogo/productos/{productoId}`, `POST /api/v1/pedidos`, entre otros.
+- Los endpoints HTTP están implementados en `backend/app/api/v1/*` siguiendo el contrato `backend/openapi.yaml` v1: `GET /api/v1/health`, `GET /api/v1/catalogo/productos/{productoId}`, `POST /api/v1/pedidos`, entre otros.
 ---
 
 ### 6.4 — Caso de uso UC-02 — Aislamiento entre establecimientos
@@ -313,7 +313,7 @@ sequenceDiagram
     Str-->>Svc: no encontrado
     Svc-->>Panel: Error "no encontrado en la tienda tienda-B"
 
-    Note over Panel, Str: RES-05: cada tienda vive en su propio Map.<br/>Leer/mutar pedidos de otra tienda es rechazado:<br/>0 accesos cruzados (ver tests/aislamiento.test.js<br/>y scripts/medir-aislamiento.js).
+    Note over Panel, Str: RES-05: cada tienda vive en su propio Map.<br/>Leer/mutar pedidos de otra tienda es rechazado:<br/>0 accesos cruzados (ver backend/tests/aislamiento.test.js<br/>y backend/scripts/medir-aislamiento.js).
 ```
 
 **Decisión relacionada:** [ADR-0004 — Aislamiento estricto por establecimiento](../adr/0004-aislamiento-por-establecimiento.md)
@@ -354,12 +354,12 @@ HTTP lo importa; la respuesta del borde es la vista pública, sin `pin`.
 
 ### 6.6 — Contrato de API y prueba de contrato (S7)
 
-**Evidencia:** `openapi.yaml` (contrato OpenAPI 3.1 v1), `tests/contract-openapi.test.js` (prueba de contrato), `docs/adr/0006-estrategia-integracion-sincrona.md` (ADR de integración) ratificado por `docs/adr/0008-ratificacion-estrategia-integracion-sincrona.md`.
-**Pipeline:** job `contract-test` en `.github/workflows/ci.yml` que ejecuta `node --test tests/contract-openapi.test.js`.
+**Evidencia:** `backend/openapi.yaml` (contrato OpenAPI 3.1 v1), `backend/tests/contract-openapi.test.js` (prueba de contrato), `docs/adr/0006-estrategia-integracion-sincrona.md` (ADR de integración) ratificado por `docs/adr/0008-ratificacion-estrategia-integracion-sincrona.md`.
+**Pipeline:** job `contract-test` en `.github/workflows/ci.yml` que ejecuta `node --test backend/tests/contract-openapi.test.js`.
 **Estrategia de integración:** Síncrona in-process mediante importaciones ESM directas (ADR-0006).
-**Implementación HTTP:** 11 operaciones REST (11 paths) implementadas en `app/api/v1/*` siguiendo el contrato: `GET /api/v1/health`, `GET /api/v1/metricas`, `GET /api/v1/catalogo/productos/{productoId}`, `GET /api/v1/catalogo/tiendas/{tiendaId}/productos`, `POST /api/v1/pedidos`, `GET /api/v1/pedidos/{pedidoId}`, `POST /api/v1/pagos/{pedidoId}/confirmar`, `POST /api/v1/entrega/{pedidoId}/listo`, `POST /api/v1/entrega/{pedidoId}/validar`, `POST /api/v1/notificaciones`, `GET /api/v1/notificaciones/{pedidoId}`. Desde S9 el contrato solo declara métodos `get` y `post`: el `PUT /api/v1/pedidos/{pedidoId}` se retiró con ADR-0013.
-**El contrato define 11 paths con 11 operaciones REST** (health, métricas, catalogo, pedidos, pagos, entrega, notificaciones) con esquemas de request/response versionados. La prueba de contrato valida que la implementación de los módulos cumple el contrato, que cada path del `openapi.yaml` tiene su `route.js` en `app/api/v1/`, y **falla ante cambios incompatibles** (ej. si `crearPedido` deja de recibir `tiendaId`). Las rutas delegan en `src/modules/*` (dominio puro, ADR-0001); la capa HTTP (`app/api/v1/`) es solo el adaptador del contrato, no contiene lógica de negocio.
-**Observabilidad (S8):** `GET /api/v1/metricas` expone contadores en memoria (`pedidosCreados`, `pagosConfirmados`, `pedidosListos`, `entregasValidadas`, `pinesRechazados`, `pinesBloqueados`) asociados a ESC-01/ESC-03/ESC-04; las rutas emiten bitácora JSON (`src/logger.js`: `ts`, `level`, `service`, `route`, `tiendaId`, `pedidoId`, `mensaje`) sin registrar PIN ni tarjeta.
+**Implementación HTTP:** 11 operaciones REST (11 paths) implementadas en `backend/app/api/v1/*` siguiendo el contrato: `GET /api/v1/health`, `GET /api/v1/metricas`, `GET /api/v1/catalogo/productos/{productoId}`, `GET /api/v1/catalogo/tiendas/{tiendaId}/productos`, `POST /api/v1/pedidos`, `GET /api/v1/pedidos/{pedidoId}`, `POST /api/v1/pagos/{pedidoId}/confirmar`, `POST /api/v1/entrega/{pedidoId}/listo`, `POST /api/v1/entrega/{pedidoId}/validar`, `POST /api/v1/notificaciones`, `GET /api/v1/notificaciones/{pedidoId}`. Desde S9 el contrato solo declara métodos `get` y `post`: el `PUT /api/v1/pedidos/{pedidoId}` se retiró con ADR-0013.
+**El contrato define 11 paths con 11 operaciones REST** (health, métricas, catalogo, pedidos, pagos, entrega, notificaciones) con esquemas de request/response versionados. La prueba de contrato valida que la implementación de los módulos cumple el contrato, que cada path del `backend/openapi.yaml` tiene su `route.js` en `backend/app/api/v1/`, y **falla ante cambios incompatibles** (ej. si `crearPedido` deja de recibir `tiendaId`). Las rutas delegan en `backend/src/modules/*` (dominio puro, ADR-0001); la capa HTTP (`backend/app/api/v1/`) es solo el adaptador del contrato, no contiene lógica de negocio.
+**Observabilidad (S8):** `GET /api/v1/metricas` expone contadores en memoria (`pedidosCreados`, `pagosConfirmados`, `pedidosListos`, `entregasValidadas`, `pinesRechazados`, `pinesBloqueados`) asociados a ESC-01/ESC-03/ESC-04; las rutas emiten bitácora JSON (`backend/src/logger.js`: `ts`, `level`, `service`, `route`, `tiendaId`, `pedidoId`, `mensaje`) sin registrar PIN ni tarjeta.
 
 ---
 
@@ -384,7 +384,7 @@ flowchart TB
 | Pieza | Dónde se ejecuta | Evidencia |
 |---|---|---|
 | API Next.js standalone + sitio | Azure Container Apps, misma imagen Docker (`PORT=3000`, `NODE_ENV=production`) | `Dockerfile:1-17`, `next.config.mjs:2-4`, ADR-0009 |
-| Rutas `/api/v1/*` + dominio `src/modules/*` | Dentro del contenedor anterior (mismo proceso, ESM síncrono) | `app/api/v1/**/route.js`, ADR-0001/0006 |
+| Rutas `/api/v1/*` + dominio `backend/src/modules/*` | Dentro del contenedor anterior (mismo proceso, ESM síncrono) | `backend/app/api/v1/**/route.js`, ADR-0001/0006 |
 | Pipeline `test` + `contract-test` | GitHub Actions runners `ubuntu-latest` + Node 22 en cada push/PR a `master` | `.github/workflows/ci.yml:12-49` |
 | Análisis estático + Quality Gate | SonarCloud, organización `isco-utb`, proyecto `ISCOUTB_AS_202620_LaPlacita` | `sonar-project.properties:4-9`, ADR-0010 |
 | Desarrollo local | Puesto del desarrollador (`npm ci` → `npm run dev` → `localhost:3000`) | `README.md`, `.env.example` |
@@ -406,7 +406,7 @@ flowchart TB
 | Recolección / Validación | `marcarListo/validarPin` en mostrador | Entrega |
 | Notificación | `{pedidoId, tiendaId, estado, mensaje, enviadaEn}` | Notificaciones |
 | Cliente | `clienteId` opaco que ordena | Pedidos (ref) |
-| Orquestador | `src/corte-vertical.js`, composición, no es contexto | — |
+| Orquestador | `backend/src/corte-vertical.js`, composición, no es contexto | — |
 
 ### 8.2 Mapa de contextos (resumen + enlace)
 Ver `docs/dominio/mapa-de-contextos.md` (diagrama Mermaid canónico).
@@ -415,7 +415,7 @@ Proyección a código: `docs/c4/componentes.md`. Decisiones: ADR-0001 (estilo), 
 
 ### 8.3 Reglas transversales
 1. **Cada dato tiene un dueño único** (tabla en `docs/dominio/propiedad-de-datos.md`). Solo el dueño escribe.
-2. **RES-05:** toda operación exige `tiendaId`; 0 accesos cruzados (ESC-02, `scripts/medir-aislamiento.js`).
+2. **RES-05:** toda operación exige `tiendaId`; 0 accesos cruzados (ESC-02, `backend/scripts/medir-aislamiento.js`).
 3. **Frontera de módulo:** comunicación solo vía `index.js` público; prohibido tocar el Map ajeno (violaciones V-01…V-06 en `docs/dominio/auditoria-modularidad.md`).
 4. **RES-01:** nunca tarjeta en el repo; solo confirmación (ACL).
 

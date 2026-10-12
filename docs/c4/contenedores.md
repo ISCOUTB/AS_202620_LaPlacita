@@ -56,7 +56,7 @@ flowchart TD
 
 | Contenedor | Estado | Evidencia |
 | --- | --- | --- |
-| API Backend Central | Implementado (`tiendaId` en todo el flujo) | `src/modules/*`, `src/corte-vertical.js`, `tests/aislamiento.test.js` |
+| API Backend Central | Implementado (`tiendaId` en todo el flujo) | `backend/src/modules/*`, `backend/src/corte-vertical.js`, `backend/tests/aislamiento.test.js` |
 | App / Web Cliente | Planeado (Corte 2) | — |
 | Portal Establecimiento | Planeado (Corte 2) | — |
 | Caché y Colas (Redis) | Planeado (Corte 2) | — |

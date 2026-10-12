@@ -11,12 +11,12 @@ flowchart TB
     classDef extSystem fill:#999999,stroke:#666666,color:#fff;
 
     subgraph api ["API Backend Central [Next.js] — IMPLEMENTADO (corte vertical)"]
-        CV(["Orquestador<br/>src/corte-vertical.js<br/>(Application Service, no es contexto)"]):::appService
-        CAT["Catálogo<br/>src/modules/catalogo/"]:::container
-        PED["Pedidos (núcleo)<br/>src/modules/pedidos/"]:::container
-        PAG["Pagos<br/>src/modules/pagos/"]:::container
-        ENT["Entrega<br/>src/modules/entrega/"]:::container
-        NOT["Notificaciones (OHS)<br/>src/modules/notificaciones/"]:::container
+        CV(["Orquestador<br/>backend/src/corte-vertical.js<br/>(Application Service, no es contexto)"]):::appService
+        CAT["Catálogo<br/>backend/src/modules/catalogo/"]:::container
+        PED["Pedidos (núcleo)<br/>backend/src/modules/pedidos/"]:::container
+        PAG["Pagos<br/>backend/src/modules/pagos/"]:::container
+        ENT["Entrega<br/>backend/src/modules/entrega/"]:::container
+        NOT["Notificaciones (OHS)<br/>backend/src/modules/notificaciones/"]:::container
         S_CAT[("productos<br/>Map")]:::containerDb
         S_PED[("pedidosPorTienda<br/>contadoresPorTienda")]:::containerDb
         S_PAG[("pagosConfirmados<br/>tienda:pedido")]:::containerDb

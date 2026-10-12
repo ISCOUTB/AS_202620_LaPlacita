@@ -1,5 +1,11 @@
 name: CI LaPlacita
 
+# El código vive en backend/ desde la reestructuración del 12/10/2026:
+# backend = API Next.js + dominio; frontend/ es la división planeada (placeholder).
+defaults:
+    run:
+        working-directory: backend
+
 on: 
     push:
         branches:
@@ -109,6 +115,11 @@ jobs:
 
         - name: Análisis estático con SonarCloud
           uses: sonarsource/sonarcloud-github-action@v5
+          with:
+                # El proyecto Sonar vive en backend/ (sonar-project.properties);
+                # sin esto el scanner buscaría la configuración en la raíz.
+                args: >
+                    -Dsonar.projectBaseDir=${{ github.workspace }}/backend
           env:
                 GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         

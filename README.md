@@ -112,59 +112,65 @@ Los prototipos de interfaz están planeados para el Corte 2 (contendores App/Web
 
 ### Estructura del repositorio 
 
+> **Monorepo con división backend/frontend (12/10/2026):** todo el código del sistema vive en
+> [`backend/`](backend/); [`frontend/`](frontend/) es el placeholder de la aplicación de usuario
+> (planeada para el corte 3). Las citas históricas de semanas anteriores (S1–S10) conservan las
+> rutas de su fecha; el mapa de correspondencias está en [`correcciones.md`](correcciones.md).
+
 ```
   AS_202620_LaPlacita/
   │
   ├── .github/
-  │   └── workflows/ 
-  │          └── ci.yml 
+  │   └── workflows/
+  │          └── ci.yml
   ├── README.md
-  ├── correcciones.md 
-  ├── Dockerfile
-  ├── sonar-project.properties
-  ├── next.config.mjs
-  ├── jsconfig.json
-  ├── package.json 
-  ├── package-lock.json
-  ├── app/
-  │   └── api/v1/
-  │         ├── health/route.js        # GET /api/v1/health
-  │         ├── catalogo/productos/[productoId]/route.js
-  │         ├── catalogo/tiendas/[tiendaId]/productos/route.js
-  │         ├── pedidos/route.js
-  │         ├── pedidos/[pedidoId]/route.js
-  │         ├── pagos/[pedidoId]/confirmar/route.js
-  │         ├── entrega/[pedidoId]/listo/route.js
-  │         ├── entrega/[pedidoId]/validar/route.js
-  │         ├── notificaciones/route.js
-  │         ├── notificaciones/[pedidoId]/route.js
-  │         └── metricas/route.js   # GET /api/v1/metricas (capa HTTP del contrato openapi.yaml)
-  ├── openapi.yaml              # Contrato OpenAPI 3.1 (v1)
-  ├── scripts/
-  │   └── medir-aislamiento.js   # Medición reproducible de RES-05 (0 accesos cruzados)
-  ├── src/
-  │   ├── health.js              # Lógica pura del endpoint /api/v1/health
-  │   ├── logger.js              # Bitácora JSON (ts, level, service, route, tiendaId, pedidoId)
-  │   ├── metricas.js            # Contadores de ESC-01/03/04 para GET /api/v1/metricas
-  │   ├── corte-vertical.js      # Corte vertical ejecutable (flujo completo con tiendaId)
-  │   └── modules/
-  │         ├── catalogo/
-  │         │      └── index.js
-  │         ├── entrega/
-  │         │      └── index.js
-  │         ├── notificaciones/
-  │         │      └── index.js
-  │         ├── pagos/
-  │         │      └── index.js
-  │         └── pedidos/
-  │                └── index.js
-  ├── tests/
-  │      ├── health.test.js
-  │      ├── modulos.test.js
-  │      ├── corte-vertical.test.js
-  │      ├── aislamiento.test.js
-  │      ├── contract-openapi.test.js
-  │      └── observabilidad.test.js   # logger JSON + GET /metricas (6 pruebas)
+  ├── correcciones.md
+  ├── backend/                      # API + dominio + pruebas (estado desplegable)
+  │   ├── Dockerfile
+  │   ├── sonar-project.properties
+  │   ├── next.config.mjs
+  │   ├── jsconfig.json
+  │   ├── package.json
+  │   ├── package-lock.json
+  │   ├── .env.example
+  │   ├── openapi.yaml              # Contrato OpenAPI 3.1 (v1)
+  │   ├── app/api/v1/
+  │   │     ├── health/route.js                     # GET /api/v1/health
+  │   │     ├── catalogo/productos/[productoId]/route.js
+  │   │     ├── catalogo/tiendas/[tiendaId]/productos/route.js
+  │   │     ├── pedidos/route.js
+  │   │     ├── pedidos/[pedidoId]/route.js
+  │   │     ├── pagos/[pedidoId]/confirmar/route.js
+  │   │     ├── entrega/[pedidoId]/listo/route.js
+  │   │     ├── entrega/[pedidoId]/validar/route.js
+  │   │     ├── notificaciones/route.js
+  │   │     ├── notificaciones/[pedidoId]/route.js
+  │   │     └── metricas/route.js                   # GET /api/v1/metricas (capa HTTP del contrato)
+  │   ├── scripts/
+  │   │     ├── medir-aislamiento.js                # Medición reproducible de RES-05 (0 accesos cruzados)
+  │   │     ├── medir-exposicion-pin.js             # Medición reproducible de ESC-03 (0 exposiciones)
+  │   │     └── medir-persistencia.js               # Medición reproducible de ESC-01 (supervivencia al reinicio)
+  │   ├── src/
+  │   │     ├── health.js                           # Lógica pura del endpoint /api/v1/health
+  │   │     ├── logger.js                           # Bitácora JSON (ts, level, service, route, tiendaId, pedidoId)
+  │   │     ├── metricas.js                         # Contadores de ESC-01/03/04 para GET /api/v1/metricas
+  │   │     ├── corte-vertical.js                   # Corte vertical ejecutable (flujo completo con tiendaId)
+  │   │     ├── persistencia/index.js               # Adaptador PostgreSQL (ESC-01, ADR-0014)
+  │   │     └── modules/
+  │   │           ├── catalogo/index.js
+  │   │           ├── entrega/index.js
+  │   │           ├── notificaciones/index.js
+  │   │           ├── pagos/index.js
+  │   │           └── pedidos/index.js
+  │   └── tests/
+  │         ├── health.test.js
+  │         ├── modulos.test.js
+  │         ├── corte-vertical.test.js
+  │         ├── aislamiento.test.js
+  │         ├── contract-openapi.test.js
+  │         ├── observabilidad.test.js              # logger JSON + GET /metricas
+  │         └── persistencia.test.js                # supervivencia al reinicio (requiere PostgreSQL)
+  ├── frontend/                     # placeholder de la aplicación de usuario (planeada, corte 3)
   └── docs/
         ├── adr/
         │     ├── 0001-adopcion-monolito-modular.md
@@ -177,13 +183,18 @@ Los prototipos de interfaz están planeados para el Corte 2 (contendores App/Web
         │     ├── 0008-ratificacion-estrategia-integracion-sincrona.md
         │     ├── 0009-despliegue-azure.md
         │     ├── 0010-analisis-sonarcloud.md
-        │     └── 0011-base-de-datos-universidad.md
+        │     ├── 0011-base-de-datos-universidad.md
+        │     ├── 0012-no-incorporar-componente-generativo.md
+        │     ├── 0013-proyeccion-publica-pedido-sin-pin.md
+        │     ├── 0014-base-de-datos-postgresql-dokploy.md
+        │     ├── 0015-ratificacion-ediciones-post-aceptacion.md
+        │     └── 0016-quality-gate-sonarcloud-bloqueante.md
         ├── arc42/
         │    ├── images/
         │    │     └── arc42-logo.png
         │    └── arc42-template-EN.md
         ├── c4/
-        │    ├── contexto.md 
+        │    ├── contexto.md
         │    ├── contenedores.md
         │    └── componentes.md
         ├── dominio/
@@ -221,7 +232,7 @@ La documentación del proyecto sigue rigurosamente los lineamientos del curso y 
 
 * Restricción RES-05 implementada: las operaciones de catálogo, pedidos y entrega exigen `tiendaId`; repositorios particionados por tienda en `src/modules/*` (decisión en [`docs/adr/0004-aislamiento-por-establecimiento.md`](docs/adr/0004-aislamiento-por-establecimiento.md))
 * Línea base medida sobre `812d227`: **2/2 accesos cruzados** logrados (incumplía ESC-02); post-cambio: **0/300** (cumple umbral)
-* Nueva prueba de aislamiento ([`tests/aislamiento.test.js`](tests/aislamiento.test.js)) y medición reproducible ([`scripts/medir-aislamiento.js`](scripts/medir-aislamiento.js))
+* Nueva prueba de aislamiento ([`tests/aislamiento.test.js`](backend/tests/aislamiento.test.js)) y medición reproducible ([`scripts/medir-aislamiento.js`](backend/scripts/medir-aislamiento.js))
 * Suites en verde: 13 pruebas (`npm test`); CI en GitHub Actions + paso SonarCloud (activo cuando exista `SONAR_TOKEN`)
 * Diagnóstico completo en arc42 §11 e incidencias de corte marcadas en [`correcciones.md`](correcciones.md)
 * Configuración SonarCloud pendiente: definir organización/projectKey y `SONAR_TOKEN` (ADRs y `sonar-project.properties` ya listos)
@@ -235,8 +246,8 @@ La documentación del proyecto sigue rigurosamente los lineamientos del curso y 
 * Pendiente: `SONAR_TOKEN`/organización de SonarCloud (requiere que el equipo cree el proyecto en sonarcloud.io con su cuenta)
 
 **Semana 7 — Contrato de API y prueba de contrato (16-17/09/2026)**
-* Contrato OpenAPI 3.1 versionado en [`openapi.yaml`](openapi.yaml): **10 paths / 11 operaciones REST** (health, catálogo, pedidos, pagos, entrega, notificaciones) con esquemas de request/response
-* Prueba de contrato ([`tests/contract-openapi.test.js`](tests/contract-openapi.test.js), 23 tests) que valida que los módulos cumplen el contrato, que cada path tiene su `route.js`, y **falla ante cambios incompatibles**; job `contract-test` en [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
+* Contrato OpenAPI 3.1 versionado en [`openapi.yaml`](backend/openapi.yaml): **10 paths / 11 operaciones REST** (health, catálogo, pedidos, pagos, entrega, notificaciones) con esquemas de request/response
+* Prueba de contrato ([`tests/contract-openapi.test.js`](backend/tests/contract-openapi.test.js), 23 tests) que valida que los módulos cumplen el contrato, que cada path tiene su `route.js`, y **falla ante cambios incompatibles**; job `contract-test` en [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
 * ADR de integración síncrona in-process ([`docs/adr/0006-estrategia-integracion-sincrona.md`](docs/adr/0006-estrategia-integracion-sincrona.md)), ratificado por [`docs/adr/0008-ratificacion-estrategia-integracion-sincrona.md`](docs/adr/0008-ratificacion-estrategia-integracion-sincrona.md)
 * Rutas HTTP en `app/api/v1/*` que delegan en `src/modules/*` (dominio puro, ADR-0001): la capa HTTP es solo el adaptador del contrato, sin lógica de negocio
 * arc42 §6 con flujos de interacción por protocolo/formato; C4 de componentes/contenedores con etiquetas HTTP REST/JSON; aspecto A-07 en [`docs/aspectos.md`](docs/aspectos.md)
@@ -245,7 +256,7 @@ La documentación del proyecto sigue rigurosamente los lineamientos del curso y 
 
 **Semana 8 — Despliegue, operación y costos (24-25/09/2026)**
 * Evidencia S8 en [`docs/semana-08.md`](docs/semana-08.md): API desplegada y verificada desde fuera de la red en `https://laplacita-app.graymoss-fdd72159.canadacentral.azurecontainerapps.io` (`GET /api/v1/health` → `http=200`, 27/09/2026 18:15 COT — detalle en [`docs/evidencia-despliegue-azure.md`](docs/evidencia-despliegue-azure.md)); IaC trazada (`Dockerfile:1-17`, `.github/workflows/ci.yml`, `src/health.js`, `app/api/v1/**/route.js`, `openapi.yaml` 11 paths / 12 operaciones); pipeline `test` ✅ `contract-test` ✅ `sonar` informativo (`continue-on-error` hasta vincular org, ADR-0010 — *estado en S8, superado en S10: el job es obligatorio, corre con token y espera el Quality Gate; ver la sección de S10*); costos **0 USD/mes** (Azure Students + universidad, ruptura ×36) con supuestos S-1…S-5 y taller S8 en [ADR-0009](docs/adr/0009-despliegue-azure.md) y [ADR-0011](docs/adr/0011-base-de-datos-universidad.md)
-* Observabilidad: bitácora JSON en rutas ([`src/logger.js`](src/logger.js), sin PIN ni tarjeta) + `GET /api/v1/metricas` ([`src/metricas.js`](src/metricas.js): pedidos, pagos, listos, entregas, rechazos y bloqueos por ESC-01/03/04) con [`tests/observabilidad.test.js`](tests/observabilidad.test.js)
+* Observabilidad: bitácora JSON en rutas ([`src/logger.js`](backend/src/logger.js), sin PIN ni tarjeta) + `GET /api/v1/metricas` ([`src/metricas.js`](backend/src/metricas.js): pedidos, pagos, listos, entregas, rechazos y bloqueos por ESC-01/03/04) con [`tests/observabilidad.test.js`](backend/tests/observabilidad.test.js)
 * arc42 §7 vista de despliegue (una caja por pieza + dónde se ejecuta) y §2 RES-06 (tope 5 USD/mes sin tarjeta); suites en verde: **44 pruebas** (`npm test`) y `npm run contract-test` (**23/23**)
 * T1 (SonarCloud) queda en diagnóstico y plan, no en cumplido: falta run verde + URL del Quality Gate *(superado en S10: run verde con token y Quality Gate público consultable — ver la sección de S10 y [`docs/evidencias/evidencias-s10.md`](docs/evidencias/evidencias-s10.md))*
 
@@ -253,8 +264,8 @@ La documentación del proyecto sigue rigurosamente los lineamientos del curso y 
 * Escenario operativo del corte declarado: **ESC-01 — Picos de demanda entre clases** ([`docs/evidencias/evidencias-s10.md`](docs/evidencias/evidencias-s10.md) §1), con hipótesis, montaje, variables y umbral **0 pedidos perdidos tras reinicio del contenedor**
 * Línea base medida contra el despliegue real de Azure: **3 pedidos creados y 0/3 supervivientes** tras el reinicio (`2026-10-12T04:03–04:16Z`) — el defecto del estado en memoria quedó evidenciado con horas (§4)
 * Decisión registrada en [ADR-0014](docs/adr/0014-base-de-datos-postgresql-dokploy.md): PostgreSQL gestionado por Dokploy en la infraestructura de la universidad, que **precisa el ADR-0011 sin modificarlo** (misma infraestructura y motor; Dokploy es la capa de gestión)
-* Persistencia implementada: adaptador [`src/persistencia/index.js`](src/persistencia/index.js) (UPSERT con cola de escritura serializada, DDL con advisory lock, rehidratación al arranque, escritura en segundo plano con bitácora de fallos), puerto de rehidratación `restaurarEstadoDesde` en el módulo `pedidos` y espera de rehidratación en la ruta de lectura; sin `DATABASE_URL` el sistema conserva el modo memoria y la suite corre sin base de datos
-* Prueba de supervivencia ([`tests/persistencia.test.js`](tests/persistencia.test.js)) con servicio PostgreSQL en CI; medición reproducible del experimento en [`scripts/medir-persistencia.js`](scripts/medir-persistencia.js)
+* Persistencia implementada: adaptador [`src/persistencia/index.js`](backend/src/persistencia/index.js) (UPSERT con cola de escritura serializada, DDL con advisory lock, rehidratación al arranque, escritura en segundo plano con bitácora de fallos), puerto de rehidratación `restaurarEstadoDesde` en el módulo `pedidos` y espera de rehidratación en la ruta de lectura; sin `DATABASE_URL` el sistema conserva el modo memoria y la suite corre sin base de datos
+* Prueba de supervivencia ([`tests/persistencia.test.js`](backend/tests/persistencia.test.js)) con servicio PostgreSQL en CI; medición reproducible del experimento en [`scripts/medir-persistencia.js`](backend/scripts/medir-persistencia.js)
 * Pipeline transversal cerrado: job `sonar` obligatorio (sin `continue-on-error` ni condicional de token) con **Quality Gate público en OK** (`https://sonarcloud.io/project/overview?id=ISCOUTB_AS_202620_LaPlacita`) y bloqueante (`sonar.qualitygate.wait=true`); runs en verde: `e01991d`, `cbd4cf0`, `d25bef4`, `fda91fd`
 * Regresiones medidas tras la persistencia: ESC-02 **0/300** accesos cruzados y ESC-03 **0/100** exposiciones (§7)
 * Suites en verde: **51 pruebas** con base de datos (50 sin ella, 1 skip condicional) y `npm run contract-test` (**27/27**)
@@ -264,15 +275,17 @@ La documentación del proyecto sigue rigurosamente los lineamientos del curso y 
 
 ## Cómo ejecutar
 
-Requiere **Node.js 22 o superior** (el proyecto usa JavaScript ESM nativo). El backend está construido sobre **Next.js** (API Routes, App Router).
+Requiere **Node.js 22 o superior** (el proyecto usa JavaScript ESM nativo). El backend está construido sobre **Next.js** (API Routes, App Router) y vive en [`backend/`](backend/).
 
 ```bash
+cd backend
 npm install && npm run dev   # comando único de arranque (instala y levanta el backend)
 ```
 
 Equivalente en dos pasos:
 
 ```bash
+cd backend
 npm install
 npm run dev
 ```
@@ -282,6 +295,7 @@ El servidor arranca en `http://localhost:3000` con un endpoint de verificación 
 Para producción:
 
 ```bash
+cd backend
 npm run build
 npm start
 ```
@@ -289,6 +303,7 @@ npm start
 ### Pruebas
 
 ```bash
+cd backend
 npm test
 ```
 
@@ -296,9 +311,10 @@ Estas mismas pruebas se ejecutan automáticamente en cada push o pull request me
 
 ### Corte vertical ejecutable
 
-`src/corte-vertical.js` atraviesa los 5 módulos en un solo flujo end-to-end: catálogo → pedidos → pagos → entrega → notificaciones. Todo el flujo se ejecuta en el contexto de una tienda (`tiendaId`). Simula un pedido real desde la consulta del producto hasta la entrega validada por PIN.
+`backend/src/corte-vertical.js` atraviesa los 5 módulos en un solo flujo end-to-end: catálogo → pedidos → pagos → entrega → notificaciones. Todo el flujo se ejecuta en el contexto de una tienda (`tiendaId`). Simula un pedido real desde la consulta del producto hasta la entrega validada por PIN.
 
 ```bash
+cd backend
 node src/corte-vertical.js
 ```
 
@@ -306,9 +322,10 @@ Salida esperada: el pedido avanza por los 4 estados (`Recibido` → `En preparac
 
 ### Medir el aislamiento (RES-05 / ESC-02)
 
-`scripts/medir-aislamiento.js` lanza 100 ciclos × 3 accesos cruzados hacia otra tienda (300 intentos) y verifica que **ninguno** se concrete (umbral ESC-02 = 0).
+`backend/scripts/medir-aislamiento.js` lanza 100 ciclos × 3 accesos cruzados hacia otra tienda (300 intentos) y verifica que **ninguno** se concrete (umbral ESC-02 = 0).
 
 ```bash
+cd backend
 node scripts/medir-aislamiento.js
 ```
 
@@ -333,14 +350,14 @@ Salida esperada: `accesosCruzadosLogrados: 0`, cumple umbral → termina con có
 2. **Clonar el repositorio**
    ```bash
    git clone https://github.com/ISCOUTB/AS_202620_LaPlacita.git
-   cd AS_202620_LaPlacita
+   cd AS_202620_LaPlacita/backend
    ```
 
 3. **Instalar las dependencias**
    ```bash
    npm install
    ```
-   Esto descarga Next.js, React y el resto de dependencias declaradas en `package.json`.
+   Esto descarga Next.js, React y el resto de dependencias declaradas en `backend/package.json`.
 
 4. **Levantar el servidor en modo desarrollo**
    ```bash

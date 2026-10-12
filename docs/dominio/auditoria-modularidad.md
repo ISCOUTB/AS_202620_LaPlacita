@@ -1,11 +1,16 @@
 # Auditoría de Modularidad — LaPlacita
 
 > Auditoría **sobre el código actual**, no sobre el diseño ideal. Recorrido documentado aunque la lista no sea vacía.
+>
+> **Nota de rutas (12/10/2026):** desde la reestructuración del monorepo, el código vive en `backend/`
+> (`src/modules/...` → `backend/src/modules/...`, `app/api/...` → `backend/app/api/...`). Las rutas
+> citadas en los hallazgos son históricas y quedan congeladas al hash de su revisión; los comandos
+> reproducibles de esta página usan las rutas vigentes (`-- backend/...`).
 
 ## Recorrido (reproducible)
 1. `git ls-tree -r --name-only HEAD | grep -iE 'migrat|schema|models?/|entit|\.sql$'` → vacío (sin SQL).
-2. `git grep -nE '(pedidosPorTienda|productos|pagosConfirmados|notificacionesEnviadas|\.set\(|pin *=)' HEAD -- src` → escrituras en `catalogo/index.js:6`, `pedidos/index.js:11-12,51,81`, `pagos/index.js:17,24`, `entrega/index.js:15`, `notificaciones/index.js:17`, `corte-vertical.js:20-38`.
-3. `git grep -nE '^import .*from.*modules' HEAD -- src` → `pedidos/index.js:7` (Pedidos→Catálogo), `pagos/index.js:6` (Pagos→Pedidos), `entrega/index.js:7` (Entrega→Pedidos). Resto sin imports cruzados.
+2. `git grep -nE '(pedidosPorTienda|productos|pagosConfirmados|notificacionesEnviadas|\.set\(|pin *=)' HEAD -- backend/src` → escrituras en `backend/src/modules/catalogo/index.js:6`, `backend/src/modules/pedidos/index.js:11-12,51,81`, `backend/src/modules/pagos/index.js:17,24`, `backend/src/modules/entrega/index.js:15`, `backend/src/modules/notificaciones/index.js:17`, `backend/src/corte-vertical.js:20-38`. *(Rutas históricas de la auditoría S6: `src/modules/...`.)*
+3. `git grep -nE '^import .*from.*modules' HEAD -- backend/src` → `pedidos/index.js:7` (Pedidos→Catálogo), `pagos/index.js:6` (Pagos→Pedidos), `entrega/index.js:7` (Entrega→Pedidos). Resto sin imports cruzados.
 4. Revisión manual `obtenerPedido` retorna referencia viva (`pedidos/index.js:63`).
 
 ## Hallazgos
@@ -64,7 +69,7 @@ Todas las verificaciones son comandos reproducibles sobre la punta.
 ## E-01 · ¿La generación escribió `pin` fuera de `asignarPin`? — **No**
 
 ```bash
-git grep -nIE '\.pin\s*=' -- src app
+git grep -nIE '\.pin\s*=' -- backend/src backend/app
 ```
 
 Salida: `src/modules/pedidos/index.js:125` (dentro de `asignarPin`) y la línea 117, que es un
@@ -86,8 +91,8 @@ cumplía en el módulo y se violaba en la ruta que lo consume. Un cliente podía
 **La corrección.** El handler `PUT` se retiró y ninguna ruta importa ya `cambiarEstado`. Verificación:
 
 ```bash
-git grep -nIE '\.estado\s*=' -- src app | grep -v 'src/modules/pedidos/index.js'   # vacío
-git grep -lE '\bcambiarEstado\b' -- app                                            # vacío
+git grep -nIE '\.estado\s*=' -- backend/src backend/app | grep -v 'backend/src/modules/pedidos/index.js'   # vacío
+git grep -lE '\bcambiarEstado\b' -- backend/app                                            # vacío
 ```
 
 Ambas vacías. El estado solo lo escribe `src/modules/pedidos/index.js`. **V-03 restaurada en el borde.**
@@ -105,7 +110,7 @@ vuelve a importarlo en una ruta, y el ADR-0013 lo prohíbe explícitamente.
 ## E-03 · ¿El `pin` sale por un canal que no sea el previsto? — **No, con una excepción deliberada**
 
 ```bash
-git grep -niE 'pin' -- src/logger.js src/metricas.js
+git grep -niE 'pin' -- backend/src/logger.js backend/src/metricas.js
 ```
 
 El logger declara explícitamente que nunca registra el PIN ni datos de tarjeta (`src/logger.js:4`), y
@@ -120,7 +125,7 @@ exposición por HTTP y no se considera erosión.
 ## E-04 · ¿La generación cruzó un límite de contexto? — **No**
 
 ```bash
-git grep -nIE "from '.*(catalogo|notificaciones|entrega|pagos)/index\.js'" -- src/modules/pedidos/index.js
+git grep -nIE "from '.*(catalogo|notificaciones|entrega|pagos)/index\.js'" -- backend/src/modules/pedidos/index.js
 ```
 
 Salida: una sola, `import { obtenerProducto }` desde Catálogo. Es la relación **Customer/Supplier
