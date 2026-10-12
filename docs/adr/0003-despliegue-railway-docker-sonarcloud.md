@@ -1,6 +1,6 @@
 # 0003 — Despliegue en contenedor Docker vía Railway y análisis estático con SonarCloud
  
-- **Estado:** aceptado
+- **Estado:** aceptado — **Reemplazado por [ADR-0009](0009-despliegue-azure.md)** en el despliegue (Azure Container Apps en lugar de Railway) y precisado por [ADR-0010](0010-analisis-sonarcloud.md) → [ADR-0016](0016-quality-gate-sonarcloud-bloqueante.md) en el análisis estático; declaración de este reemplazo en el [ADR-0015](0015-ratificacion-ediciones-post-aceptacion.md)
 - **Fecha:** 2026-08-30
 - **Decide:** Buendía Barrios Mateo, Isaza Montalvo Miguel, Jiménez Álvarez Samuel, Martínez Castillo Jorge
 - **ADR relacionado:** ADR-0001 — Adopción de Monolito Modular con Capas Internas frente a Capas Globales y Hexagonal

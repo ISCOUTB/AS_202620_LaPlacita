@@ -130,8 +130,8 @@
 | 2 | Restricción del equipo declarada | OK | **RES-05 — Aislamiento estricto por establecimiento** (todo flujo exige `tiendaId`; 0 accesos cruzados) |
 | 3 | Diagnóstico con línea base | OK | arc42 §11.2-11.3: sobre `812d227` se midieron **2/2 accesos cruzados logrados** (incumple ESC-02, umbral `0`) |
 | 4 | ADR del reto | OK | [`docs/adr/0004-aislamiento-por-establecimiento.md`](docs/adr/0004-aislamiento-por-establecimiento.md) — alternativas A/B/C, decisión B (repositorio particionado por tienda), consecuencias y trazabilidad |
-| 5 | Implementación sobre el corte vertical con prueba nueva en CI | OK | `tiendaId` obligatorio en `src/modules/{catalogo,pedidos,pagos,entrega,notificaciones}/index.js` y `src/corte-vertical.js`; [`tests/aislamiento.test.js`](tests/aislamiento.test.js) (4 pruebas) que corren en `npm test` dentro del CI |
-| 6 | Medición vs umbral | OK | [`scripts/medir-aislamiento.js`](scripts/medir-aislamiento.js): 100 ciclos × 3 accesos cruzados = 300 intentos; **0 logrados**, cumple umbral (`exit 0`) |
+| 5 | Implementación sobre el corte vertical con prueba nueva en CI | OK | `tiendaId` obligatorio en `src/modules/{catalogo,pedidos,pagos,entrega,notificaciones}/index.js` y `src/corte-vertical.js`; [`tests/aislamiento.test.js`](backend/tests/aislamiento.test.js) (4 pruebas) que corren en `npm test` dentro del CI |
+| 6 | Medición vs umbral | OK | [`scripts/medir-aislamiento.js`](backend/scripts/medir-aislamiento.js): 100 ciclos × 3 accesos cruzados = 300 intentos; **0 logrados**, cumple umbral (`exit 0`) |
 | 7 | Trazabilidad | OK | ADR-0001 → ADR-0002 → ADR-0004; RF-02 → A-02 → ESC-02 en `docs/aspectos.md`; arc42 §5/§6/§9/§10/§11 alineados al código real |
 | 8 | `docs/ia.md` | OK | Entrada del 06/09/2026 registrada (resultado + validación pendiente del equipo) |
 | 9 | PDF de 2 páginas | Pendiente (del equipo) | Se genera tras la revisión y se sube a Moodle (no se commitea) |
@@ -318,3 +318,79 @@ Evidencia: [`docs/semana-08.md`](docs/semana-08.md) (Lista B — Pestaña Audito
 
 - **SonarCloud (T1):** criterio en "diagnóstico y plan", no en cumplido — requiere credenciales del equipo (§4.3 de `docs/semana-08.md`).
 - **Despliegue Railway:** decidido (ADR-0003), no desplegado — sin URL pública (§2 de `docs/semana-08.md`).
+
+---
+
+## Post-cierre S10 · Cierre de arrastres y reestructuración del monorepo (12/10/2026)
+**Commit base:** `46fefed` (12/10/2026 — ADR-0015 y registro IA en voz impersonal)
+
+### 1. Hallazgos de la planilla del revisor (2026-10-06) y su cierre
+
+| # | Hallazgo (matriz transversal / overall) | Cierre aplicado |
+|---|---|---|
+| 1 | ADR aceptados editados sin reemplazo declarado (0003/0009/0010) — **No cumple** desde S8 | [ADR-0015](docs/adr/0015-ratificacion-ediciones-post-aceptacion.md) ratifica las ediciones post-aceptación (ninguna cambió la decisión) y declara el reemplazo de ADR-0003 por ADR-0009 en despliegue. [ADR-0016](docs/adr/0016-quality-gate-sonarcloud-bloqueante.md) registra la decisión vigente del análisis estático (Quality Gate obligatorio y bloqueante) y reemplaza al ADR-0010. Cabeceras de ADR-0003 y ADR-0010 anotadas con «Reemplazado» y enlaces; contenido histórico intacto |
+| 2 | Pipeline/SonarCloud/Quality Gate — **No cumple** transversal | El trío del CONTRATO §8 está acreditado desde `cbd4cf0`: configuración ([`backend/sonar-project.properties`](backend/sonar-project.properties), `sonar.qualitygate.wait=true`), runs en verde (`e01991d`, `cbd4cf0`, `d25bef4`, `fda91fd`) y Quality Gate público en OK (`https://sonarcloud.io/project/overview?id=ISCOUTB_AS_202620_LaPlacita`). Menciones residuales «informativo» de README y `docs/semana-08.md` anotadas como superadas en S10 (los registros históricos no se reescriben) |
+| 3 | Completar C4 y enlaces de evidencia en A-06 | Aplicado en `8ca0404` (llegó después del cierre de S10): fila A-06 enlaza vista C4, pruebas negativas de contrato y medición 0/300 de [`docs/evidencias/evidencias-s10.md`](docs/evidencias/evidencias-s10.md) §7; verificado tras el pull |
+| 4 | Identidad de tenant y persistencia antes de declarar seguridad integral | Persistencia: resuelta en S10 (ESC-01, ADR-0014). Identidad de tenant: plan declarado más abajo (§3), pendiente de ADR en el corte 3 — **la seguridad integral sigue sin declararse** |
+| 5 | Sin credenciales en el repositorio ni en el historial — No verificado (limitación del revisor) | Barrido propio del equipo según CONTRATO §9 documentado más abajo (§4): limpio en HEAD y sin claves en el historial; la verificación independiente corresponde al revisor |
+| 6 | Contribución de todos los integrantes | No arreglable desde el repositorio: se resuelve en sustentación; las 5 firmas del historial quedan como evidencia de trabajo repartido |
+
+### 2. Reestructuración del monorepo: división backend / frontend
+
+Con `git mv` (historial preservado), todo el código del sistema vive en `backend/` y `frontend/`
+es el placeholder de la aplicación de usuario (planeada para el corte 3, sin código todavía):
+
+| Ruta anterior (S1–S10) | Ruta vigente |
+|---|---|
+| `src/**` | `backend/src/**` |
+| `app/api/v1/**` | `backend/app/api/v1/**` |
+| `tests/**` | `backend/tests/**` |
+| `scripts/**` | `backend/scripts/**` |
+| `openapi.yaml` | `backend/openapi.yaml` |
+| `package.json`, `package-lock.json`, `next.config.mjs`, `jsconfig.json`, `Dockerfile`, `sonar-project.properties`, `.env.example`, `.dockerignore` | `backend/…` |
+
+Ajustes derivados: `ci.yml` con `working-directory: backend` y el scanner invocado con
+`-Dsonar.projectBaseDir`; `.gitignore` con patrones no anclados; docs vivos reenlazados
+(README, `docs/aspectos.md`, `docs/c4/*`, arc42 §1–§10, comandos de `docs/dominio/auditoria-modularidad.md`).
+
+> **Nota sobre citas históricas.** Las rutas citadas en evidencias fechadas
+> (`docs/evidencias/`, `docs/semana-08.md`, `docs/evidencia-contrato-s7.md`, secciones S1–S10 de
+> este archivo, §11 del arc42 y los archivos de entregables) **quedan congeladas al hash de su
+> revisión**: describían el estado real de su fecha y reescribirlas falsificaría la evidencia.
+> Para leerlas contra el código actual, aplique el mapa de rutas de arriba.
+
+### 3. Plan declarado — identidad del establecimiento (tenant) [pendiente, corte 3]
+
+**Problema:** el `tiendaId` lo suministra el llamante (query o body); nada verifica que quien
+llama sea el establecimiento dueño del pedido. El aislamiento RES-05 es estructural (partición
+de almacenes), no autenticación: retirar el PIN del GET (ADR-0013) tampoco resuelve la identidad
+del establecimiento.
+
+**Opciones evaluadas para el ADR del corte 3:**
+
+| Opción | Idea | Consecuencia principal |
+|---|---|---|
+| A. Token/API-key por tienda, emitido fuera de banda | El backend valida la credencial en middleware e inyecta el `tiendaId` verificado al dominio | Requiere emisión y rotación de credenciales por establecimiento |
+| B. JWT con emisor propio | El establecimiento inicia sesión y recibe un token firmado con su `tiendaId` | Introduce identidad de usuario además de la de tienda; más superficie |
+| C. Aislamiento de red (IP/mTLS por tienda) | El despliegue restringe el origen por establecimiento | No escala en el campus (redes compartidas) |
+
+**Mientras tanto:** la seguridad integral **no se declara cerrada**; el límite queda anotado en
+el dominio (`pedidos` exige `tiendaId` explícito) y en este registro.
+
+### 4. Barrido de secretos propio (CONTRATO §9, 12/10/2026)
+
+```bash
+git grep -nIE '(AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY|ghp_[A-Za-z0-9]{36}|xox[baprs]-|sk-[A-Za-z0-9]{20,}|(password|passwd|secret|token|api_?key)\s*[:=]\s*.{6,})' HEAD   # sin coincidencias en código (los .env.example declaran variables vacías)
+git ls-files | grep -E '(^|/)\.env$'        # sin salida
+git log --oneline -S'BEGIN PRIVATE KEY'     # 7a68487, e0542ce: solo el patrón de búsqueda documentado en evidencias, ninguna clave
+```
+
+Resultado: limpio en HEAD y sin claves privadas en el historial. La comprobación independiente
+del revisor sigue siendo la que cierra la fila de la matriz.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| ADR-0003/0010 reemplazados con contenido histórico intacto (solo cabecera anotada) | `git log --follow -- docs/adr/0003-*.md docs/adr/0010-*.md`: el commit de este cierre solo añade la línea de estado; ADR-0015 y ADR-0016 declaran los reemplazos |
+| División backend/frontend sin perder historial | `git log --follow -- backend/src/modules/pedidos/index.js` muestra los commits anteriores a la reestructuración |
+| Identidad de tenant declarada como plan, no como resuelta | Leer §3 de esta sección: la seguridad integral sigue sin declararse |

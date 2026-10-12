@@ -1,6 +1,6 @@
 # 0010 — Análisis estático con SonarCloud y Quality Gate
 
-- **Estado:** aceptado
+- **Estado:** aceptado — **Reemplazado por [ADR-0016](0016-quality-gate-sonarcloud-bloqueante.md)** (el análisis pasó de informativo a Quality Gate obligatorio y bloqueante); reemplazo declarado en el propio ADR-0016, contenido histórico intacto
 - **Fecha:** 2026-09-25
 - **Decide:** Buendía Barrios Mateo, Isaza Montalvo Miguel, Jiménez Álvarez Samuel, Martínez Castillo Jorge
 - **ADR relacionado:** [ADR-0003](0003-despliegue-railway-docker-sonarcloud.md) — decisión combinada de plataforma que este registro precisa solo en análisis estático (el despliegue se precisa en el [ADR-0009](0009-despliegue-azure.md)); ADR-0003 no se modifica

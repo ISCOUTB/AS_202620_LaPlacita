@@ -40,6 +40,21 @@ la decisión adoptada; por eso no se crearon ADR de reemplazo en su momento,
 sino esta declaración. Regla hacia adelante: ningún ADR aceptado se edita;
 todo cambio posterior se declara en un ADR nuevo como este.
 
+## Reemplazos derivados (12/10/2026)
+
+De la revisión de este ADR con el equipo surgen dos reemplazos de decisión que
+la convención del CONTRATO §4 exige declarar:
+
+1. **ADR-0003 → reemplazado por [ADR-0009](0009-despliegue-azure.md)** en el
+   despliegue: la decisión vigente es Azure Container Apps, no Railway. Además
+   su parte de análisis estático quedó precisada por el ADR-0010 y hoy por el
+   [ADR-0016](0016-quality-gate-sonarcloud-bloqueante.md). Se anota la cabecera
+   del ADR-0003 con el estado «Reemplazado» y los enlaces; su contenido no se
+   reescribe. Esta edición de cabecera queda **declarada aquí**.
+2. **ADR-0010 → reemplazado por [ADR-0016](0016-quality-gate-sonarcloud-bloqueante.md)**:
+   el análisis estático pasó de informativo a Quality Gate obligatorio y
+   bloqueante. La edición de su cabecera queda declarada en el propio ADR-0016.
+
 ---
 
 ## Trazabilidad

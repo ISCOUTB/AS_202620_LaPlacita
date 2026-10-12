@@ -233,9 +233,9 @@ La documentación del proyecto sigue rigurosamente los lineamientos del curso y 
 * Restricción RES-05 implementada: las operaciones de catálogo, pedidos y entrega exigen `tiendaId`; repositorios particionados por tienda en `src/modules/*` (decisión en [`docs/adr/0004-aislamiento-por-establecimiento.md`](docs/adr/0004-aislamiento-por-establecimiento.md))
 * Línea base medida sobre `812d227`: **2/2 accesos cruzados** logrados (incumplía ESC-02); post-cambio: **0/300** (cumple umbral)
 * Nueva prueba de aislamiento ([`tests/aislamiento.test.js`](backend/tests/aislamiento.test.js)) y medición reproducible ([`scripts/medir-aislamiento.js`](backend/scripts/medir-aislamiento.js))
-* Suites en verde: 13 pruebas (`npm test`); CI en GitHub Actions + paso SonarCloud (activo cuando exista `SONAR_TOKEN`)
+* Suites en verde: 13 pruebas (`npm test`); CI en GitHub Actions + paso SonarCloud (activo cuando exista `SONAR_TOKEN`) *(estado del corte 1, superado en S10: job obligatorio con token y Quality Gate bloqueante en verde — ADR-0016)*
 * Diagnóstico completo en arc42 §11 e incidencias de corte marcadas en [`correcciones.md`](correcciones.md)
-* Configuración SonarCloud pendiente: definir organización/projectKey y `SONAR_TOKEN` (ADRs y `sonar-project.properties` ya listos)
+* Configuración SonarCloud pendiente: definir organización/projectKey y `SONAR_TOKEN` (ADRs y `sonar-project.properties` ya listos) *(estado del corte 1, superado en S10: org `isco-utb` vinculada y análisis en verde con gate bloqueante — ADR-0016)*
 
 **Semana 6 — Contextos delimitados y propiedad de datos (13/09/2026)**
 * Mapa DDD con C/S, OHS, SK `tiendaId` y ACL futura ([`docs/dominio/mapa-de-contextos.md`](docs/dominio/mapa-de-contextos.md), §8 en [`docs/arc42/arc42-template-EN.md`](docs/arc42/arc42-template-EN.md))
@@ -243,7 +243,7 @@ La documentación del proyecto sigue rigurosamente los lineamientos del curso y 
 * C4 nivel 3 ([`docs/c4/componentes.md`](docs/c4/componentes.md)) + ADR-0005 de reajuste; contenedores intactos
 * Trazabilidad Aspecto→Contexto en [`docs/aspectos.md`](docs/aspectos.md); correcciones en [`correcciones.md`](correcciones.md)
 * V-01 y V-03 ya implementados en código el mismo día (`pedidos.asignarPin` único escritor de `pin`; métodos de intención `confirmarPago/marcarListo/confirmarEntrega`), sin romper `corte-1` (`npm test` 14/14, aislamiento 0/300) — detalle en `correcciones.md` y ADR-0007
-* Pendiente: `SONAR_TOKEN`/organización de SonarCloud (requiere que el equipo cree el proyecto en sonarcloud.io con su cuenta)
+* Pendiente: `SONAR_TOKEN`/organización de SonarCloud (requiere que el equipo cree el proyecto en sonarcloud.io con su cuenta) *(estado en S6, superado en S10: token activo, análisis en verde y Quality Gate público — ADR-0016 y [`docs/evidencias/evidencias-s10.md`](docs/evidencias/evidencias-s10.md))*
 
 **Semana 7 — Contrato de API y prueba de contrato (16-17/09/2026)**
 * Contrato OpenAPI 3.1 versionado en [`openapi.yaml`](backend/openapi.yaml): **10 paths / 11 operaciones REST** (health, catálogo, pedidos, pagos, entrega, notificaciones) con esquemas de request/response
@@ -270,6 +270,13 @@ La documentación del proyecto sigue rigurosamente los lineamientos del curso y 
 * Regresiones medidas tras la persistencia: ESC-02 **0/300** accesos cruzados y ESC-03 **0/100** exposiciones (§7)
 * Suites en verde: **51 pruebas** con base de datos (50 sin ella, 1 skip condicional) y `npm run contract-test` (**27/27**)
 * Pendiente al cierre del corte: experimento post-cambio contra el despliegue con base de datos (§6, Fase D) — bloqueado por el firewall del servidor de la universidad; se ejecutará en cuanto el puerto 5433 quede accesible desde Azure
+
+**Post-cierre · Reestructuración del monorepo y cierre de arrastres (12/10/2026)**
+
+* División `backend/` / `frontend/` del monorepo con `git mv` (historial preservado): todo el código del sistema vive en [`backend/`](backend/); [`frontend/`](frontend/) es el placeholder de la aplicación de usuario, planeada para el corte 3. Mapa de correspondencias de rutas en [`correcciones.md`](correcciones.md)
+* [ADR-0015](docs/adr/0015-ratificacion-ediciones-post-aceptacion.md) ratifica las ediciones post-aceptación de ADR-0003/0009/0010 (propuesto, pendiente de validación del equipo) y declara el reemplazo de ADR-0003 por ADR-0009 en despliegue
+* [ADR-0016](docs/adr/0016-quality-gate-sonarcloud-bloqueante.md) registra la decisión vigente del análisis estático: **Quality Gate obligatorio y bloqueante**, que reemplaza al ADR-0010; cabeceras de ADR-0003 y ADR-0010 anotadas con el estado «Reemplazado», contenido histórico intacto
+* Suites en verde tras la reestructuración: **50 pruebas** (`npm test`, 2 skip sin base de datos) y `npm run contract-test` (**27/27**); `npm run build` correcto
 
 ---
 

@@ -265,7 +265,7 @@ Volumen estimado: ≈55.000 solicitudes/mes, ≈17 MB/mes de logs, ≈110 MB/mes
 | # | Riesgo / pendiente | Impacto | Mitigación / acción |
 |---|---|---|---|
 | R-1 | ~~Sin URL pública~~ **Resuelto 27/09/2026** | — | Desplegado en Azure Container Apps y verificado. Evidencia en `docs/evidencia-despliegue-azure.md` |
-| R-2 | Quality Gate sin URL pública (org/token no vinculados) | Transversal sin cerrar; el job `sonar` es informativo (`continue-on-error`) y no bloquea el verde | Plan §4.3 (requiere credenciales del equipo; ADR-0010) |
+| R-2 | Quality Gate sin URL pública (org/token no vinculados) | Transversal sin cerrar; el job `sonar` es informativo (`continue-on-error`) y no bloquea el verde — **cerrado en S10**: run verde con token, Quality Gate público en OK y gate bloqueante ([docs/evidencias/evidencias-s10.md](evidencias/evidencias-s10.md); hoy registrado como ADR-0016) | Plan §4.3 (requiere credenciales del equipo; ADR-0010) |
 | R-3 | Estado en memoria, sin persistencia | Pérdida de datos entre reinicios; no apto para producción | PostgreSQL/Redis (Corte 2) |
 | R-4 | Logger parcial (3/11 routes) | Observabilidad incompleta | Extender logger + `latencyMs`/`requestId`. El PIN en claro de `corte-vertical.js:35` ya está corregido |
 | R-5 | `npm audit`: 1 crítica + 1 alta, ambas de `next@14.2.5` (`postcss` transitivo) | Superficie de ataque conocida en el framework | **No se corrige en S8 a propósito.** El parche exige `next@16.3.6` con React 19: son dos versiones mayores, no un parche. Migrar con el cierre a horas sería arriesgar un entregable ya desplegado y verificado. Plan: migración programada tras S8, con revalidación del contrato y del `output: standalone` |
@@ -279,7 +279,7 @@ Volumen estimado: ≈55.000 solicitudes/mes, ≈17 MB/mes de logs, ≈110 MB/mes
 |---|---|---|
 | URL desplegada | §2 | `openapi.yaml:14-16`, `docs/adr/0009-despliegue-azure.md`, `docs/evidencia-contrato-s7.md:43-46` |
 | Infraestructura como código | §3 | `Dockerfile:1-17`, `next.config.mjs:2-4`, `sonar-project.properties:4-9`, `app/api/v1/**/route.js` (11 archivos), `.env.example` |
-| Pipeline CI/CD | §4 | `.github/workflows/ci.yml` (`test`, `contract-test`, `sonar` informativo), runs `35181554516` / `35383329950`, local 44/44 |
+| Pipeline CI/CD | §4 | `.github/workflows/ci.yml` (`test`, `contract-test`, `sonar` informativo — estado S8, superado en S10 (job obligatorio y bloqueante, ADR-0016)), runs `35181554516` / `35383329950`, local 44/44 |
 | Health + logs + métricas | §5 | `src/health.js`, `src/logger.js`, `src/metricas.js`, `app/api/v1/health/route.js`, `app/api/v1/metricas/route.js`, `openapi.yaml` (`Health`, `Metricas`, `Error`), `tests/observabilidad.test.js` |
 | Costos + supuestos | §6 | [ADR-0009](adr/0009-despliegue-azure.md) (cálculo por pieza + ruptura ×36), [ADR-0011](adr/0011-base-de-datos-universidad.md) (universidad), supuestos S-1…S-5, taller S8 25/09/2026 — estimación, no factura |
 | Vista de despliegue | arc42 §7 | Una caja por pieza + dónde se ejecuta; [ADR-0009](adr/0009-despliegue-azure.md), [ADR-0010](adr/0010-analisis-sonarcloud.md) |

@@ -438,6 +438,7 @@ Esta sección registra el historial de decisiones arquitectónicas significativa
 | ADR-0013 | Proyección pública del pedido sin `pin` y retiro del setter genérico de estado en HTTP | Aceptado | 2026-10-04 | ESC-03 | [0013-proyeccion-publica-pedido-sin-pin.md](../adr/0013-proyeccion-publica-pedido-sin-pin.md) |
 | ADR-0014 | PostgreSQL gestionado por Dokploy en la infraestructura de la universidad | Aceptado | 2026-10-11 | ESC-01, ESC-02 | [0014-base-de-datos-postgresql-dokploy.md](../adr/0014-base-de-datos-postgresql-dokploy.md) |
 | ADR-0015 | Ratificación de ediciones post-aceptación en ADR-0003, ADR-0009 y ADR-0010 | Propuesto | 2026-10-12 | Transversal | [0015-ratificacion-ediciones-post-aceptacion.md](../adr/0015-ratificacion-ediciones-post-aceptacion.md) |
+| ADR-0016 | Quality Gate de SonarCloud obligatorio y bloqueante | Aceptado | 2026-10-12 | Transversal | [0016-quality-gate-sonarcloud-bloqueante.md](../adr/0016-quality-gate-sonarcloud-bloqueante.md) |
  
 **Relación con los bloques de construcción:**
 - ADR-0001 y ADR-0002 determinan la estructura: un único proceso con módulos de dominio separados.
