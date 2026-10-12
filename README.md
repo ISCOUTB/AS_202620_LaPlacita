@@ -134,6 +134,8 @@ Los prototipos de interfaz están planeados para el Corte 2 (contendores App/Web
   │   ├── package-lock.json
   │   ├── .env.example
   │   ├── openapi.yaml              # Contrato OpenAPI 3.1 (v1)
+  │   ├── app/route.js                # redirect / → /docs
+  │   ├── app/docs/route.js           # Swagger UI (documentación interactiva de la API)
   │   ├── app/api/v1/
   │   │     ├── health/route.js                     # GET /api/v1/health
   │   │     ├── catalogo/productos/[productoId]/route.js
@@ -145,6 +147,7 @@ Los prototipos de interfaz están planeados para el Corte 2 (contendores App/Web
   │   │     ├── entrega/[pedidoId]/validar/route.js
   │   │     ├── notificaciones/route.js
   │   │     ├── notificaciones/[pedidoId]/route.js
+  │   │     ├── openapi/route.js                    # GET /api/v1/openapi (sirve el contrato)
   │   │     └── metricas/route.js                   # GET /api/v1/metricas (capa HTTP del contrato)
   │   ├── scripts/
   │   │     ├── medir-aislamiento.js                # Medición reproducible de RES-05 (0 accesos cruzados)
@@ -318,6 +321,24 @@ npm test
 
 Estas mismas pruebas se ejecutan automáticamente en cada push o pull request mediante GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
 
+### Documentación interactiva de la API
+
+El backend expone una UI estilo FastAPI para explorar y **probar** los endpoints desde el navegador:
+
+```bash
+cd backend
+npm run dev
+# abrir http://localhost:3000/docs
+```
+
+| Ruta | Qué sirve |
+|---|---|
+| [`/docs`](http://localhost:3000/docs) | Swagger UI 5 con **Try it out** (cargada por CDN, sin dependencias npm) |
+| `/api/v1/openapi` | El contrato OpenAPI 3.1 ([`backend/openapi.yaml`](backend/openapi.yaml)) servido tal cual — única fuente, el mismo archivo que valida la prueba de contrato |
+| `/` | Redirect a `/docs` |
+
+Como el `servers` del contrato es relativo (`/api/v1`), el Try it out ejecuta los requests contra el host que sirve la página — local, el entorno de pruebas de Dokploy o producción en Azure — sin configurar nada.
+
 ### Corte vertical ejecutable
 
 `backend/src/corte-vertical.js` atraviesa los 5 módulos en un solo flujo end-to-end: catálogo → pedidos → pagos → entrega → notificaciones. Todo el flujo se ejecuta en el contexto de una tienda (`tiendaId`). Simula un pedido real desde la consulta del producto hasta la entrega validada por PIN.
@@ -383,7 +404,7 @@ Salida esperada: `accesosCruzadosLogrados: 0`, cumple umbral → termina con có
    ```json
    { "status": "ok" }
    ```
-   > La raíz `http://localhost:3000/` devuelve 404: es esperado, todavía no hay páginas/frontend en el proyecto, solo la API.
+   > La raíz `http://localhost:3000/` redirige a `/docs` (documentación interactiva de la API); no hay páginas de usuario: el frontend vive en [`frontend/`](frontend/), placeholder para el corte 3.
 
 6. **Ejecutar las pruebas automatizadas**
    ```bash

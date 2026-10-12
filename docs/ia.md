@@ -3,10 +3,10 @@
 
 ## Resumen: qué se aceptó y qué se rechazó
 
-- Entradas registradas: 43 (06/08/2026 al 12/10/2026).
+- Entradas registradas: 44 (06/08/2026 al 12/10/2026).
 - Aceptadas y verificadas por el equipo: 29 (columna Validación con ejecución o confirmación).
 - Aceptadas con ajustes del equipo: 4 entradas.
-- Entradas con propuestas rechazadas y justificadas: 17 (29 propuestas en total).
+- Entradas con propuestas rechazadas y justificadas: 18 (33 propuestas en total).
 - Con validación pendiente declarada: 6 entradas (5 de ago–sep, cubiertas de facto por
   evidencia posterior —suites en verde, cortes y semanas siguientes—; más la presente,
   pendiente de revisión del equipo).
@@ -26,7 +26,10 @@
   versionar la URL sslip del entorno de pruebas (incrusta la IP del servidor);
   rehidratación por fusión en vez de limpiar (rompería la simulación de arranque en blanco
   de la línea base); capturar fallos de lista() para seguir en memoria (consistencia
-  primero, ADR-0014: mejor 500 que divergir de la base).
+  primero, ADR-0014: mejor 500 que divergir de la base); dependencia npm de swagger-ui o
+  scalar (CDN sin dependencias nuevas); Redoc (solo lectura, sin Try it out); servir los docs
+  desde frontend/ (es tooling del backend); duplicar el contrato en public/ (drift: se sirve
+  el mismo openapi.yaml con fs y COPY explícito en el Dockerfile).
 - Detalle completo por fecha y herramienta en la bitácora (§1).
 
 ---
@@ -100,3 +103,4 @@ Para medir el valor real del soporte de la Inteligencia Artificial en el proyect
 - **Ahorro de tiempo en formato:** Reducción estimada del 40% en el tiempo dedicado a la maquetación inicial de documentos en Markdown y estructuración de índices.
 - **Calidad técnica y conceptual:** Mejora en la formalización de los atributos de calidad, ayudando a estructurar de forma más clara los *trade-offs* arquitectónicos del sistema.
 - **Control de calidad humano:** El 100% de los entregables han sido leídos, ajustados y aprobados por los integrantes del equipo, garantizando que reflejen fielmente la lógica real del software.
+| **12/10/2026** | GLM (Z.ai, vía OpenCode) | Documentación interactiva de la API estilo FastAPI: UI visual para explorar y probar los endpoints desde el navegador. | *"quiero tener una parte visual de la api, así como con fastapi, ¿es posible? que yo pueda hacer pruebas de forma visual también"* | Se creó `/docs` con Swagger UI 5 cargada por CDN (sin dependencias npm) y Try it out activo; `/api/v1/openapi` sirve el contrato `openapi.yaml` real con `fs` (única fuente, sin copia: el Dockerfile lo copia explícitamente al standalone); `/` redirige a `/docs`. El `servers` relativo del contrato hace que el Try it out apunte al host que sirve la página sin configuración. README, árbol y correcciones.md actualizados. | 1) Dependencia npm de swagger-ui/scalar — CDN basta y respeta la regla de no añadir dependencias. 2) Redoc — solo lectura, sin pruebas desde el navegador. 3) Alojar los docs en `frontend/` — es tooling del backend; `frontend/` reserva la app de usuario. 4) Copiar el contrato a `public/` — duplicaría la única fuente y podría desincronizarse de la prueba de contrato. | Pendiente de validación del equipo: `/docs` renderiza y el Try it out ejecuta requests contra la BD real del entorno test (verificación en el despliegue `dokploy-test`). |

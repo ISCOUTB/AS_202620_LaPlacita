@@ -482,3 +482,33 @@ entorno de pruebas donde el backend corre **en el mismo servidor que la base**:
 |---|---|
 | El gate corre con PostgreSQL real antes de redesplegar | Log del run: job `test` con servicio postgres y 51 pruebas (no 50: las de persistencia corren) |
 | La URL del entorno no está versionada | `git grep -i sslip` sobre el repo → sin resultados; solo el secret la contiene |
+
+---
+
+## Documentación interactiva de la API · `/docs` (12/10/2026)
+
+El backend expone una UI estilo FastAPI para explorar y **probar** los endpoints desde el
+navegador (rama `dokploy-test`; sale en Azure al fusionarse a master):
+
+| Ruta | Qué sirve |
+|---|---|
+| `/docs` | Swagger UI 5 con Try it out (CDN, sin dependencias npm) |
+| `/api/v1/openapi` | El contrato OpenAPI 3.1 (`backend/openapi.yaml`) servido tal cual — única fuente, el mismo archivo que valida la prueba de contrato |
+| `/` | Redirect a `/docs` (antes 404) |
+
+Notas de implementación:
+
+- El `servers` del contrato es relativo (`/api/v1`): el Try it out apunta al host que sirve la
+  página — desarrollo, entorno test (`dokploy-test`) o Azure — sin configuración.
+- El Dockerfile copia `openapi.yaml` al standalone (`COPY --from=build`): el build de Next no
+  incluye archivos que nadie importa y la ruta lo lee con `fs` en runtime.
+- Impacto en las pruebas: nulo por diseño — el escaneo de rutas del contrato no mira `/docs`, y
+  `/api/v1/openapi` no importa módulos de dominio (pasa las aserciones S9 y ESC-01).
+- **No es el frontend**: herramienta de documentación y prueba del backend; `frontend/` sigue
+  reservado a la aplicación de usuario.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| `/api/v1/openapi` sirve el contrato real, no una copia | Modificar temporalmente una descripción en `backend/openapi.yaml`, `npm run dev` y ver el cambio en `/docs` sin tocar la ruta |
+| El Try it out no requiere CORS | Los requests salen del mismo origen que la página; `curl -s -o /dev/null -w '%{http_code}' <host>/docs` → 200 |
