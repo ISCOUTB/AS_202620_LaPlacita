@@ -1,0 +1,91 @@
+# Entorno de pruebas en Dokploy (rama dokploy-test).
+#
+# Por qué existe: el firewall de la universidad bloquea el puerto externo del
+# PostgreSQL (Dokploy) hacia Azure (ADR-0014, evidencias-s10 §6 Fase D), de modo
+# que el despliegue de producción arranca en modo memoria. En Dokploy el backend
+# corre en el MISMO servidor que la base y la alcanza por la red interna de
+# Docker, sin atravesar el firewall. Este entorno permite probar la API contra
+# una base de datos real. NO sustituye al despliegue de producción
+# (master → Azure Container Apps vía deploy-backend.yml).
+#
+# Flujo: gate de pruebas (npm test + contract-test con PostgreSQL real) →
+# webhook de redeploy de Dokploy → health check con reintentos.
+
+name: Deploy dokploy-test
+
+on:
+  push:
+    branches: [dokploy-test]
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-dokploy-test.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-dokploy-test
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  DATABASE_URL: postgresql://laplacita:laplacita_ci@localhost:5432/laplacita
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+            POSTGRES_USER: laplacita
+            POSTGRES_PASSWORD: laplacita_ci
+            POSTGRES_DB: laplacita
+        ports:
+            - 5432:5432
+        options: >-
+            --health-cmd pg_isready
+            --health-interval 5s
+            --health-timeout 5s
+            --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+        working-directory: backend
+
+      - name: Gate — pruebas con base de datos real
+        run: npm test
+        working-directory: backend
+
+      - name: Gate — prueba de contrato
+        run: npm run contract-test
+        working-directory: backend
+
+      - name: Redesplegar en Dokploy
+        run: |
+          echo "Disparando redeploy de la app dokploy-test..."
+          curl -fsS --max-time 30 -X POST "$DOKPLOY_TEST_WEBHOOK"
+          echo "Webhook aceptado: Dokploy reconstruye en el servidor."
+        env:
+          DOKPLOY_TEST_WEBHOOK: ${{ secrets.DOKPLOY_TEST_WEBHOOK }}
+
+      - name: Health check
+        run: |
+          base="${{ secrets.DOKPLOY_TEST_URL }}"
+          echo "Verificando $base/api/v1/health"
+          for i in $(seq 1 15); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$base/api/v1/health" || true)
+            if [ "$code" = "200" ]; then echo "health=200 (intento $i)"; exit 0; fi
+            echo "intento $i: http=$code"; sleep 10
+          done
+          echo "health check agotado: la app test no responde tras el redeploy"
+          exit 1

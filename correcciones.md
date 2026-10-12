@@ -435,3 +435,46 @@ registrado en S8): producción corría la imagen `s8-2` del 27/09. Desde este ca
 |---|---|
 | El build ocurre en el runner (no ACR Tasks) y el tag es el SHA del commit | Log del run: paso «Build y push de la imagen» muestra `docker build -f backend/Dockerfile`; `az acr repository show-tags` lista el SHA |
 | El update conserva `DATABASE_URL` sin que el workflow lo conozca | El workflow no contiene la variable en ninguna línea; el app sigue conectado tras el despliegue (o en modo memoria con bitácora de fallos de escritura) |
+
+---
+
+## Entorno de pruebas · Dokploy (rama `dokploy-test`) (12/10/2026)
+
+El firewall de la universidad sigue bloqueando el puerto externo del PostgreSQL (Dokploy) hacia
+Azure, así que el despliegue de producción arranca en modo memoria (límite declarado en
+[ADR-0014](docs/adr/0014-base-de-datos-postgresql-dokploy.md) y evidencias-s10 §6 Fase D). Para
+probar la API contra una base de datos real **sin esperar el firewall**, el equipo habilitó un
+entorno de pruebas donde el backend corre **en el mismo servidor que la base**:
+
+| Aspecto | Decisión |
+|---|---|
+| Rama | `dokploy-test` (auxiliar; el estado calificado del curso sigue siendo `master`) |
+| Destino | Application de Dokploy en el mismo servidor/proyecto que el PostgreSQL |
+| Conexión BD | `DATABASE_URL` por la **red interna de Docker** (host interno, puerto 5432): sin firewall de por medio |
+| Pipeline | `.github/workflows/deploy-dokploy-test.yml`: gate de pruebas (`npm test` + `contract-test` con PostgreSQL) → webhook de redeploy → health check con reintentos |
+| URL del entorno | Secret `DOKPLOY_TEST_URL` (dominio sslip.io generado por Dokploy; va como secret porque incrusta la IP del servidor y el repo es público) |
+| Producción | Intacta: `deploy-backend.yml` sigue disparándose solo con `master` y despliega a Azure |
+
+### Límites declarados
+
+- Este entorno **no sustituye** la evidencia de despliegue del curso (Azure/master) ni el
+  experimento Fase D contra Azure: lo documenta como verificación intermedia de la persistencia
+  contra PostgreSQL real. El experimento contra producción queda pendiente del firewall.
+- Datos de prueba: misma API, datos sintéticos (`tienda-01`, `prod-001`); sin credenciales
+  reales en ningún secret de este flujo (el webhook va como secret de GitHub).
+
+### Cómo verificar
+
+1. Run verde de **Deploy dokploy-test** (gate → webhook → health).
+2. `curl <DOKPLOY_TEST_URL>/api/v1/health` → `{"status":"ok"}`.
+3. Experimento ESC-01 contra este entorno:
+   `node backend/scripts/medir-persistencia.js pre 3 --url <DOKPLOY_TEST_URL>` → reinicio del
+   contenedor en Dokploy → `node backend/scripts/medir-persistencia.js post --url <DOKPLOY_TEST_URL>`
+   → esperado **3/3 supervivientes** (umbral ESC-01: 0 pedidos perdidos).
+4. Flujos de la API contra BD real: pedido → pago → listo → PIN → notificaciones.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| El gate corre con PostgreSQL real antes de redesplegar | Log del run: job `test` con servicio postgres y 51 pruebas (no 50: las de persistencia corren) |
+| La URL del entorno no está versionada | `git grep -i sslip` sobre el repo → sin resultados; solo el secret la contiene |
