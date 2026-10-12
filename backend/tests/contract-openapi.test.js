@@ -432,3 +432,30 @@ test('S9: ninguna ruta HTTP llama cambiarEstado con el nombre del estado (V-03)'
     );
   }
 });
+
+// ═══════════════════════════════════════════════════════════════
+// ASERCIÓN DE REGRESIÓN DEL BORDE — Fase D (ESC-01, ADR-0014)
+// ═══════════════════════════════════════════════════════════════
+// Defecto encontrado el 12/10/2026 por el experimento de supervivencia contra
+// el entorno de pruebas: las rutas de ESCRITURA no esperaban la rehidratación,
+// de modo que un POST temprano asignaba ids con los contadores en blanco y la
+// rehidratación asíncrona posterior (que limpia los mapas del dominio) provoca
+// colisiones de id y pérdida silenciosa por UPSERT. La lectura ya esperaba
+// (`await lista()`); esta aserción extiende la espera a toda ruta que toque el
+// almacén persistido de pedidos.
+
+const MODULOS_QUE_TOCAN_PEDIDOS_PERSISTIDO = /modules\/(pedidos|pagos|entrega)\/index\.js/;
+
+test('ESC-01: toda ruta que muta el almacén de pedidos espera la rehidratación', () => {
+  const rutas = rutasHttp();
+  assert.ok(rutas.length > 0, 'No se encontró ninguna route.js en app/api/v1');
+  for (const url of rutas) {
+    const fuente = readFileSync(url, 'utf-8');
+    if (!MODULOS_QUE_TOCAN_PEDIDOS_PERSISTIDO.test(fuente)) continue;
+    assert.ok(
+      /await\s+lista\(\)/.test(fuente),
+      `${url.pathname} toca el almacén persistido de pedidos y no espera la rehidratación: ` +
+        'un POST temprano antes del boot de persistencia provoca colisión de ids y pérdida de pedidos (ESC-01)'
+    );
+  }
+});

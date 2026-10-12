@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import * as pedidos from '../../../../../../src/modules/pedidos/index.js';
 import * as entrega from '../../../../../../src/modules/entrega/index.js';
+import { lista } from '../../../../../../src/persistencia/index.js';
 import { info, error as logError } from '../../../../../../src/logger.js';
 
 // S9 · ADR-0013: valida el PIN y devuelve la vista pública. El llamante ya
@@ -9,6 +10,9 @@ import { info, error as logError } from '../../../../../../src/logger.js';
 // mostrador lo necesita.
 export async function POST(request, { params }) {
   try {
+    // ESC-01 · ADR-0014: la validación consume el PIN y muta intentos sobre el
+    // almacén persistido — espera la rehidratación (defecto Fase D, 12/10/2026).
+    await lista();
     const { searchParams } = request.nextUrl;
     const tiendaId = searchParams.get('tiendaId');
 
