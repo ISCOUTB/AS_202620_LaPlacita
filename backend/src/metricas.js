@@ -5,14 +5,16 @@
 // pagosConfirmados a ESC-04. Limitación honesta: en memoria, se reinicia con el
 // proceso (igual que el resto del dominio en este corte).
 
-const contadores = {
+import { estadoCompartido } from './estado-compartido.js';
+
+const contadores = estadoCompartido('contadores', () => ({
   pedidosCreados: 0,
   pagosConfirmados: 0,
   pedidosListos: 0,
   entregasValidadas: 0,
   pinesRechazados: 0,
   pinesBloqueados: 0,
-};
+}));
 
 function contar(evento) {
   if (evento in contadores) {

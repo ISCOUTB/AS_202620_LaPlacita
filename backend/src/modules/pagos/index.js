@@ -5,7 +5,9 @@
 
 import { obtenerPedido, confirmarPago as confirmarPagoPedido } from '../pedidos/index.js';
 
-const pagosConfirmados = new Map();
+import { estadoCompartido } from '../../estado-compartido.js';
+
+const pagosConfirmados = estadoCompartido('pagosConfirmados', () => new Map());
 
 function confirmarPago(pedidoId, tiendaId) {
   const pedido = obtenerPedido(pedidoId, tiendaId);

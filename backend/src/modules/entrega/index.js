@@ -22,7 +22,9 @@ function generarPin() {
 // garantiza la transición a Entregado (un solo uso).
 const MAX_INTENTOS_PIN = 5;
 
-const intentosFallidos = new Map();
+import { estadoCompartido } from '../../estado-compartido.js';
+
+const intentosFallidos = estadoCompartido('intentosFallidos', () => new Map());
 
 function claveIntentos(pedidoId, tiendaId) {
   return `${tiendaId}:${pedidoId}`;

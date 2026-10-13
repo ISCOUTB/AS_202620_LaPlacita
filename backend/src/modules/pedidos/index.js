@@ -17,8 +17,10 @@ import { escribirPedido, alCargar } from '../../persistencia/index.js';
 
 const ESTADOS = ['Recibido', 'En preparación', 'Listo', 'Entregado'];
 
-const pedidosPorTienda = new Map();
-const contadoresPorTienda = new Map();
+import { estadoCompartido } from '../../estado-compartido.js';
+
+const pedidosPorTienda = estadoCompartido('pedidosPorTienda', () => new Map());
+const contadoresPorTienda = estadoCompartido('contadoresPorTienda', () => new Map());
 
 function repoTienda(tiendaId) {
   if (!pedidosPorTienda.has(tiendaId)) {

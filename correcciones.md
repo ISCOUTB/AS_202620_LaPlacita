@@ -512,3 +512,45 @@ Notas de implementación:
 |---|---|
 | `/api/v1/openapi` sirve el contrato real, no una copia | Modificar temporalmente una descripción en `backend/openapi.yaml`, `npm run dev` y ver el cambio en `/docs` sin tocar la ruta |
 | El Try it out no requiere CORS | Los requests salen del mismo origen que la página; `curl -s -o /dev/null -w '%{http_code}' <host>/docs` → 200 |
+
+---
+
+## Frontend PWA de usuario · rama `frontend-mvp` (12/10/2026, sin commit)
+
+Arranque de la aplicación de usuario con la división del monorepo: Next.js 16 + TypeScript +
+Tailwind + shadcn/ui + service worker propio, decisión registrada en
+[ADR-0017](docs/adr/0017-frontend-nextjs-pwa-shadcn.md) (propuesto). Flujo MVP verificado en
+local de punta a punta (catálogo → pedido → pago → listo con PIN → validación con rechazo de
+PIN errado) a través del patrón BFF.
+
+### Huecos del contrato v1 que el frontend expone (deuda declarada, no oculta)
+
+| # | Hueco | Consecuencia en la app | Vía de cierre |
+|---|---|---|---|
+| 1 | No existe `GET /catalogo/tiendas` | El selector usa los 5 ids canónicos del dominio | Nuevo endpoint + versión del contrato (decisión del equipo) |
+| 2 | El pedido es de UN producto (`productoId` + `cantidad`) | No hay carrito multi-item real | Extender el contrato a `items[]` (v2) |
+| 3 | El PIN no es legible por el usuario (ADR-0013, correcto por A-06) | El código de retiro de la app es el `pedidoId`; el PIN lo maneja el mostrador | Decisión de diseño: entrega del PIN al usuario (p. ej. en el pago) |
+
+### Defecto de backend revelado y corregido (entorno de desarrollo)
+
+**Turbopack en desarrollo compila los módulos por ruta:** el estado en memoria del monolito
+era inconsistente entre rutas (un pedido creado en `POST /pedidos` no aparecía en `GET
+/pedidos/{id}` ni en métricas; cada copia del módulo tenía su propio `Map`). Corregido anclando
+el estado del dominio a `globalThis` (`backend/src/estado-compartido.js`) — no-op en
+producción, cuyo grafo de módulos es único (verificado: el flujo completo funcionó en el
+despliegue `dokploy-test` antes de este fix). Suites: 51 tests + 28 contrato en verde.
+
+### Decisiones de implementación (detalle en ADR-0017)
+
+- Serwist descartado frente a Turbopack (Next 16): service worker propio sin dependencias,
+  con exclusión explícita de `/api/v1` (los estados del pedido son frescos por diseño).
+- CORS descartado (Turbopack dev no ejecuta `proxy.js`): patrón BFF con rewrites de `/api/v1`
+  en el frontend — el navegador nunca cruza orígenes.
+- CI: job `frontend` nuevo (lint + build de producción).
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| El estado del monolito es único por proceso también en dev | Crear un pedido por `POST /api/v1/pedidos` y leerlo inmediatamente por `GET /api/v1/pedidos/{id}` en el backend local: la lectura lo encuentra |
+| La PWA no cachea datos del pedido | `public/sw.js` excluye `/api/` explícitamente; el seguimiento siempre consulta la red |
+| El BFF mantiene un solo origen | El navegador solo ve `:3001`; ninguna llamada va a `:3000` (pestaña Network) |

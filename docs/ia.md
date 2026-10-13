@@ -3,10 +3,10 @@
 
 ## Resumen: qué se aceptó y qué se rechazó
 
-- Entradas registradas: 44 (06/08/2026 al 12/10/2026).
+- Entradas registradas: 45 (06/08/2026 al 12/10/2026).
 - Aceptadas y verificadas por el equipo: 29 (columna Validación con ejecución o confirmación).
 - Aceptadas con ajustes del equipo: 4 entradas.
-- Entradas con propuestas rechazadas y justificadas: 18 (33 propuestas en total).
+- Entradas con propuestas rechazadas y justificadas: 19 (40 propuestas en total).
 - Con validación pendiente declarada: 6 entradas (5 de ago–sep, cubiertas de facto por
   evidencia posterior —suites en verde, cortes y semanas siguientes—; más la presente,
   pendiente de revisión del equipo).
@@ -29,7 +29,11 @@
   primero, ADR-0014: mejor 500 que divergir de la base); dependencia npm de swagger-ui o
   scalar (CDN sin dependencias nuevas); Redoc (solo lectura, sin Try it out); servir los docs
   desde frontend/ (es tooling del backend); duplicar el contrato en public/ (drift: se sirve
-  el mismo openapi.yaml con fs y COPY explícito en el Dockerfile).
+  el mismo openapi.yaml con fs y COPY explícito en el Dockerfile); Next.js Commerce como
+  plantilla del frontend (acoplada a Shopify y volumen no sustentable); Serwist (plugin
+  webpack frente a Turbopack de Next 16); CORS en el backend vía proxy.js (Turbopack dev no
+  lo ejecuta: se adoptó BFF con rewrites, mismo origen); Ionic/Expo (otro paradigma; la PWA
+  cubre la instalación); HeroUI (menos control del código que componentes copiados).
 - Detalle completo por fecha y herramienta en la bitácora (§1).
 
 ---
@@ -104,3 +108,4 @@ Para medir el valor real del soporte de la Inteligencia Artificial en el proyect
 - **Calidad técnica y conceptual:** Mejora en la formalización de los atributos de calidad, ayudando a estructurar de forma más clara los *trade-offs* arquitectónicos del sistema.
 - **Control de calidad humano:** El 100% de los entregables han sido leídos, ajustados y aprobados por los integrantes del equipo, garantizando que reflejen fielmente la lógica real del software.
 | **12/10/2026** | GLM (Z.ai, vía OpenCode) | Documentación interactiva de la API estilo FastAPI: UI visual para explorar y probar los endpoints desde el navegador. | *"quiero tener una parte visual de la api, así como con fastapi, ¿es posible? que yo pueda hacer pruebas de forma visual también"* | Se creó `/docs` con Swagger UI 5 cargada por CDN (sin dependencias npm) y Try it out activo; `/api/v1/openapi` sirve el contrato `openapi.yaml` real con `fs` (única fuente, sin copia: el Dockerfile lo copia explícitamente al standalone); `/` redirige a `/docs`. El `servers` relativo del contrato hace que el Try it out apunte al host que sirve la página sin configuración. README, árbol y correcciones.md actualizados. | 1) Dependencia npm de swagger-ui/scalar — CDN basta y respeta la regla de no añadir dependencias. 2) Redoc — solo lectura, sin pruebas desde el navegador. 3) Alojar los docs en `frontend/` — es tooling del backend; `frontend/` reserva la app de usuario. 4) Copiar el contrato a `public/` — duplicaría la única fuente y podría desincronizarse de la prueba de contrato. | Pendiente de validación del equipo: `/docs` renderiza y el Try it out ejecuta requests contra la BD real del entorno test (verificación en el despliegue `dokploy-test`). |
+| **12/10/2026** | GLM (Z.ai, vía OpenCode) | Arranque del frontend de usuario: PWA instalable en teléfonos con plantillas gratuitas de Next.js, sin construir desde cero. | *"quiero ahora adelantar el frontend, la aplicación debe ser compatible con teléfonos con pwa, no vamos a hacer el front desde cero, vamos a usar plantillas de nextjs... siempre y cuando sean gratuitas"* | Se evaluaron las candidatas (Next.js Commerce descartada por acoplamiento a Shopify; Serwist descartado frente a Turbopack de Next 16; HeroUI e Ionic descartadas) y se registró la decisión en el [ADR-0017](../docs/adr/0017-frontend-nextjs-pwa-shadcn.md) (propuesto): Next.js 16 + TypeScript + Tailwind + shadcn/ui + service worker propio. PWA con manifest, `sw.js` a mano (red-primero, `~offline`, exclusión de `/api/v1`) e íconos maskable. Cliente tipado del contrato (`frontend/lib/api.ts`) y patrón BFF (rewrites de `/api/v1`, sin CORS). Flujo MVP completo verificado local: catálogo → pedido → pago → listo con PIN → validación (PIN errado rechazado y contado). | 1) Next.js Commerce — capa Shopify que arrancar y código difícil de sustentar. 2) Serwist — pelea con Turbopack; el SW a mano es defendible línea por línea. 3) CORS con `proxy.js` — Turbopack dev no ejecuta el proxy; el BFF elimina el problema en dev y prod. 4) Carrito multi-item — el contrato v1 crea pedidos de un producto; la app no inventa endpoints. 5) Obtener el PIN por lectura — ADR-0013 lo retiró por A-06; el código de retiro es el pedidoId. | Pendiente de validación del equipo (sin commit, rama `frontend-mvp`): probar la PWA en el teléfono, lint/build en verde (ya verificados) y aceptar el ADR-0017. Defecto de backend revelado y corregido en la misma sesión: aislamiento de módulos por ruta en Turbopack dev → estado anclado a `globalThis` (`backend/src/estado-compartido.js`, 51 tests + 28 contrato en verde). |

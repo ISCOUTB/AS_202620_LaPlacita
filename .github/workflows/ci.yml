@@ -73,9 +73,38 @@ jobs:
 
         - name: Instalar dependencias
           run: npm ci
+          working-directory: backend
 
         - name: Ejecutar pruebas de contrato
           run: node --test tests/contract-openapi.test.js
+          working-directory: backend
+
+    # El frontend de usuario (PWA) se valida también en CI: build de producción.
+    frontend:
+        runs-on: ubuntu-latest
+
+        steps:
+        - name: Descargar código
+          uses: actions/checkout@v4
+
+        - name: Configurar Node.js
+          uses: actions/setup-node@v4
+          with:
+            node-version: '22'
+            cache: 'npm'
+            cache-dependency-path: frontend/package-lock.json
+
+        - name: Instalar dependencias
+          run: npm ci
+          working-directory: frontend
+
+        - name: Lint
+          run: npm run lint
+          working-directory: frontend
+
+        - name: Build de producción
+          run: npm run build
+          working-directory: frontend
 
     sonar:
         runs-on: ubuntu-latest
