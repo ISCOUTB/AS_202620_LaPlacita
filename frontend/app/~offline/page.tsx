@@ -1,15 +1,29 @@
-export const metadata = { title: "Sin conexión" };
+import { SiteHeader } from "@/components/site-header"
+import { SiteFooter } from "@/components/site-footer"
 
-// Página offline que entrega el service worker cuando una navegación falla.
+export const metadata = { title: "Sin conexión - LaPlacita" }
+
+// Página que entrega el service worker cuando una navegación falla.
 export default function OfflinePage() {
   return (
-    <section className="space-y-4 py-10 text-center">
-      <p className="text-4xl">📡</p>
-      <h1 className="text-lg font-semibold">Sin conexión</h1>
-      <p className="text-sm text-muted-foreground">
-        No se pudo cargar esta pantalla. Revisa tu conexión y vuelve a intentar —
-        tus pedidos anteriores siguen disponibles en el menú «Mis pedidos».
-      </p>
-    </section>
-  );
+    <>
+      <div className="grain-overlay" aria-hidden="true" />
+      <SiteHeader />
+      <main>
+        <section className="section-padding">
+          <div className="empty-state">
+            <p className="empty-state-emoji" aria-hidden="true">
+              📡
+            </p>
+            <p className="empty-state-title">Sin conexión</p>
+            <p className="empty-state-note">
+              No se pudo cargar esta pantalla. Revisa tu conexión y vuelve a
+              intentar — tus pedidos anteriores siguen disponibles.
+            </p>
+          </div>
+        </section>
+      </main>
+      <SiteFooter />
+    </>
+  )
 }

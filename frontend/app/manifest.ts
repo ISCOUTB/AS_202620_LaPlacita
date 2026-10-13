@@ -1,22 +1,21 @@
-import type { MetadataRoute } from "next";
+import type { MetadataRoute } from "next"
 
-// Manifest PWA: hace la aplicación instalable en el teléfono. Los íconos viven
-// en public/icons/ (192 y 512, con variante maskable para Android).
+// Manifest PWA: hace la aplicación instalable en el teléfono. Íconos de la
+// marca v0 (public/) + colores del tema papel/tinta.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "LaPlacita · Pre-pedidos del campus",
+    name: "LaPlacita - Pide ya, recoge sin fila",
     short_name: "LaPlacita",
     description:
-      "Consulta el menú, haz tu pre-pedido y recoge sin filas en las cafeterías del campus.",
+      "Pedidos anticipados (Click & Collect) para las 5 tiendas del campus. Elige, paga y recoge con tu PIN.",
     start_url: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#fafafa",
-    theme_color: "#0a0a0a",
+    background_color: "#ecdfc6",
+    theme_color: "#ecdfc6",
     icons: [
-      { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
-      { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
-      { src: "/icons/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      { src: "/icon.svg", type: "image/svg+xml", sizes: "any" },
+      { src: "/apple-icon.png", sizes: "180x180", type: "image/png" },
     ],
-  };
+  }
 }

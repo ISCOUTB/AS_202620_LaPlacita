@@ -3,18 +3,18 @@
  *
  * Estrategias:
  *  - Navegaciones (document): red primero → caché → página offline (/~offline).
- *  - Estáticos inmutables (/_next/static, /icons): caché primero.
+ *  - Estáticos inmutables (/_next/static, /icons, imágenes): caché primero.
  *  - Demás GET del mismo origen: red primero con respaldo de caché.
  *  - /api/v1 NUNCA se cachea: los datos del pedido (estados, PIN) son frescos
  *    por diseño (ESC-01: el usuario consulta el estado en tiempo real).
  *
- * Es la alternativa a Serwist: Next 16 compila con Turbopack y este SW no
- * depende del pipeline de build. Cada línea es defendible en sustentación.
+ * Alternativa deliberada a Serwist: Next 16 compila con Turbopack y este SW
+ * no depende del pipeline de build. Cada línea es defendible en sustentación.
  */
 
-const CACHE = "laplacita-v1";
-const OFFLINE = "/~offline";
-const PRECACHE = [OFFLINE, "/manifest.webmanifest"];
+const CACHE = "laplacita-v4"
+const OFFLINE = "/~offline"
+const PRECACHE = [OFFLINE, "/manifest.webmanifest"]
 
 self.addEventListener("install", (evento) => {
   evento.waitUntil(
@@ -22,8 +22,8 @@ self.addEventListener("install", (evento) => {
       .open(CACHE)
       .then((caché) => caché.addAll(PRECACHE))
       .then(() => self.skipWaiting())
-  );
-});
+  )
+})
 
 self.addEventListener("activate", (evento) => {
   evento.waitUntil(
@@ -33,20 +33,26 @@ self.addEventListener("activate", (evento) => {
         Promise.all(claves.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
       )
       .then(() => self.clients.claim())
-  );
-});
+  )
+})
 
 function esEstaticoInmutable(url) {
-  return url.pathname.startsWith("/_next/static") || url.pathname.startsWith("/icons/");
+  return (
+    url.pathname.startsWith("/_next/static") ||
+    url.pathname.startsWith("/icons/") ||
+    url.pathname.startsWith("/images/") ||
+    url.pathname.endsWith(".svg") ||
+    url.pathname.endsWith(".png")
+  )
 }
 
 self.addEventListener("fetch", (evento) => {
-  const { request } = evento;
-  if (request.method !== "GET") return;
+  const { request } = evento
+  if (request.method !== "GET") return
 
-  const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith("/api/")) return; // datos del pedido: siempre red
+  const url = new URL(request.url)
+  if (url.origin !== self.location.origin) return
+  if (url.pathname.startsWith("/api/")) return // datos del pedido: siempre red
 
   // Estáticos inmutables: caché primero.
   if (esEstaticoInmutable(url)) {
@@ -55,13 +61,13 @@ self.addEventListener("fetch", (evento) => {
         (cacheado) =>
           cacheado ??
           fetch(request).then((respuesta) => {
-            const copia = respuesta.clone();
-            caches.open(CACHE).then((caché) => caché.put(request, copia));
-            return respuesta;
+            const copia = respuesta.clone()
+            caches.open(CACHE).then((caché) => caché.put(request, copia))
+            return respuesta
           })
       )
-    );
-    return;
+    )
+    return
   }
 
   // Navegaciones: red primero → caché → offline.
@@ -69,9 +75,9 @@ self.addEventListener("fetch", (evento) => {
     evento.respondWith(
       fetch(request)
         .then((respuesta) => {
-          const copia = respuesta.clone();
-          caches.open(CACHE).then((caché) => caché.put(request, copia));
-          return respuesta;
+          const copia = respuesta.clone()
+          caches.open(CACHE).then((caché) => caché.put(request, copia))
+          return respuesta
         })
         .catch(() =>
           caches
@@ -79,18 +85,18 @@ self.addEventListener("fetch", (evento) => {
             .then((cacheado) => cacheado ?? caches.match(OFFLINE))
             .then((r) => r ?? new Response("Sin conexión", { status: 503 }))
         )
-    );
-    return;
+    )
+    return
   }
 
   // Resto de GET del mismo origen: red primero con respaldo de caché.
   evento.respondWith(
     fetch(request)
       .then((respuesta) => {
-        const copia = respuesta.clone();
-        caches.open(CACHE).then((caché) => caché.put(request, copia));
-        return respuesta;
+        const copia = respuesta.clone()
+        caches.open(CACHE).then((caché) => caché.put(request, copia))
+        return respuesta
       })
       .catch(() => caches.match(request).then((cacheado) => cacheado ?? Response.error()))
-  );
-});
+  )
+})

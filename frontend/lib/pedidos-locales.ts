@@ -1,40 +1,39 @@
 // "Mis pedidos": el contrato solo consulta por pedidoId + tiendaId, así que el
-// cliente guarda los pedidos que crea en localStorage (fuerza natural de la
-// PWA: sobrevive cierres y funciona offline para la lista).
-import type { Pedido } from "./api";
+// cliente guarda los pedidos que crea en localStorage (sobrevive cierres y
+// alimenta la pantalla de seguimiento).
+import type { Pedido } from "./api"
 
-const CLAVE_PEDIDOS = "laplacita.mis-pedidos";
-const CLAVE_CLIENTE = "laplacita.cliente-id";
+const CLAVE_PEDIDOS = "laplacita.mis-pedidos"
+const CLAVE_CLIENTE = "laplacita.cliente-id"
 
 export interface PedidoGuardado {
-  pedidoId: string;
-  tiendaId: string;
-  productoId: string;
-  productoNombre: string;
-  cantidad: number;
-  total: number;
-  creadoEn: string;
+  pedidoId: string
+  tiendaId: string
+  productoId: string
+  productoNombre: string
+  cantidad: number
+  total: number
+  creadoEn: string
 }
 
 function leer(): PedidoGuardado[] {
-  if (typeof window === "undefined") return [];
   try {
-    return JSON.parse(localStorage.getItem(CLAVE_PEDIDOS) ?? "[]") as PedidoGuardado[];
+    return JSON.parse(localStorage.getItem(CLAVE_PEDIDOS) ?? "[]") as PedidoGuardado[]
   } catch {
-    return [];
+    return []
   }
 }
 
 function guardar(todos: PedidoGuardado[]) {
-  localStorage.setItem(CLAVE_PEDIDOS, JSON.stringify(todos));
+  localStorage.setItem(CLAVE_PEDIDOS, JSON.stringify(todos))
 }
 
 export function listarPedidosLocales(): PedidoGuardado[] {
-  return leer().sort((a, b) => b.creadoEn.localeCompare(a.creadoEn));
+  return leer().sort((a, b) => b.creadoEn.localeCompare(a.creadoEn))
 }
 
 export function registrarPedidoLocal(pedido: Pedido, productoNombre: string): void {
-  const todos = leer().filter((p) => p.pedidoId !== pedido.id);
+  const todos = leer().filter((p) => p.pedidoId !== pedido.id)
   todos.push({
     pedidoId: pedido.id,
     tiendaId: pedido.tiendaId,
@@ -43,16 +42,20 @@ export function registrarPedidoLocal(pedido: Pedido, productoNombre: string): vo
     cantidad: pedido.cantidad,
     total: pedido.total,
     creadoEn: new Date().toISOString(),
-  });
-  guardar(todos);
+  })
+  guardar(todos)
+}
+
+export function limpiarPedidosLocales(): void {
+  guardar([])
 }
 
 /** clienteId estable por dispositivo (el contrato lo exige al crear pedidos). */
 export function clienteId(): string {
-  let id = localStorage.getItem(CLAVE_CLIENTE);
+  let id = localStorage.getItem(CLAVE_CLIENTE)
   if (!id) {
-    id = `web-${crypto.randomUUID()}`;
-    localStorage.setItem(CLAVE_CLIENTE, id);
+    id = `web-${crypto.randomUUID()}`
+    localStorage.setItem(CLAVE_CLIENTE, id)
   }
-  return id;
+  return id
 }
