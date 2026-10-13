@@ -1,20 +1,35 @@
-import type React from "react"
 import type { Metadata, Viewport } from "next"
-import { Playfair_Display, Space_Grotesk, Syne } from "next/font/google"
+import localFont from "next/font/local"
+import Link from "next/link"
 import { CartProvider } from "@/components/cart/cart-provider"
-import { RegistroSw } from "@/components/registro-sw"
 import { FloatingCart } from "@/components/cart/floating-cart"
+import { RegistroSw } from "@/components/registro-sw"
 import "./globals.css"
 
-const spaceGrotesk = Space_Grotesk({ subsets: ["latin"] })
+// Fuentes auto-hospedadas (app/fonts/): next/font/local no toca la red en
+// build — requisito para compilar dentro del contenedor de Dokploy, donde
+// fonts.gstatic.com no es alcanzable (defecto del 13/10/2026 con
+// next/font/google). Son archivos variables de Google Fonts, subset latin.
+const spaceGrotesk = localFont({
+  src: "./fonts/space-grotesk-variable.woff2",
+  weight: "300 700",
+  variable: "--font-geist-sans",
+  display: "swap",
+})
 
-const syne = Syne({ subsets: ["latin"], weight: ["700", "800"], variable: "--font-syne" })
+const syne = localFont({
+  src: "./fonts/syne-variable.woff2",
+  weight: "400 800",
+  variable: "--font-syne",
+  display: "swap",
+})
 
-const playfair = Playfair_Display({
-  subsets: ["latin"],
+const playfair = localFont({
+  src: "./fonts/playfair-italic-variable.woff2",
   style: "italic",
-  weight: ["700"],
+  weight: "400 900",
   variable: "--font-playfair",
+  display: "swap",
 })
 
 export const viewport: Viewport = {
@@ -55,9 +70,10 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es" className={`${syne.variable} ${playfair.variable}`}>
-      <head />
-
+    <html
+      lang="es"
+      className={`${spaceGrotesk.variable} ${syne.variable} ${playfair.variable}`}
+    >
       <body className={`${spaceGrotesk.className} antialiased`}>
         <CartProvider>
           {children}
