@@ -554,3 +554,47 @@ despliegue `dokploy-test` antes de este fix). Suites: 51 tests + 28 contrato en 
 | El estado del monolito es único por proceso también en dev | Crear un pedido por `POST /api/v1/pedidos` y leerlo inmediatamente por `GET /api/v1/pedidos/{id}` en el backend local: la lectura lo encuentra |
 | La PWA no cachea datos del pedido | `public/sw.js` excluye `/api/` explícitamente; el seguimiento siempre consulta la red |
 | El BFF mantiene un solo origen | El navegador solo ve `:3001`; ninguna llamada va a `:3000` (pestaña Network) |
+
+---
+
+## Frontend adopta el proyecto v0 · rama `frontend-mvp` (13/10/2026, sin commit)
+
+El equipo rechazó el MVP propio de frontend (visual deficiente) y trajo un proyecto generado con
+**v0.dev** (`frontend/landinepage/` → raíz de `frontend/`). La decisión y sus consecuencias están
+en [ADR-0017](docs/adr/0017-frontend-nextjs-pwa-shadcn.md) (propuesto). El MVP descartado quedó
+archivado en el commit WIP `157c9f3`.
+
+### Lo que se portó y lo que se limpió del proyecto v0
+
+| Acción | Detalle |
+|---|---|
+| Se conserva | Estética papel/tinta/rojo, landing, páginas de tienda con filtro, carrito con drawer agrupado por tienda, las 5 tiendas con nombres/ubicaciones/horarios reales del campus |
+| Se conecta al contrato | `lib/api.ts` (cliente tipado), catálogo real por `tiendaId`, checkout del carrito → un `POST /pedidos` por línea (contrato v1: un pedido por producto) |
+| Se elimina | `@vercel/analytics`, ~55 componentes `ui/` sin uso, theme-provider, mock de productos (`lib/products.ts`), `typescript.ignoreBuildErrors` (v0 lo traía desactivado), lock de pnpm (se usa npm) |
+| Pantallas nuevas (no existían en v0) | `/pedidos/[pedidoId]` (seguimiento con polling 3 s, código de retiro, historial) y `/mis-pedidos` (estado en vivo) — en el estilo papel/tinta de v0 |
+| PWA | manifest + service worker propio + `~offline` (requisito original: instalable en teléfonos) |
+
+### Huecos del contrato v1 que este frontend expone (deuda declarada)
+
+1. Sin `GET /catalogo/tiendas`: las tiendas son estáticas con mapeo slug↔`tiendaId`.
+2. Carrito multi-item ≠ un pedido: el checkout emite N pedidos (uno por producto). Unificarlos
+   exigiría extender el contrato a `items[]` (v2).
+3. El PIN no es legible por el usuario (ADR-0013, correcto por A-06): el código de retiro es el
+   `pedidoId`; la entrega del PIN al usuario es decisión de diseño pendiente.
+
+### Defecto de despliegue revelado: los rewrites se hornean en build
+
+El primer intento de BFF usó `rewrites()` de `next.config` con `BACKEND_URL` — al construir la
+imagen Docker el destino quedó **horneado con el valor del build** y el env del contenedor
+(`BACKEND_URL` interno de Dokploy) era ignorado: el proxy apuntaba al localhost de la propia
+imagen. Corregido con un route handler catch-all (`frontend/app/api/v1/[...path]/route.js`) que
+lee `BACKEND_URL` en runtime. Validado con Podman: contenedor con `BACKEND_URL` interno →
+landing 200, `sw.js` 200, `GET /api/v1/health` y catálogo real a través del BFF.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| El checkout crea un pedido por línea y no pierde nada si una llamada falla | Carrito con 2 productos → "Hacer pedido" → 2 POSTs en la pestaña Network; forzar un error (backend caído) conserva el ítem en el carrito |
+| El catálogo es el del backend, no el mock | `git grep products.ts frontend/` → sin resultados; el menú cambia al editarlo en `backend/src/modules/catalogo/index.js` |
+| El fix `estado-compartido.js` sigue vigente con cualquier frontend | Crear pedido por POST y leerlo por GET en el backend local: la lectura lo encuentra |
+| El BFF lee `BACKEND_URL` en runtime (no horneado) | Levantar la imagen con `-e BACKEND_URL=<otra-url>` y ver el proxy apuntar allí sin recompilar |
