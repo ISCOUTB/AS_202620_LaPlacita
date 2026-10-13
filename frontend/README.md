@@ -39,6 +39,19 @@ Abrir `http://localhost:3001`. En despliegue, `BACKEND_URL` apunta al backend re
 | `/mis-pedidos` | Pedidos del dispositivo con estado en vivo | localStorage + `GET /pedidos/{id}` |
 | `/~offline` | Página sin conexión | service worker |
 
+## Despliegue (entorno de pruebas)
+
+| Aspecto | Valor |
+|---|---|
+| Plataforma | Dokploy (mismo servidor que el backend de pruebas y la BD) |
+| App | branch `frontend-mvp`, Dockerfile `frontend/Dockerfile`, contexto `frontend` |
+| Dominio | `https://laplacita-app.iscoutb.dev` (HTTPS vía Traefik/Let's Encrypt — habilita la instalación de la PWA) |
+| `BACKEND_URL` | URL del backend de pruebas (env de runtime; el BFF la lee por petición) |
+| Redespliegue automático | Pendiente: webhook de Dokploy + workflow de GitHub Actions (gate lint + build), mismo patrón que `deploy-dokploy-test.yml` |
+
+Nota: el `service worker` solo se registra en builds de producción
+(`components/registro-sw.tsx`), así que en desarrollo no interfiere con el HMR.
+
 ## Acuerdos vigentes
 
 - El frontend consume **exclusivamente** el contrato `/api/v1` — no inventa endpoints ni

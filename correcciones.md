@@ -591,6 +591,23 @@ imagen. Corregido con un route handler catch-all (`frontend/app/api/v1/[...path]
 lee `BACKEND_URL` en runtime. Validado con Podman: contenedor con `BACKEND_URL` interno →
 landing 200, `sw.js` 200, `GET /api/v1/health` y catálogo real a través del BFF.
 
+### Despliegue del frontend en Dokploy (13/10/2026)
+
+El frontend está desplegado en `https://laplacita-app.iscoutb.dev` (mismo servidor que el
+backend de pruebas y la BD). Tres defectos en cadena durante el primer intento, todos
+corregidos:
+
+| # | Error | Corrección |
+|---|---|---|
+| 1 | `Github Provider not found` — el app apuntaba al proveedor GitHub sin integración | Proveedor Git genérico con la URL pública de clonado (el repo es público) |
+| 2 | `frontend/frontend/.env: Directory nonexistent` — ruta de build duplicada (raíz + Dockerfile path concatenados) | Una sola convención, espejo del backend de pruebas (Dockerfile path `frontend/Dockerfile`) |
+| 3 | Build falla en `npm run build`: `next/font/google` necesita fonts.gstatic.com, inalcanzable desde el servidor de la universidad | Fuentes auto-hospedadas (`app/fonts/`, `next/font/local`) — el build ya no depende de Google; verificado con Podman |
+
+Verificado post-deploy: landing 200, `/tiendas/[slug]` 200, mis-pedidos 200, `sw.js` 200,
+`manifest.webmanifest` 200 y el BFF respondiendo el catálogo real. Pendiente declarado: el fix
+del bucle del BFF (`dcf6422`) se pusheó después de ese deploy — requiere un Redeploy; y la URL
+del webhook de redeploy no aparece en Advanced (plan B: API de Dokploy con API key).
+
 ### Resumen de correcciones que el sistema automatizado no detecta automáticamente
 | Corrección invisible al sistema | Cómo verificarla manualmente |
 |---|---|
@@ -598,3 +615,4 @@ landing 200, `sw.js` 200, `GET /api/v1/health` y catálogo real a través del BF
 | El catálogo es el del backend, no el mock | `git grep products.ts frontend/` → sin resultados; el menú cambia al editarlo en `backend/src/modules/catalogo/index.js` |
 | El fix `estado-compartido.js` sigue vigente con cualquier frontend | Crear pedido por POST y leerlo por GET en el backend local: la lectura lo encuentra |
 | El BFF lee `BACKEND_URL` en runtime (no horneado) | Levantar la imagen con `-e BACKEND_URL=<otra-url>` y ver el proxy apuntar allí sin recompilar |
+| El proxy se autodetecta si apunta a sí mismo | Dejar `BACKEND_URL` sin definir en el contenedor: `/api/v1/health` responde 502 "Bucle de proxy" en segundos, sin colgar |
