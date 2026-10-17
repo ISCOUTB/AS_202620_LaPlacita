@@ -447,6 +447,7 @@ Esta sección registra el historial de decisiones arquitectónicas significativa
 | ADR-0016 | Quality Gate de SonarCloud obligatorio y bloqueante | Aceptado | 2026-10-12 | Transversal | [0016-quality-gate-sonarcloud-bloqueante.md](../adr/0016-quality-gate-sonarcloud-bloqueante.md) |
 | ADR-0017 | Frontend de usuario con Next.js 16, TypeScript, shadcn/ui y service worker propio | Aceptado | 2026-10-13 | A-05, A-03, A-06 | [0017-frontend-nextjs-pwa-shadcn.md](../adr/0017-frontend-nextjs-pwa-shadcn.md) |
 | ADR-0018 | Retiro de Azure: todo el sistema se despliega en Dokploy (laboratorio de la U) | Aceptado | 2026-10-13 | ESC-01, transversal | [0018-retiro-de-azure-despliegue-en-dokploy.md](../adr/0018-retiro-de-azure-despliegue-en-dokploy.md) |
+| ADR-0019 | No extracción de módulos a servicios independientes (evaluación S11) | Propuesto | 2026-10-12 | Transversal | [0019-no-extraccion-a-servicios.md](../adr/0019-no-extraccion-a-servicios.md) |
  
 **Relación con los bloques de construcción:**
 - ADR-0001 y ADR-0002 determinan la estructura: un único proceso con módulos de dominio separados.
@@ -704,6 +705,23 @@ Resultado: **0/300 accesos cruzados** → se cumple el umbral de ESC-02.
   3. `npm test` (13 pruebas, incluida `tests/aislamiento.test.js`).
 - **Evidencia:** salidas capturadas en §11.3/§11.4 y en el run de CI.
 
+### 11.6. Modos de fallo parcial identificados (S11 — propuesta)
+
+> Tabla propuesta el 2026-10-12, pendiente de validación del equipo. Detalle y
+> diseños en [`docs/evidencias/evidencias-s11.md`](../evidencias/evidencias-s11.md).
+> **Nota del 13/10 (ADR-0018):** las menciones de «API en Azure» corresponden al despliegue
+> vigente al redactarse; desde el retiro de Azure la API sirve desde Dokploy (laboratorio de la
+> U) y los modos de fallo aplican igual al nuevo host.
+
+| # | Integración | Modo | Mitigación propuesta |
+|---|---|---|---|
+| F-01 | Cliente → API en Azure | No responde / tarde → el cliente reintenta y duplica (demostrado en local 12/10) | Timeout + backoff; idempotencia en `POST /pedidos` |
+| F-02 | Cliente → API | Responde dos veces (reintento) | Clave de idempotencia propuesta |
+| F-03 | App → PostgreSQL (ADR-0014) | Cae a medias (write aplicado, ack perdido) | Outbox + reintento idempotente propuestos |
+| F-04 | App → PostgreSQL | No responde (caída) | Circuit breaker + degradación con reconciliación (propuestos) |
+| F-05 | CI → SonarCloud | Scanner no responde (gate bloqueante) | Timeout del paso + reintento propuestos |
+| F-06 | Routes → módulos (in-process) | No aplica hoy: sin red no hay respuesta parcial | Se propone mantener in-process (ADR-0019) |
+
 ---
 
 ## 12. Endurecimiento de A-06 — Exposición del `pin` y bypass de la máquina de estados
@@ -781,6 +799,29 @@ mostrador.
   3. Para el plano HTTP: `npm run build && npm start`, y en otra terminal `node scripts/medir-exposicion-pin.js --url http://localhost:3000`.
   4. `npm test` (48 pruebas, incluidas las cuatro aserciones `S9:` de `tests/contract-openapi.test.js`).
 - **Evidencia:** salidas capturadas en §12.3/§12.4, en [`docs/evidencias/evidencias-s9.md`](../evidencias/evidencias-s9.md) y en los runs de CI 37224472688 (rojo, commit `658dc8d`) y 37225494755 (verde, commit `e0542ce`).
+
+---
+
+## 13. Fallos parciales y decisión de extracción (S11 — propuesta)
+
+> Sección propuesta el 2026-10-12, pendiente de validación del equipo. Modos de
+> fallo en §11.6; detalle en [`docs/evidencias/evidencias-s11.md`](../evidencias/evidencias-s11.md);
+> decisión propuesta en [ADR-0019](../adr/0019-no-extraccion-a-servicios.md).
+
+### 13.1. Diseños propuestos (no implementados)
+
+- **Idempotencia:** cabecera `Idempotency-Key` en `POST /pedidos`; el reintento con
+  la misma clave devuelve la respuesta original sin re-ejecutar (ventana por definir).
+- **Saga coreografiada propuesta:** pedido → pago → entrega con compensaciones
+  (cancelar pedido si falla el pago; compensar si falla la entrega); outbox propuesto
+  para publicación atómica. Solo tendría sentido si se extrae algún módulo.
+
+### 13.2. Decisión de extracción propuesta
+
+Se propone **no extraer ningún módulo todavía** (criterios: RES-02 equipo de 4,
+RES-03 semestre, 5 tiendas, llamadas in-process sin fallos parciales, costo 0).
+Reevaluar si una tienda supera el 40 % del tráfico con SLO propio, el equipo
+supera 6–8 personas o se necesita despliegue independiente. Ver ADR-0017 (propuesto).
 
 ---
 
