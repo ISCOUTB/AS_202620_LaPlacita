@@ -6,7 +6,8 @@
 > ser **0019**. El contenido de la decisión no cambia. Registro en `docs/ia.md` (entrada del
 > 17/10).
 
-- **Estado:** propuesto (pendiente de aceptación del equipo)
+- **Estado:** aceptado (validado por el equipo el 2026-10-17; propuesta original de
+  Muse Spark vía OpenCode, registrada en `docs/ia.md`)
 - **Fecha:** 2026-10-12 (renumerado a 0019 el 2026-10-17)
 - **Decide:** Equipo LaPlacita (pendiente de confirmación en revisión)
 - **Escenario relacionado:** transversal (ESC-01 disponibilidad, ESC-05 flujo de pedido)

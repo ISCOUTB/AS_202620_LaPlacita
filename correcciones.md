@@ -649,3 +649,29 @@ sin uso y pueden eliminarse.
 | El firewall dejó de ser un factor | Backend y PostgreSQL en la misma red interna: `GET /api/v1/catalogo/...` desde la PWA funciona sin ningún puerto externo de BD |
 | ESC-01 acreditado contra la producción real | El experimento de `evidencias-s10.md` §6 (3/3) corrió contra Dokploy, no contra un entorno efímero |
 | C4 coincide con el código | `docs/c4/contenedores.md`: PostgreSQL implementado (ADR-0014) y protocolo TCP/pg, no REST |
+
+---
+
+## Cierre S11 · validación de propuestas y fix D2 (17/10/2026)
+
+La auditoría de deriva del cierre S10 (hallazgo D2, prioridad media) y la mitigación parcial de
+F-03 quedaron cerradas: **el orden de escrituras por pedido ahora está garantizado y probado**.
+
+| Acción | Detalle |
+|---|---|
+| Fix D2 | `backend/src/persistencia/cola-escrituras.js`: cola FIFO por clave `(tienda, pedido)` con instantánea inmutable congelada al encolar. Antes, cada UPSERT se disparaba inmediatamente y el pool podía solaparlos: la fila podía quedar con un estado atrasado **sin caída del proceso** (hallazgo D2 de la auditoría S10) |
+| Prueba pedida por el revisor | `backend/tests/cola-escrituras.test.js`: escritura lenta + escritura rápida sobre la misma clave — sin la cola, la rápida termina primero y el estado final guardado es el viejo (falla); con la cola, orden de mutación exacto. Más: claves distintas en paralelo, fallo de un eslabón no rompe la cola, instantánea congelada |
+| Aserción de integración | `tests/persistencia.test.js`: crear → confirmar → listo rápido → esperar escrituras → la fila final es `Listo` (la última mutación) |
+| Validación S11 | ADR-0019 (no extracción) pasa a **aceptado**; §11.6/§13 del arc42 marcadas como validadas por el equipo; F-03 con la mitigación de orden implementada y probada |
+| Suite | 55 pruebas + 28 de contrato en verde |
+
+**Deuda que sigue declarada (no implementada):** idempotencia de `POST /pedidos` (F-01/F-02),
+outbox (persistir antes del 201), circuit breaker (F-04), reintento del scanner (F-05). El
+límite fire-and-forget se conserva documentado.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| El orden de escrituras es estructural (cola FIFO), no un artefacto de timing | `tests/cola-escrituras.test.js`: escritura lenta (40 ms) + rápida sobre la misma clave — con la implementación vieja (paralela) la rápida ganaba y la fila quedaba vieja |
+| La instantánea se congela al encolar | El test 4 muta el objeto vivo después de encolar y la escritura persiste el estado anterior |
+| El fire-and-forget se conserva (la respuesta no espera la BD) | La ruta responde 201 sin `await` de la escritura; el orden lo garantiza la cola, no la espera |

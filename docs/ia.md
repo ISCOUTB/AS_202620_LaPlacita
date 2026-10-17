@@ -3,10 +3,10 @@
 
 ## Resumen: qué se aceptó y qué se rechazó
 
-- Entradas registradas: 49 (06/08/2026 al 13/10/2026).
+- Entradas registradas: 50 (06/08/2026 al 17/10/2026).
 - Aceptadas y verificadas por el equipo: 29 (columna Validación con ejecución o confirmación).
 - Aceptadas con ajustes del equipo: 4 entradas.
-- Entradas con propuestas rechazadas y justificadas: 23 (51 propuestas en total).
+- Entradas con propuestas rechazadas y justificadas: 24 (53 propuestas en total).
 - Con validación pendiente declarada: 7 entradas (5 de ago–sep, cubiertas de facto por
   evidencia posterior —suites en verde, cortes y semanas siguientes—; más la presente,
   pendiente de revisión del equipo).
@@ -117,3 +117,4 @@ Para medir el valor real del soporte de la Inteligencia Artificial en el proyect
 - **Ahorro de tiempo en formato:** Reducción estimada del 40% en el tiempo dedicado a la maquetación inicial de documentos en Markdown y estructuración de índices.
 - **Calidad técnica y conceptual:** Mejora en la formalización de los atributos de calidad, ayudando a estructurar de forma más clara los *trade-offs* arquitectónicos del sistema.
 - **Control de calidad humano:** El 100% de los entregables han sido leídos, ajustados y aprobados por los integrantes del equipo, garantizando que reflejen fielmente la lógica real del software.
+| **17/10/2026** | GLM (Z.ai, vía OpenCode) | Cierre de la S11: validación en equipo de las propuestas de fallos parciales (tabla F-01…F-06, ADR-0019 no extraer) e implementación de la corrección D2 de la auditoría S10 (orden de escrituras no garantizado). | *"si, dale, aunque antes revisa el ultimo commit de mi compañero, el empezo algo sobre eso"* | Se integró el commit de Jorge (bd6cecb) resolviendo la colisión de numeración ADR-0017 (extracción → **0019**, con nota de renumeración; el 0017 del frontend conservó su número por ser el más referenciado). Fix D2: `backend/src/persistencia/cola-escrituras.js` — cola FIFO por clave (tienda, pedido) con instantánea inmutable congelada al encolar; la prueba determinística de reordenación (lenta + rápida sobre la misma clave) FALLA contra la implementación vieja (paralela: la fila quedaba con el estado atrasado sin caída del proceso, hallazgo D2). Aserción de integración en `tests/persistencia.test.js` (última mutación gana). ADR-0019 a aceptado; arc42 §11.6 con F-03 parcialmente implementado y notas del retiro de Azure. | 1) UPDATE condicional con versión (opción B del revisor) — la cola FIFO (opción A) no cambia el contrato de la tabla ni el esquema. 2) Esperar la base antes del 201 — rompería el fire-and-forget declarado (ADR-0001); lo garantizado es el orden y la instantánea. 3) Borrar la rama `auditoria/a5-bloqueo-400` — verificado stale (sin commits sobre master, divergió antes de la reestructurura); se consulta al equipo antes de eliminar. 4) Aceptar el ADR-0019 sin registro de IA — la propuesta original de Muse Spark ya está en la bitácora (fila del 12/10). | Verificado: 55 pruebas + 28 contrato en verde; la prueba de reordenación falla contra la implementación vieja (comprobado en esta sesión) y pasa con la cola. Pendiente de validación del equipo: las mitigaciones restantes (idempotencia, outbox, circuit breaker) siguen propuestas. |

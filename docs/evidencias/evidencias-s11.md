@@ -90,3 +90,28 @@ Suite del backend en el mismo estado: `npm test` → `pass 51 / fail 0`.
    fallen ante cada defecto (doble POST, ack perdido simulado, caída simulada).
 3. Medir (latencia p95 con reintentos, tasa de duplicados) y registrar horas.
 4. Decidir la extracción en el ADR-0019 [renumerado el 17/10; era 0017 en la rama de origen] (pasarlo a aceptado o reemplazarlo).
+
+---
+
+## 7. Actualización (17/10/2026) — validación del equipo y primera mitigación implementada
+
+El equipo validó las propuestas de este documento y el [ADR-0019](../adr/0019-no-extraccion-a-servicios.md)
+pasó a **aceptado**. Además se implementó la corrección que la auditoría de deriva del cierre S10
+(D2, prioridad media) y la mitigación parcial de F-03 pedían:
+
+- **Orden de escrituras garantizado por pedido:** cola FIFO por clave `(tienda, pedido)` con
+  instantánea inmutable congelada al encolar (`backend/src/persistencia/cola-escrituras.js`).
+  Antes, cada UPSERT se disparaba inmediatamente y el pool podía solaparlos: la fila podía
+  quedar con un estado atrasado sin caída del proceso (hallazgo D2).
+- **Prueba determinística de reordenación:** `backend/tests/cola-escrituras.test.js` — escritura
+  lenta + escritura rápida sobre la misma clave; sin la cola, la rápida termina primero y el
+  estado final guardado es el viejo (falla). Con la cola: orden de mutación exacto.
+- **Aserción de integración:** `tests/persistencia.test.js` — crear → confirmar → listo rápido,
+  esperar escrituras y verificar que la fila final es `Listo` (la última mutación, no la primera).
+- **El límite fire-and-forget se conserva documentado** (evidencias-s10 §8 y cabecera del
+  adaptador): la respuesta HTTP sigue sin esperar la durabilidad; lo garantizado es el ORDEN y
+  la instantánea persistida.
+
+**Qué sigue propuesto (deuda declarada, no implementada):** idempotencia de `POST /pedidos`
+(§3), outbox (persistir antes del 201), circuit breaker con degradación (F-04), reintento del
+scanner (F-05). `Backend suite: 55 pruebas + 28 de contrato en verde.`

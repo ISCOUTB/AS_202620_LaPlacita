@@ -21,6 +21,7 @@
 //     no observado termina el proceso en Node, y eso vencía el job `test` de CI.
 
 import { error as logError } from '../logger.js';
+import { crearColaEscrituras } from './cola-escrituras.js';
 
 const ESQUEMA = `
 CREATE TABLE IF NOT EXISTS pedidos (
@@ -47,11 +48,17 @@ let inicio = null;
 let registrosCargados = null;
 const oyentesDeCarga = [];
 const escriturasEnVuelo = new Set();
-// Cola de escritura: UPSERTs encadenados en orden de mutación. Sin esto, tres
-// mutaciones seguidas del mismo pedido (crear → confirmarPago → asignarPin)
-// corren en paralelo y la fila puede quedar con el estado de la primera
-// escritura en terminar, no de la última mutación.
-let ultimaEscritura = Promise.resolve();
+// Cola de escritura POR PEDIDO (fix D2 de la auditoría del cierre S10):
+// cada mutación captura una instantánea inmutable del pedido y se encadena a
+// la promesa anterior de SU clave (tienda, pedido), de modo que tres
+// mutaciones seguidas (crear → confirmarPago → asignarPin) persisten en ese
+// orden exacto aunque el pool solape consultas. Claves distintas corren en
+// paralelo. La garantía la prueba `tests/cola-escrituras.test.js`
+// (reordenación determinista: escritura lenta + escritura rápida).
+// La respuesta HTTP sigue sin esperar la base (fire-and-forget declarado en
+// evidencias-s10 §8); lo que cambia es que la fila final nunca es un estado
+// viejo por carrera de escrituras.
+const colasDeEscritura = crearColaEscrituras();
 
 // ¿Hay base de datos configurada? Sin `DATABASE_URL` todo el módulo es no-op.
 export function activa() {
@@ -159,7 +166,7 @@ export async function lista() {
   await iniciar();
 }
 
-async function escribirFila(pedido) {
+async function escribirFila(instantanea) {
   await iniciar();
   await pool.query(
     `INSERT INTO pedidos (${COLUMNAS})
@@ -173,41 +180,57 @@ async function escribirFila(pedido) {
          pin = EXCLUDED.pin,
          actualizado_en = now()`,
     [
-      pedido.tiendaId,
-      pedido.id,
-      pedido.clienteId,
-      pedido.productoId,
-      pedido.cantidad,
-      pedido.total,
-      pedido.estado,
-      pedido.pin,
+      instantanea.tiendaId,
+      instantanea.id,
+      instantanea.clienteId,
+      instantanea.productoId,
+      instantanea.cantidad,
+      instantanea.total,
+      instantanea.estado,
+      instantanea.pin,
     ],
   );
 }
 
 // Espejo de escritura: UPSERT del pedido completo. Fire-and-forget a
 // propósito — el dominio no espera la base (ADR-0001); el fallo se bitacora y
-// la cola sigue con la siguiente escritura.
+// la cola sigue con la siguiente escritura. Lo que SÍ espera cada escritura
+// es a la anterior de SU pedido (cola por clave, fix D2).
 export function escribirPedido(pedido) {
   if (!activa()) {
     return;
   }
-  const tarea = escribirFila(pedido).catch((err) => {
-    logError({
-      route: 'persistencia',
-      tiendaId: pedido.tiendaId,
-      pedidoId: pedido.id,
-      mensaje: `escritura: ${err.message}`,
-    });
+  // Instantánea inmutable de ESTA mutación: el objeto vivo puede seguir
+  // mutando (máquina de estados) antes de que el pool ejecute el query, y la
+  // fila debe reflejar el estado de la mutación que disparó la escritura.
+  const instantanea = Object.freeze({
+    tiendaId: pedido.tiendaId,
+    id: pedido.id,
+    clienteId: pedido.clienteId,
+    productoId: pedido.productoId,
+    cantidad: pedido.cantidad,
+    total: pedido.total,
+    estado: pedido.estado,
+    pin: pedido.pin ?? null,
   });
+  const clave = `${instantanea.tiendaId}::${instantanea.id}`;
+  const tarea = colasDeEscritura
+    .encolar(clave, () => escribirFila(instantanea))
+    .catch((err) => {
+      logError({
+        route: 'persistencia',
+        tiendaId: instantanea.tiendaId,
+        pedidoId: instantanea.id,
+        mensaje: `escritura: ${err.message}`,
+      });
+    });
   escriturasEnVuelo.add(tarea);
   // El rechazo de `tarea` ya está capturado arriba; esta continuación solo
-  // limpia el registro de escrituras en vuelo.
+  // limpia el registro de escrituras en vuelo y libera la cola si es la última.
   void tarea.then(() => {
     escriturasEnVuelo.delete(tarea);
+    colasDeEscritura.liberar(clave, tarea);
   });
-  // La cola continúa aunque esta escritura haya fallado.
-  ultimaEscritura = tarea;
 }
 
 // Espera las escrituras en vuelo (lo usan las pruebas de supervivencia para
@@ -216,8 +239,9 @@ export async function esperarEscrituras() {
   if (inicio) {
     await iniciar();
   }
+  // Cubre las cadenas completas: cada tarea encolada se registra en
+  // `escriturasEnVuelo` desde el momento del encolado.
   await Promise.allSettled(escriturasEnVuelo);
-  await ultimaEscritura;
 }
 
 // Lee todas las filas tal como están en la base (lo usa la prueba que

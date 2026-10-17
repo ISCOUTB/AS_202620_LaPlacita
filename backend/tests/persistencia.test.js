@@ -82,6 +82,18 @@ test('con persistencia, tras un reinicio los pedidos se restauran desde la base'
   assert.equal(leido.estado, 'En preparación');
   assert.equal(leido.pin, '4321');
 
+  // Fix D2 (auditoría del cierre S10): mutaciones rápidas del MISMO pedido
+  // deben persistir en orden — la fila final es la ÚLTIMA mutación, no un
+  // estado atrasado por carrera de UPSERTs. Con la cola por pedido, la
+  // rehidratación posterior reproduce exactamente la secuencia confirmada.
+  pedidos.marcarListo(pedido.id, 'tienda-01');
+  await persistencia.esperarEscrituras();
+  const filasOrden = await persistencia.cargarTodo();
+  const filaPedido = filasOrden.find(
+    (f) => f.tiendaId === 'tienda-01' && f.id === pedido.id
+  );
+  assert.equal(filaPedido.estado, 'Listo');
+
   // El contador por tienda también se rehidrata: el siguiente id no colisiona
   // con ningún pedido existente (el defecto que motivó el experimento).
   const otro = crearPedidoUnico();

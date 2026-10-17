@@ -447,7 +447,7 @@ Esta sección registra el historial de decisiones arquitectónicas significativa
 | ADR-0016 | Quality Gate de SonarCloud obligatorio y bloqueante | Aceptado | 2026-10-12 | Transversal | [0016-quality-gate-sonarcloud-bloqueante.md](../adr/0016-quality-gate-sonarcloud-bloqueante.md) |
 | ADR-0017 | Frontend de usuario con Next.js 16, TypeScript, shadcn/ui y service worker propio | Aceptado | 2026-10-13 | A-05, A-03, A-06 | [0017-frontend-nextjs-pwa-shadcn.md](../adr/0017-frontend-nextjs-pwa-shadcn.md) |
 | ADR-0018 | Retiro de Azure: todo el sistema se despliega en Dokploy (laboratorio de la U) | Aceptado | 2026-10-13 | ESC-01, transversal | [0018-retiro-de-azure-despliegue-en-dokploy.md](../adr/0018-retiro-de-azure-despliegue-en-dokploy.md) |
-| ADR-0019 | No extracción de módulos a servicios independientes (evaluación S11) | Propuesto | 2026-10-12 | Transversal | [0019-no-extraccion-a-servicios.md](../adr/0019-no-extraccion-a-servicios.md) |
+| ADR-0019 | No extracción de módulos a servicios independientes (evaluación S11) | Aceptado | 2026-10-12 | Transversal | [0019-no-extraccion-a-servicios.md](../adr/0019-no-extraccion-a-servicios.md) |
  
 **Relación con los bloques de construcción:**
 - ADR-0001 y ADR-0002 determinan la estructura: un único proceso con módulos de dominio separados.
@@ -707,7 +707,8 @@ Resultado: **0/300 accesos cruzados** → se cumple el umbral de ESC-02.
 
 ### 11.6. Modos de fallo parcial identificados (S11 — propuesta)
 
-> Tabla propuesta el 2026-10-12, pendiente de validación del equipo. Detalle y
+> Tabla propuesta el 2026-10-12, **validada por el equipo el 2026-10-17** (ADR-0019 en
+> aceptado; mitigaciones F-03 parciales implementadas y probadas — ver F-03). Detalle y
 > diseños en [`docs/evidencias/evidencias-s11.md`](../evidencias/evidencias-s11.md).
 > **Nota del 13/10 (ADR-0018):** las menciones de «API en Azure» corresponden al despliegue
 > vigente al redactarse; desde el retiro de Azure la API sirve desde Dokploy (laboratorio de la
@@ -717,7 +718,7 @@ Resultado: **0/300 accesos cruzados** → se cumple el umbral de ESC-02.
 |---|---|---|---|
 | F-01 | Cliente → API en Azure | No responde / tarde → el cliente reintenta y duplica (demostrado en local 12/10) | Timeout + backoff; idempotencia en `POST /pedidos` |
 | F-02 | Cliente → API | Responde dos veces (reintento) | Clave de idempotencia propuesta |
-| F-03 | App → PostgreSQL (ADR-0014) | Cae a medias (write aplicado, ack perdido) | Outbox + reintento idempotente propuestos |
+| F-03 | App → PostgreSQL (ADR-0014) | Cae a medias (write aplicado, ack perdido) | **Orden garantizado e implementado (17/10):** cola FIFO por pedido con instantánea congelada (`persistencia/cola-escrituras.js`, prueba de reordenación determinista en `tests/cola-escrituras.test.js`). Persistir antes del 201 (outbox) sigue propuesto |
 | F-04 | App → PostgreSQL | No responde (caída) | Circuit breaker + degradación con reconciliación (propuestos) |
 | F-05 | CI → SonarCloud | Scanner no responde (gate bloqueante) | Timeout del paso + reintento propuestos |
 | F-06 | Routes → módulos (in-process) | No aplica hoy: sin red no hay respuesta parcial | Se propone mantener in-process (ADR-0019) |
