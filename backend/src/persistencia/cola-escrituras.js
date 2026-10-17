@@ -37,9 +37,15 @@ export function crearColaEscrituras() {
       return tarea;
     },
 
-    /** Solo cierto si la última tarea de la clave sigue siendo `tarea`. */
-    esLaUltima(clave, tarea) {
-      return colas.get(clave) === tarea;
+    /**
+     * Libera la entrada de la clave si la última tarea sigue siendo `tarea`
+     * (la cola vacía no acumula). Si se encadenó un trabajo posterior, la
+     * entrada se conserva para ese trabajo.
+     */
+    liberar(clave, tarea) {
+      if (colas.get(clave) === tarea) {
+        colas.delete(clave);
+      }
     },
   };
 }
