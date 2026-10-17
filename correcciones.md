@@ -616,3 +616,36 @@ del webhook de redeploy no aparece en Advanced (plan B: API de Dokploy con API k
 | El fix `estado-compartido.js` sigue vigente con cualquier frontend | Crear pedido por POST y leerlo por GET en el backend local: la lectura lo encuentra |
 | El BFF lee `BACKEND_URL` en runtime (no horneado) | Levantar la imagen con `-e BACKEND_URL=<otra-url>` y ver el proxy apuntar allí sin recompilar |
 | El proxy se autodetecta si apunta a sí mismo | Dejar `BACKEND_URL` sin definir en el contenedor: `/api/v1/health` responde 502 "Bucle de proxy" en segundos, sin colgar |
+
+---
+
+## Retiro de Azure · todo el sistema en Dokploy (13/10/2026)
+
+Decisión del equipo: el **servidor del laboratorio de la universidad** pasa a ser el único
+despliegue. Registrada en [ADR-0018](docs/adr/0018-retiro-de-azure-despliegue-en-dokploy.md),
+que reemplaza al ADR-0009 (cabecera anotada, contenido histórico intacto).
+
+| Acción | Detalle |
+|---|---|
+| Eliminado | `.github/workflows/deploy-backend.yml` (despliegue a Azure Container Apps) y el workflow de rama `deploy-dokploy-test.yml` |
+| Nuevo | `.github/workflows/deploy-dokploy.yml`: push a `master` que toque `backend/**` → gate (pruebas con PostgreSQL + contrato) → webhook de Dokploy → health check |
+| URLs de producción | Backend `https://laplacita-test.iscoutb.dev` · PWA `https://laplacita-app.iscoutb.dev` (renombrar el dominio del backend es tarea cosmética opcional) |
+| C4 al día (fix D1 de la auditoría S10) | `docs/c4/contenedores.md` y `componentes.md`: PostgreSQL y App/Web Cliente pasan a **implementados** (pg/TCP, condicional a `DATABASE_URL`); Redis y Portal Establecimiento siguen planeados |
+| arc42 §7 | Vista de despliegue reescrita: Dokploy como único host, red interna con la BD, BFF de la PWA |
+| Pendiente S10 | El experimento "Fase D contra Azure" queda **sin objeto** (nota datada en `evidencias-s10.md` §6): ESC-01 está acreditado contra Dokploy (3/3), que es la producción desde esta decisión |
+
+**Ramas fusionadas a `master`:** `frontend-mvp` (7 commits: PWA v0, fixes de despliegue, docs,
+tutorial) y `dokploy-test` (catálogo de 5 tiendas). Todo lo desplegado y sustentado queda ahora
+en la rama calificada.
+
+**Panel Dokploy (tarea del equipo):** el app del backend debe pasar a observar la rama
+**`master`** (hasta entonces, el webhook redesplegaría la rama vieja). Opcional: el app de la PWA
+también puede pasarse a `master`. Los recursos de Azure y los secrets `AZURE_*` de GitHub quedan
+sin uso y pueden eliminarse.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| El firewall dejó de ser un factor | Backend y PostgreSQL en la misma red interna: `GET /api/v1/catalogo/...` desde la PWA funciona sin ningún puerto externo de BD |
+| ESC-01 acreditado contra la producción real | El experimento de `evidencias-s10.md` §6 (3/3) corrió contra Dokploy, no contra un entorno efímero |
+| C4 coincide con el código | `docs/c4/contenedores.md`: PostgreSQL implementado (ADR-0014) y protocolo TCP/pg, no REST |

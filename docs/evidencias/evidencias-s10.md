@@ -151,6 +151,11 @@ activa); la emisión de notificaciones en las rutas sigue siendo la deuda declar
 > Queda pendiente replicar este experimento contra el despliegue de Azure cuando el puerto de la
 > base sea accesible; el procedimiento es idéntico (`scripts/medir-persistencia.js pre/post` con
 > `--url` del despliegue).
+>
+> **Nota del 13/10/2026 (ADR-0018):** el pendiente queda **sin objeto** — Azure se retira y
+> Dokploy (servidor del laboratorio de la universidad) pasa a ser el único despliegue de
+> producción. ESC-01 queda acreditado contra esa infraestructura con el experimento anterior
+> (3/3 supervivientes, 0 perdidos), que es el entorno donde corre el sistema desde entonces.
 
 ## 7. Regresión: ESC-02 y ESC-03 intactos
 

@@ -1,28 +1,21 @@
-# Entorno de pruebas en Dokploy (rama dokploy-test).
-#
-# Por qué existe: el firewall de la universidad bloquea el puerto externo del
-# PostgreSQL (Dokploy) hacia Azure (ADR-0014, evidencias-s10 §6 Fase D), de modo
-# que el despliegue de producción arranca en modo memoria. En Dokploy el backend
-# corre en el MISMO servidor que la base y la alcanza por la red interna de
-# Docker, sin atravesar el firewall. Este entorno permite probar la API contra
-# una base de datos real. NO sustituye al despliegue de producción
-# (master → Azure Container Apps vía deploy-backend.yml).
-#
-# Flujo: gate de pruebas (npm test + contract-test con PostgreSQL real) →
-# webhook de redeploy de Dokploy → health check con reintentos.
+name: Deploy Dokploy (laboratorio de la U)
 
-name: Deploy dokploy-test
+# Despliegue del backend en Dokploy — el servidor del laboratorio de la
+# universidad (ADR-0018: retiro de Azure). El app de Dokploy observa la rama
+# `master`; este workflow valida en un gate (pruebas con PostgreSQL + contrato)
+# y dispara el webhook de redeploy. La PWA del frontend vive en la misma
+# plataforma (app separada que observa master).
 
 on:
   push:
-    branches: [dokploy-test]
+    branches: [master]
     paths:
       - "backend/**"
-      - ".github/workflows/deploy-dokploy-test.yml"
+      - ".github/workflows/deploy-dokploy.yml"
   workflow_dispatch:
 
 concurrency:
-  group: deploy-dokploy-test
+  group: deploy-dokploy-backend
   cancel-in-progress: false
 
 permissions:
@@ -72,7 +65,7 @@ jobs:
 
       - name: Redesplegar en Dokploy
         run: |
-          echo "Disparando redeploy de la app dokploy-test..."
+          echo "Disparando redeploy del backend en el laboratorio de la U..."
           curl -fsS --max-time 30 -X POST "$DOKPLOY_TEST_WEBHOOK"
           echo "Webhook aceptado: Dokploy reconstruye en el servidor."
         env:
@@ -87,5 +80,5 @@ jobs:
             if [ "$code" = "200" ]; then echo "health=200 (intento $i)"; exit 0; fi
             echo "intento $i: http=$code"; sleep 10
           done
-          echo "health check agotado: la app test no responde tras el redeploy"
+          echo "health check agotado: la app del laboratorio no responde tras el redeploy"
           exit 1

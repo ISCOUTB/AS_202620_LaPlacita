@@ -22,7 +22,7 @@ flowchart TB
         S_PAG[("pagosConfirmados<br/>tienda:pedido")]:::containerDb
         S_NOT[("notificacionesEnviadas<br/>array")]:::containerDb
     end
-    DB[("PostgreSQL<br/>PLANEADO Corte 2")]:::planned
+    DB[("PostgreSQL<br/>IMPLEMENTADO — ADR-0014<br/>(condicional a DATABASE_URL)")]:::container
     REDIS[("Redis<br/>PLANEADO Corte 2")]:::planned
     PASARELA["Pasarela de Pagos ext.<br/>(tras ACL)"]:::extSystem
 

@@ -1,6 +1,6 @@
 # 0009 — Despliegue de API + sitio en Azure Container Apps (Azure for Students)
 
-- **Estado:** aceptado
+- **Estado:** aceptado — **Reemplazado por [ADR-0018](0018-retiro-de-azure-despliegue-en-dokploy.md)**: el despliegue pasa íntegro a Dokploy, el servidor del laboratorio de la universidad; reemplazo declarado en el propio ADR-0018, contenido histórico intacto
 - **Fecha:** 2026-09-25
 - **Decide:** Buendía Barrios Mateo, Isaza Montalvo Miguel, Jiménez Álvarez Samuel, Martínez Castillo Jorge
 - **ADR relacionado:** [ADR-0003](0003-despliegue-railway-docker-sonarcloud.md) — decisión combinada de plataforma que este registro precisa solo en API + sitio (el análisis estático se precisa en el [ADR-0010](0010-analisis-sonarcloud.md) y la base de datos en el [ADR-0011](0011-base-de-datos-universidad.md)); ADR-0003 no se modifica. Reemplaza al enfoque Railway documentado en el taller S8

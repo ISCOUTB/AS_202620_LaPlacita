@@ -365,30 +365,36 @@ HTTP lo importa; la respuesta del borde es la vista pública, sin `pin`.
 
 ## 7. Vista de Despliegue
 
-Cada pieza del sistema y dónde se ejecuta (una caja por pieza):
+Cada pieza del sistema y dónde se ejecuta (una caja por pieza). Desde el 13/10/2026, el retiro de
+Azure ([ADR-0018](../adr/0018-retiro-de-azure-despliegue-en-dokploy.md)) concentra el despliegue
+en **Dokploy, el servidor del laboratorio de la universidad**: mismo servidor para backend,
+frontend y PostgreSQL, en la misma red interna.
 
 ```mermaid
 flowchart TB
-    DEV["Puesto del desarrollador<br/>(Node 22, npm ci, npm run dev)"] 
+    DEV["Puesto del desarrollador<br/>(Node 22, npm ci, npm run dev)"]
     GH["GitHub<br/>(repo + Actions runners ubuntu-latest)"]
-    RW["Azure Container Apps<br/>(imagen Docker, PORT 3000, HTTPS)"]
+    DK["Dokploy · laboratorio de la U<br/>(contenedores Docker, red interna)"]
+    DB[("PostgreSQL gestionado por Dokploy<br/>(misma red interna)")]
     SC["SonarCloud<br/>(análisis + Quality Gate)"]
-    CLI["Cliente móvil / navegador<br/>(consume la API pública)"]
+    CLI["Cliente móvil / navegador<br/>(PWA en el dominio del frontend)"]
 
     DEV -->|push a master| GH
-    GH -->|despliega contenedor| RW
+    GH -->|gate + webhook de redeploy| DK
     GH -->|análisis estático| SC
-    CLI -->|HTTPS / REST JSON| RW
+    DK ---|TCP / pg, sin firewall| DB
+    CLI -->|HTTPS: PWA + contrato /api/v1 (BFF)| DK
 ```
 
 | Pieza | Dónde se ejecuta | Evidencia |
 |---|---|---|
-| API Next.js standalone + sitio | Azure Container Apps, misma imagen Docker (`PORT=3000`, `NODE_ENV=production`) | `Dockerfile:1-17`, `next.config.mjs:2-4`, ADR-0009 |
-| Rutas `/api/v1/*` + dominio `backend/src/modules/*` | Dentro del contenedor anterior (mismo proceso, ESM síncrono) | `backend/app/api/v1/**/route.js`, ADR-0001/0006 |
-| Pipeline `test` + `contract-test` | GitHub Actions runners `ubuntu-latest` + Node 22 en cada push/PR a `master` | `.github/workflows/ci.yml:12-49` |
-| Análisis estático + Quality Gate | SonarCloud, organización `isco-utb`, proyecto `ISCOUTB_AS_202620_LaPlacita` | `sonar-project.properties:4-9`, ADR-0010 |
-| Desarrollo local | Puesto del desarrollador (`npm ci` → `npm run dev` → `localhost:3000`) | `README.md`, `.env.example` |
-| Persistencia | En memoria del proceso en este corte; PostgreSQL en servidor de la universidad + Redis planeados (Corte 2) | C4 contenedores, ADR-0001, ADR-0011 |
+| API Next.js standalone | Dokploy (servidor del laboratorio de la U), contenedor Docker (`PORT=3000`, `NODE_ENV=production`), dominio `laplacita-test.iscoutb.dev` | `backend/Dockerfile`, `.github/workflows/deploy-dokploy.yml`, ADR-0018 |
+| PWA de usuario (Next.js standalone) | Dokploy, contenedor Docker, dominio `laplacita-app.iscoutb.dev`; su BFF proxyea `/api/v1` al backend | `frontend/Dockerfile`, `frontend/app/api/v1/[...path]/route.js`, ADR-0017 |
+| Rutas `/api/v1/*` + dominio `backend/src/modules/*` | Dentro del contenedor del backend (mismo proceso, ESM síncrono) | `backend/app/api/v1/**/route.js`, ADR-0001/0006 |
+| Pipeline `test` + `contract-test` + `frontend` | GitHub Actions runners `ubuntu-latest` + Node 22 en cada push/PR a `master` | `.github/workflows/ci.yml` |
+| Análisis estático + Quality Gate | SonarCloud, organización `isco-utb`, proyecto `ISCOUTB_AS_202620_LaPlacita` | `sonar-project.properties`, ADR-0016 |
+| Persistencia | PostgreSQL gestionado por Dokploy en la misma red interna (implementado, condicional a `DATABASE_URL`); Redis planeado | ADR-0014, C4 contenedores, ESC-01 3/3 (evidencias-s10 §6) |
+| Desarrollo local | Puesto del desarrollador (`npm ci` → `npm run dev` → `localhost:3000/3001`) | `README.md`, `backend/.env.example`, `frontend/.env.example` |
 
 ---
 
@@ -439,6 +445,8 @@ Esta sección registra el historial de decisiones arquitectónicas significativa
 | ADR-0014 | PostgreSQL gestionado por Dokploy en la infraestructura de la universidad | Aceptado | 2026-10-11 | ESC-01, ESC-02 | [0014-base-de-datos-postgresql-dokploy.md](../adr/0014-base-de-datos-postgresql-dokploy.md) |
 | ADR-0015 | Ratificación de ediciones post-aceptación en ADR-0003, ADR-0009 y ADR-0010 | Propuesto | 2026-10-12 | Transversal | [0015-ratificacion-ediciones-post-aceptacion.md](../adr/0015-ratificacion-ediciones-post-aceptacion.md) |
 | ADR-0016 | Quality Gate de SonarCloud obligatorio y bloqueante | Aceptado | 2026-10-12 | Transversal | [0016-quality-gate-sonarcloud-bloqueante.md](../adr/0016-quality-gate-sonarcloud-bloqueante.md) |
+| ADR-0017 | Frontend de usuario con Next.js 16, TypeScript, shadcn/ui y service worker propio | Aceptado | 2026-10-13 | A-05, A-03, A-06 | [0017-frontend-nextjs-pwa-shadcn.md](../adr/0017-frontend-nextjs-pwa-shadcn.md) |
+| ADR-0018 | Retiro de Azure: todo el sistema se despliega en Dokploy (laboratorio de la U) | Aceptado | 2026-10-13 | ESC-01, transversal | [0018-retiro-de-azure-despliegue-en-dokploy.md](../adr/0018-retiro-de-azure-despliegue-en-dokploy.md) |
  
 **Relación con los bloques de construcción:**
 - ADR-0001 y ADR-0002 determinan la estructura: un único proceso con módulos de dominio separados.
