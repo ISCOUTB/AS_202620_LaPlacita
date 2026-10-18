@@ -1,8 +1,8 @@
 # 0017 — Frontend de usuario adoptando el proyecto v0 (Next.js 16, TypeScript, Tailwind)
 
-- **Estado:** propuesto (pendiente de aceptación del equipo)
+- **Estado:** aceptado (validado por el equipo el 2026-10-18; propuesto el 2026-10-13)
 - **Fecha:** 2026-10-13
-- **Decide:** Equipo LaPlacita (pendiente de confirmación)
+- **Decide:** Equipo LaPlacita
 - **Escenario relacionado:** A-05 (simplicidad del flujo de pedido), A-03 (notificación oportuna)
 - **ADR relacionados:** [ADR-0001](0001-adopcion-monolito-modular.md) — decide el backend; el stack del frontend quedó deliberadamente fuera de su alcance; [ADR-0013](0013-proyeccion-publica-pedido-sin-pin.md) (el PIN no viaja por lectura)
 - **Reemplaza el intento anterior:** un MVP propio con tema casero (12/10/2026) que el equipo descartó por calidad visual; quedó archivado en el commit WIP `157c9f3` de la rama `frontend-mvp`.

@@ -1,8 +1,8 @@
 # 0015 — Ratificación de ediciones post-aceptación en ADR-0003, ADR-0009 y ADR-0010
 
-- **Estado:** propuesto (pendiente de aceptación del equipo antes del cierre)
+- **Estado:** aceptado (validado por el equipo el 2026-10-18; propuesto el 2026-10-12)
 - **Fecha:** 2026-10-12
-- **Decide:** Equipo LaPlacita (pendiente de confirmación en revisión pre-cierre)
+- **Decide:** Equipo LaPlacita
 - **Escenario relacionado:** transversal (criterio «ADR aceptados no reescritos», matrices S8–S10)
 - **ADR relacionados:** [ADR-0003](0003-despliegue-railway-docker-sonarcloud.md), [ADR-0009](0009-despliegue-azure.md), [ADR-0010](0010-analisis-sonarcloud.md)
 

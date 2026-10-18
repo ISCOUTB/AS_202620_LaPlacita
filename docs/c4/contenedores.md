@@ -60,7 +60,7 @@ flowchart TD
 | Contenedor | Estado | Evidencia |
 | --- | --- | --- |
 | API Backend Central | Implementado (`tiendaId` en todo el flujo) | `backend/src/modules/*`, `backend/src/corte-vertical.js`, `backend/tests/aislamiento.test.js` |
-| App / Web Cliente | **Implementado** (PWA Next.js 16, diseño v0) | `frontend/` (rama `frontend-mvp`), BFF `frontend/app/api/v1/[...path]/route.js`, desplegada en Dokploy (ADR-0017) |
+| App / Web Cliente | **Implementado** (PWA Next.js 16, diseño v0) | `frontend/` (en `master` desde el 13/10), BFF `frontend/app/api/v1/[...path]/route.js`, desplegada en Dokploy (ADR-0017) |
 | Base de Datos Principal (PostgreSQL) | **Implementado** (Dokploy, condicional a `DATABASE_URL`; en su ausencia el dominio conserva Maps en memoria) | [ADR-0014](../adr/0014-base-de-datos-postgresql-dokploy.md), `backend/src/persistencia/index.js`, experimento ESC-01 3/3 ([evidencias-s10 §6](../evidencias/evidencias-s10.md)) |
 | Portal Establecimiento | Planeado (corte 3) | Las operaciones de tienda se realizan hoy con el contrato (`/docs`) |
 | Caché y Colas (Redis) | Planeado (corte 3) | ADR-0011 lo reserva para PINs/colas |

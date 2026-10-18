@@ -2,7 +2,7 @@
 
 > **Estado: en desarrollo (rama `frontend-mvp`, sin commit).** PWA de usuario del monorepo,
 > construida sobre un diseño generado con v0.dev y conectada al contrato real del backend.
-> Decisión de stack en [ADR-0017](../docs/adr/0017-frontend-nextjs-pwa-shadcn.md) (propuesto).
+> Decisión de stack en [ADR-0017](../docs/adr/0017-frontend-nextjs-pwa-shadcn.md) (aceptado el 18/10/2026).
 
 ## Stack
 
