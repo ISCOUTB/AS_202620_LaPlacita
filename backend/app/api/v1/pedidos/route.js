@@ -11,13 +11,18 @@ import { lista } from '../../../../src/persistencia/index.js';
 // asignaba `pedido-1` antes de que la rehidratación asíncrona restaurara los
 // contadores, el segundo POST repetía el id y el UPSERT sobrescribía el
 // pedido anterior — pérdida silenciosa en la ventana de arranque.
+// S11 · F-01/F-02: Idempotency-Key opcional; mismo contenido → mismo pedido, otro contenido → 409.
 export async function POST(request) {
   try {
     await lista();
     const body = await request.json();
-    const pedido = pedidos.crearPedido(body);
-    return NextResponse.json(pedidos.vistaPublica(pedido.id, pedido.tiendaId), { status: 201 });
+    const clave = request.headers.get('idempotency-key');
+    const { pedido, repetido } = pedidos.crearPedidoIdempotente(body, clave);
+    return NextResponse.json(pedidos.vistaPublica(pedido.id, pedido.tiendaId), {
+      status: 201,
+      headers: repetido ? { 'Idempotent-Replayed': 'true' } : undefined,
+    });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ error: error.message }, { status: error.conflicto ? 409 : 400 });
   }
 }

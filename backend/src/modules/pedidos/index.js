@@ -21,6 +21,10 @@ import { estadoCompartido } from '../../estado-compartido.js';
 
 const pedidosPorTienda = estadoCompartido('pedidosPorTienda', () => new Map());
 const contadoresPorTienda = estadoCompartido('contadoresPorTienda', () => new Map());
+// S11 · F-01/F-02: claves de idempotencia por tienda. Un reintento del cliente
+// con la misma `Idempotency-Key` devuelve el pedido original en vez de crear
+// otro. Vive en memoria (deuda declarada: no sobrevive a un reinicio).
+const idempotenciaPorTienda = estadoCompartido('idempotenciaPorTienda', () => new Map());
 
 function repoTienda(tiendaId) {
   if (!pedidosPorTienda.has(tiendaId)) {
@@ -78,6 +82,35 @@ function crearPedido({ productoId, cantidad, clienteId, tiendaId }) {
   escribirPedido(pedido);
   contar('pedidosCreados');
   return instantanea(pedido);
+}
+
+function huella({ productoId, cantidad, clienteId }) {
+  return JSON.stringify([productoId, cantidad, clienteId]);
+}
+
+// Sin clave se comporta como `crearPedido` (la cabecera es opcional en v1).
+// La comprobación y la creación son síncronas: dos peticiones simultáneas con
+// la misma clave no pueden intercalarse en el event loop.
+function crearPedidoIdempotente(datos, clave) {
+  if (!clave) {
+    return { pedido: crearPedido(datos), repetido: false };
+  }
+  if (!datos.tiendaId) {
+    throw new Error('tiendaId es obligatorio');
+  }
+  const llave = `${datos.tiendaId}::${clave}`;
+  const previo = idempotenciaPorTienda.get(llave);
+  if (previo) {
+    if (previo.huella !== huella(datos)) {
+      const error = new Error('Idempotency-Key reutilizada con otro contenido');
+      error.conflicto = true;
+      throw error;
+    }
+    return { pedido: instantanea(pedidoMutable(previo.pedidoId, datos.tiendaId)), repetido: true };
+  }
+  const pedido = crearPedido(datos);
+  idempotenciaPorTienda.set(llave, { pedidoId: pedido.id, huella: huella(datos) });
+  return { pedido, repetido: false };
 }
 
 function obtenerPedido(pedidoId, tiendaId) {
@@ -179,6 +212,7 @@ alCargar(restaurarEstadoDesde);
 
 export {
   crearPedido,
+  crearPedidoIdempotente,
   obtenerPedido,
   vistaPublica,
   cambiarEstado,

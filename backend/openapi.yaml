@@ -120,6 +120,13 @@ paths:
       tags: [pedidos]
       summary: Crear un nuevo pedido
       operationId: crearPedido
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: Clave única por intento lógico de compra. Un reintento con la misma clave y el mismo contenido devuelve el pedido original (S11, F-01/F-02).
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -135,6 +142,13 @@ paths:
                 $ref: '#/components/schemas/Pedido'
         '400':
           description: Datos de entrada inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+        '409':
+          description: Idempotency-Key reutilizada con otro contenido
           content:
             application/json:
               schema:
