@@ -10,10 +10,13 @@ import {
   marcarListo as marcarListoPedido,
   confirmarEntrega,
 } from '../pedidos/index.js';
+import { randomInt } from 'node:crypto';
 import { contar } from '../../metricas.js';
 
+// El PIN es la credencial del mostrador (A-06): se genera con el CSPRNG de Node,
+// no con Math.random (predecible; SonarCloud javascript:S2245). Rango 1000–9999.
 function generarPin() {
-  return String(Math.floor(1000 + Math.random() * 9000));
+  return String(randomInt(1000, 10000));
 }
 
 // A-06: límite de intentos fallidos (aspectos.md:134-138). Contador en memoria

@@ -712,3 +712,16 @@ latencia p95 con reintentos.
 | La confirmación de pago no necesita idempotencia | Confirmar dos veces el mismo pedido: la segunda responde 400 (`Transición inválida`), sin duplicar efectos |
 | El ADR-0019 aceptado no se reeditó | `git log --follow -- docs/adr/0019-no-extraccion-a-servicios.md`: sin commits del 18/10 |
 
+### Actualización (18/10/2026) — SonarCloud: PIN generado con CSPRNG
+
+Quality Gate en **OK** sobre `01c62f5` (código nuevo: cobertura 94 %, 0 bugs, 0 code smells,
+duplicación 0 %, hotspots revisados 100 %). Quedaba un issue abierto desde el 30/08:
+`javascript:S2245` (vulnerabilidad MAJOR) — el PIN del mostrador, credencial de A-06, se generaba
+con `Math.random` (predecible). `backend/src/modules/entrega/index.js` usa ahora
+`crypto.randomInt(1000, 10000)`: mismo rango, sin dependencias nuevas. Suites: 61 pruebas (2
+omitidas sin base de datos) y 28/28 de contrato.
+
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| El PIN sale de un generador criptográfico | `git grep -n "Math.random" backend/src` → sin resultados; en SonarCloud el proyecto queda con 0 vulnerabilidades tras el análisis |
+
