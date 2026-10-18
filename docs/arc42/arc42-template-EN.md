@@ -705,23 +705,24 @@ Resultado: **0/300 accesos cruzados** → se cumple el umbral de ESC-02.
   3. `npm test` (13 pruebas, incluida `tests/aislamiento.test.js`).
 - **Evidencia:** salidas capturadas en §11.3/§11.4 y en el run de CI.
 
-### 11.6. Modos de fallo parcial identificados (S11 — propuesta)
+### 11.6. Modos de fallo parcial identificados (S11 — validada el 17/10/2026)
 
 > Tabla propuesta el 2026-10-12, **validada por el equipo el 2026-10-17** (ADR-0019 en
-> aceptado; mitigaciones F-03 parciales implementadas y probadas — ver F-03). Detalle y
+> aceptado; mitigaciones F-03 parciales implementadas y probadas — ver F-03). **El 18/10/2026
+> se implementó la idempotencia de `POST /pedidos` (F-01/F-02).** Detalle y
 > diseños en [`docs/evidencias/evidencias-s11.md`](../evidencias/evidencias-s11.md).
 > **Nota del 13/10 (ADR-0018):** las menciones de «API en Azure» corresponden al despliegue
 > vigente al redactarse; desde el retiro de Azure la API sirve desde Dokploy (laboratorio de la
 > U) y los modos de fallo aplican igual al nuevo host.
 
-| # | Integración | Modo | Mitigación propuesta |
+| # | Integración | Modo | Mitigación (estado) |
 |---|---|---|---|
-| F-01 | Cliente → API en Azure | No responde / tarde → el cliente reintenta y duplica (demostrado en local 12/10) | Timeout + backoff; idempotencia en `POST /pedidos` |
-| F-02 | Cliente → API | Responde dos veces (reintento) | Clave de idempotencia propuesta |
+| F-01 | Cliente → API (Dokploy; en Azure al redactarse) | No responde / tarde → el cliente reintenta y duplica (demostrado en local 12/10) | **Implementado (18/10):** `Idempotency-Key` en `POST /pedidos` (`modules/pedidos` → `crearPedidoIdempotente`, prueba `tests/idempotencia.test.js`, que falla sin la clave). Timeout + backoff del cliente: propuesto |
+| F-02 | Cliente → API | Responde dos veces (reintento) | **Implementado (18/10):** misma clave + mismo contenido → mismo pedido (201 con `Idempotent-Replayed: true`); misma clave + otro contenido → 409 |
 | F-03 | App → PostgreSQL (ADR-0014) | Cae a medias (write aplicado, ack perdido) | **Orden garantizado e implementado (17/10):** cola FIFO por pedido con instantánea congelada (`persistencia/cola-escrituras.js`, prueba de reordenación determinista en `tests/cola-escrituras.test.js`). Persistir antes del 201 (outbox) sigue propuesto |
 | F-04 | App → PostgreSQL | No responde (caída) | Circuit breaker + degradación con reconciliación (propuestos) |
 | F-05 | CI → SonarCloud | Scanner no responde (gate bloqueante) | Timeout del paso + reintento propuestos |
-| F-06 | Routes → módulos (in-process) | No aplica hoy: sin red no hay respuesta parcial | Se propone mantener in-process (ADR-0019) |
+| F-06 | Routes → módulos (in-process) | No aplica hoy: sin red no hay respuesta parcial | Se mantiene in-process (ADR-0019, aceptado) |
 
 ---
 
@@ -803,26 +804,44 @@ mostrador.
 
 ---
 
-## 13. Fallos parciales y decisión de extracción (S11 — propuesta)
+## 13. Fallos parciales y decisión de extracción (S11)
 
-> Sección propuesta el 2026-10-12, pendiente de validación del equipo. Modos de
-> fallo en §11.6; detalle en [`docs/evidencias/evidencias-s11.md`](../evidencias/evidencias-s11.md);
-> decisión propuesta en [ADR-0019](../adr/0019-no-extraccion-a-servicios.md).
+> Sección propuesta el 2026-10-12 y **validada por el equipo el 2026-10-17**; idempotencia
+> implementada el 2026-10-18. Modos de fallo en §11.6; detalle en
+> [`docs/evidencias/evidencias-s11.md`](../evidencias/evidencias-s11.md); decisión en
+> [ADR-0019](../adr/0019-no-extraccion-a-servicios.md) (aceptado).
 
-### 13.1. Diseños propuestos (no implementados)
+### 13.1. Diseños
 
-- **Idempotencia:** cabecera `Idempotency-Key` en `POST /pedidos`; el reintento con
-  la misma clave devuelve la respuesta original sin re-ejecutar (ventana por definir).
-- **Saga coreografiada propuesta:** pedido → pago → entrega con compensaciones
-  (cancelar pedido si falla el pago; compensar si falla la entrega); outbox propuesto
-  para publicación atómica. Solo tendría sentido si se extrae algún módulo.
+- **Idempotencia (implementada, 18/10):** cabecera opcional `Idempotency-Key` en
+  `POST /pedidos`, con alcance `(tiendaId, clave)`. Misma clave y mismo contenido
+  (`productoId`, `cantidad`, `clienteId`) → se devuelve el pedido original con `201` y la
+  cabecera `Idempotent-Replayed: true`, sin crear otro; misma clave con otro contenido →
+  `409`. La comprobación y la creación son síncronas, así que dos peticiones simultáneas con
+  la misma clave no se intercalan. Sin cabecera se conserva el comportamiento v1 (cambio
+  compatible del contrato, declarado en `backend/openapi.yaml`). Las claves viven en memoria
+  durante la vida del proceso: **persistirlas en PostgreSQL queda como deuda** (un reintento
+  posterior a un reinicio volvería a crear el pedido). Prueba:
+  [`backend/tests/idempotencia.test.js`](../../backend/tests/idempotencia.test.js), que falla
+  contra la implementación sin clave (evidencia en `evidencias-s11.md` §9).
+- **Saga coreografiada (diseñada, no aplica hoy):** pedido → pago → entrega con
+  compensaciones (cancelar pedido si falla el pago; compensar si falla la entrega); outbox
+  para publicación atómica. Solo tiene sentido si se extrae algún módulo, y ADR-0019 decidió
+  no extraer: el flujo sigue siendo una sola unidad de fallo in-process.
 
-### 13.2. Decisión de extracción propuesta
+### 13.2. Decisión de extracción
 
-Se propone **no extraer ningún módulo todavía** (criterios: RES-02 equipo de 4,
+Se decidió **no extraer ningún módulo todavía** (criterios: RES-02 equipo de 4,
 RES-03 semestre, 5 tiendas, llamadas in-process sin fallos parciales, costo 0).
 Reevaluar si una tienda supera el 40 % del tráfico con SLO propio, el equipo
-supera 6–8 personas o se necesita despliegue independiente. Ver ADR-0017 (propuesto).
+supera 6–8 personas o se necesita despliegue independiente. Ver
+[ADR-0019](../adr/0019-no-extraccion-a-servicios.md) (aceptado).
+
+> **Nota sobre ADR-0019:** los rótulos «(propuesta)» que conserva el texto del ADR son la
+> redacción original del 12/10; el equipo aceptó la decisión **sin cambios** el 17/10. El ADR
+> no se reedita tras su aceptación (criterio de [ADR-0015](../adr/0015-ratificacion-ediciones-post-aceptacion.md));
+> esta nota es la aclaración vigente. Sus menciones a «cliente → Azure» se leen como el host
+> de su fecha (desde [ADR-0018](../adr/0018-retiro-de-azure-despliegue-en-dokploy.md), Dokploy).
 
 ---
 

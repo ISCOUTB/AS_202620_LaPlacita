@@ -675,3 +675,40 @@ límite fire-and-forget se conserva documentado.
 | El orden de escrituras es estructural (cola FIFO), no un artefacto de timing | `tests/cola-escrituras.test.js`: escritura lenta (40 ms) + rápida sobre la misma clave — con la implementación vieja (paralela) la rápida ganaba y la fila quedaba vieja |
 | La instantánea se congela al encolar | El test 4 muta el objeto vivo después de encolar y la escritura persiste el estado anterior |
 | El fire-and-forget se conserva (la respuesta no espera la BD) | La ruta responde 201 sin `await` de la escritura; el orden lo garantiza la cola, no la espera |
+
+---
+
+## Cierre S11 · idempotencia y alineación documental (18/10/2026)
+
+Revisión de la entrega S11 (tabla de modos de fallo con mitigación, diseño de idempotencia o
+saga, ADR de extracción) contra el estado de `master` en `9b816f1`. Los tres entregables
+existían; se corrigieron inconsistencias y se cerró el único defecto demostrado (F-01/F-02).
+
+### Hallazgos propios y su cierre
+
+| # | Hallazgo | Cierre aplicado |
+|---|---|---|
+| 1 | arc42 §13.2 citaba «ADR-0017 (propuesto)»: tras la renumeración del 17/10 el 0017 es el ADR del frontend | Referencia a [ADR-0019](docs/adr/0019-no-extraccion-a-servicios.md) (aceptado) |
+| 2 | arc42 §11.6/§13 y `evidencias-s11.md` seguían rotulados «propuesta / pendiente de validación» pese a la validación del 17/10 | Rótulos al día; la propuesta fechada del 12/10 se conserva sin reescribir |
+| 3 | ADR-0019 aceptado conserva «Decisión (propuesta)» y menciones a Azure | **No se edita** (criterio ADR-0015): aclaración en arc42 §13.2 |
+| 4 | Duplicación de pedidos por reintento (F-01/F-02) demostrada el 12/10 y sin mitigar | `Idempotency-Key` en `POST /pedidos`: `crearPedidoIdempotente` (`backend/src/modules/pedidos/index.js`), ruta con `201` + `Idempotent-Replayed` y `409`, prueba `backend/tests/idempotencia.test.js` |
+| 5 | Diseño de idempotencia sin alcance, conflicto, concurrencia ni retención; afirmaba «contrato sin cambios» | `evidencias-s11.md` §3.1 completo; cabecera opcional y `409` declarados en `backend/openapi.yaml` (cambio compatible con v1) |
+| 6 | `evidencias-s11.md` con dos secciones «## 7» | La actualización del 17/10 pasa a §8; nueva §9 con la evidencia del 18/10 |
+| 7 | README sin bloque de estado S11 | Bloque «Semana 11» añadido |
+| 8 | `docs/ia.md`: línea en blanco que cortaba la tabla y fila del 17/10 fuera de la bitácora (§3) | Tabla continua; fila del 17/10 reubicada en §1 y fila del 18/10 añadida |
+
+Suites tras el cambio (local, sin `DATABASE_URL`): `npm test` 61 pruebas (59 pasan, 2
+omitidas que requieren PostgreSQL) y `npm run contract-test` 28/28.
+
+**Deuda que sigue declarada:** persistencia de las claves de idempotencia, envío de la cabecera
+desde la PWA, outbox (F-03), circuit breaker (F-04), reintento del scanner (F-05) y medición de
+latencia p95 con reintentos.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| La prueba de idempotencia falla sin la mitigación | Hacer que `crearPedidoIdempotente` devuelva siempre `crearPedido(datos)` y correr `node --test tests/idempotencia.test.js`: 2/4 en rojo (`pedido-1` vs `pedido-2`); evidencia en `evidencias-s11.md` §9 |
+| El contrato v1 sigue siendo compatible | `POST /api/v1/pedidos` sin cabecera crea un pedido nuevo en cada llamada, como antes (prueba «sin clave se conserva el comportamiento v1») |
+| La confirmación de pago no necesita idempotencia | Confirmar dos veces el mismo pedido: la segunda responde 400 (`Transición inválida`), sin duplicar efectos |
+| El ADR-0019 aceptado no se reeditó | `git log --follow -- docs/adr/0019-no-extraccion-a-servicios.md`: sin commits del 18/10 |
+

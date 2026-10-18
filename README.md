@@ -287,6 +287,16 @@ La documentación del proyecto sigue rigurosamente los lineamientos del curso y 
 * **Entorno con base de datos** (12/10/2026): Dokploy despliega el backend en el mismo servidor del PostgreSQL, por red interna — gate de pruebas → webhook de redeploy → health check, vía [`deploy-dokploy.yml`](.github/workflows/deploy-dokploy.yml)
 * **Retiro de Azure · todo en Dokploy** (13/10/2026): el servidor del laboratorio de la universidad pasa a ser el **único despliegue** — backend, PWA y PostgreSQL en la misma red interna, sin firewall y a costo 0; decisión en [ADR-0018](docs/adr/0018-retiro-de-azure-despliegue-en-dokploy.md), que reemplaza al ADR-0009. ESC-01 queda acreditado contra esta infraestructura (3/3); el pendiente "Fase D contra Azure" queda sin objeto — detalle en [`correcciones.md`](correcciones.md) §Retiro de Azure
 
+**Semana 11 — Fallos parciales, idempotencia y decisión de extracción (17-18/10/2026)**
+
+* Tabla de modos de fallo F-01…F-06 con su mitigación y estado en arc42 §11.6 y [`docs/evidencias/evidencias-s11.md`](docs/evidencias/evidencias-s11.md) (validada por el equipo el 17/10)
+* **Idempotencia implementada** (18/10): cabecera opcional `Idempotency-Key` en `POST /pedidos` — mismo contenido → mismo pedido, otro contenido → `409`; declarada en [`backend/openapi.yaml`](backend/openapi.yaml) y probada en [`backend/tests/idempotencia.test.js`](backend/tests/idempotencia.test.js), que falla sin la clave (cierra F-01/F-02)
+* Saga coreografiada diseñada (arc42 §13.1); no aplica mientras no se extraiga ningún módulo
+* Decisión: **no extraer** módulos — [ADR-0019](docs/adr/0019-no-extraccion-a-servicios.md) (aceptado), con criterios de reevaluación declarados
+* Fix D2 de la auditoría S10: orden de escrituras por pedido garantizado ([`backend/src/persistencia/cola-escrituras.js`](backend/src/persistencia/cola-escrituras.js))
+* Suites: `npm test` **61 pruebas** (2 omitidas sin base de datos en local) y `npm run contract-test` **28/28**
+* Deuda declarada: persistir las claves de idempotencia, envío de la cabecera desde la PWA, outbox, circuit breaker y reintento del scanner
+
 ---
 
 ## Cómo ejecutar

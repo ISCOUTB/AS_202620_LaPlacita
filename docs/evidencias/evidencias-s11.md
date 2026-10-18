@@ -1,6 +1,9 @@
-# Evidencia S11 — Fallos parciales y decisión de extracción (propuesta)
+# Evidencia S11 — Fallos parciales y decisión de extracción
 
 Documento de propuestas del 2026-10-12, pendiente de validación del equipo.
+**Estado vigente: validado por el equipo el 17/10/2026 (§8); idempotencia de `POST /pedidos`
+implementada y probada el 18/10/2026 (§9).** Las secciones 1–7 se conservan como la propuesta
+fechada del 12/10 (no se reescriben).
 **Nota del 13/10 (ADR-0018):** las menciones de «API en Azure» corresponden al despliegue
 vigente al redactarse; desde el retiro de Azure la API sirve desde Dokploy (laboratorio de la
 U) — los modos de fallo aplican igual al nuevo host.
@@ -45,7 +48,7 @@ El mismo payload crea dos pedidos distintos y ambos recuperables: un reintento
 del cliente duplica el pedido. Mitigación (propuesta, §3): `Idempotency-Key`.
 Suite del backend en el mismo estado: `npm test` → `pass 51 / fail 0`.
 
-## 3. Diseño de idempotencia propuesto (no implementado)
+## 3. Diseño de idempotencia (propuesto el 12/10; implementado el 18/10 — ver §3.1 y §9)
 
 - Cabecera `Idempotency-Key` en `POST /pedidos` (y reintentos de `POST /pagos/{pedidoId}/confirmar`).
 - El reintento con la misma clave devuelve la respuesta original sin re-ejecutar
@@ -53,6 +56,20 @@ Suite del backend en el mismo estado: `npm test` → `pass 51 / fail 0`.
   PostgreSQL (ventana de retención por definir por el equipo).
 - Criterio de aceptación propuesto: doble `POST` con la misma clave crea un
   solo pedido (prueba pendiente de escribir).
+
+### 3.1. Diseño final (decidido e implementado el 18/10/2026)
+
+| Aspecto | Decisión |
+|---|---|
+| Operación | `POST /pedidos`. `POST /pagos/{pedidoId}/confirmar` no lo necesita: la máquina de estados ya rechaza confirmar dos veces (transición no secuencial → 400), así que el reintento no duplica efectos |
+| Cabecera | `Idempotency-Key`, **opcional** (sin ella se conserva el comportamiento v1) |
+| Alcance de la clave | `(tiendaId, clave)` — la misma clave en otra tienda no colisiona (coherente con RES-05) |
+| Mismo contenido | `productoId`, `cantidad` y `clienteId` iguales → se devuelve el pedido original, `201` + cabecera `Idempotent-Replayed: true`, sin crear otro |
+| Otro contenido | Misma clave con contenido distinto → `409` (`Idempotency-Key reutilizada con otro contenido`) |
+| Concurrencia | La comprobación y la creación son síncronas tras `await lista()`: dos peticiones simultáneas con la misma clave no se intercalan en el event loop |
+| Retención | En memoria durante la vida del proceso (`estadoCompartido('idempotenciaPorTienda')`). **Deuda:** persistir las claves en PostgreSQL; tras un reinicio, un reintento con una clave anterior crearía otro pedido |
+| Contrato | Cambio **compatible** en `backend/openapi.yaml`: parámetro de cabecera opcional + respuesta `409` (corrige lo dicho en §6) |
+| Cliente | La PWA aún no envía la cabecera ni reintenta: generar la clave por intento de compra y reutilizarla en el reintento queda como deuda del frontend |
 
 ## 4. Diseño de saga propuesto (no implementado)
 
@@ -81,7 +98,9 @@ Suite del backend en el mismo estado: `npm test` → `pass 51 / fail 0`.
 - arc42 §11.6 (tabla, propuesta) + §13 (diseños y decisión, propuestos).
 - C4: sin cambios propuestos (sin contenedor nuevo mientras no se extraiga).
 - Contrato `backend/openapi.yaml`: sin cambios propuestos (la idempotencia usaría
-  cabecera, no nueva ruta).
+  cabecera, no nueva ruta). *Corrección del 18/10: añadir la cabecera sí cambia el
+  contrato (parámetro opcional + respuesta `409`); el cambio es compatible con v1 y quedó
+  declarado en `backend/openapi.yaml` (§3.1).*
 
 ## 7. Lo que falta para cerrar S11 (equipo)
 
@@ -93,7 +112,7 @@ Suite del backend en el mismo estado: `npm test` → `pass 51 / fail 0`.
 
 ---
 
-## 7. Actualización (17/10/2026) — validación del equipo y primera mitigación implementada
+## 8. Actualización (17/10/2026) — validación del equipo y primera mitigación implementada
 
 El equipo validó las propuestas de este documento y el [ADR-0019](../adr/0019-no-extraccion-a-servicios.md)
 pasó a **aceptado**. Además se implementó la corrección que la auditoría de deriva del cierre S10
@@ -115,3 +134,40 @@ pasó a **aceptado**. Además se implementó la corrección que la auditoría de
 **Qué sigue propuesto (deuda declarada, no implementada):** idempotencia de `POST /pedidos`
 (§3), outbox (persistir antes del 201), circuit breaker con degradación (F-04), reintento del
 scanner (F-05). `Backend suite: 55 pruebas + 28 de contrato en verde.`
+
+---
+
+## 9. Actualización (18/10/2026) — idempotencia de `POST /pedidos` implementada (F-01/F-02)
+
+Cierra el defecto demostrado en §2.1 (mismo payload → dos pedidos). Diseño en §3.1.
+
+| Archivo | Cambio |
+|---|---|
+| `backend/src/modules/pedidos/index.js` | `crearPedidoIdempotente(datos, clave)` y almacén `idempotenciaPorTienda` |
+| `backend/app/api/v1/pedidos/route.js` | Lee `Idempotency-Key`; `201` + `Idempotent-Replayed: true` en el reintento; `409` ante conflicto |
+| `backend/openapi.yaml` | Parámetro de cabecera opcional y respuesta `409` en `POST /pedidos` |
+| `backend/tests/idempotencia.test.js` | 4 pruebas: doble POST con la misma clave, conflicto de contenido, sin clave (v1), alcance por tienda |
+
+**La prueba falla sin la mitigación.** Con `crearPedidoIdempotente` ignorando la clave
+(implementación equivalente a la anterior), ejecutado el 18/10/2026:
+
+```text
+node --test tests/idempotencia.test.js
+✖ doble POST con la misma clave crea un solo pedido
+  AssertionError: el reintento debe devolver el pedido original
+    actual: 'pedido-1'
+    expected: 'pedido-2'
+✖ la misma clave con otro contenido es un conflicto
+  AssertionError: Missing expected exception.
+ℹ pass 2
+ℹ fail 2
+```
+
+Con la implementación: `pass 4 / fail 0`. Suites completas en local (sin `DATABASE_URL`):
+`npm test` → **61 pruebas, 59 pasan, 2 omitidas** (las de persistencia que requieren
+PostgreSQL; corren en CI) y `npm run contract-test` → **28/28**.
+
+**Sigue como deuda declarada (no implementada):** persistencia de las claves de
+idempotencia, envío de la cabecera desde la PWA, outbox (persistir antes del 201, F-03),
+circuit breaker con degradación (F-04), reintento del scanner (F-05) y la medición de
+latencia p95 con reintentos propuesta en §7.
