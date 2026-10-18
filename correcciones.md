@@ -725,3 +725,27 @@ omitidas sin base de datos) y 28/28 de contrato.
 |---|---|
 | El PIN sale de un generador criptográfico | `git grep -n "Math.random" backend/src` → sin resultados; en SonarCloud el proyecto queda con 0 vulnerabilidades tras el análisis |
 
+### Actualización (18/10/2026) — producción en `master` y ADR pendientes aceptados
+
+**Dokploy observa `master`.** La tarea del equipo anotada en «Retiro de Azure» queda hecha: las
+apps del backend y de la PWA en Dokploy pasaron de las ramas `dokploy-test` / `frontend-mvp` a
+`master`. Antes del cambio, el workflow `deploy-dokploy.yml` terminaba en verde pero el webhook
+reconstruía la rama vieja: el contrato servido en producción no traía `Idempotency-Key` tras dos
+despliegues (el health check del workflow solo mira `/health` y no lo detecta). Verificado tras
+el cambio: `GET /api/v1/openapi` en `laplacita-test.iscoutb.dev` incluye `Idempotency-Key` y la
+respuesta `409`; `/health`, `/docs` y el catálogo en 200; la PWA (`/`, tienda, mis-pedidos,
+`sw.js`, manifest) en 200 y su BFF responde `/api/v1/health`.
+
+**ADR-0015 y ADR-0017 aceptados por el equipo.** Seguían en «propuesto». Pasar de propuesto a
+aceptado es el ciclo normal del ADR, no una edición post-aceptación: solo cambian las líneas
+`Estado` y `Decide`; contexto, alternativas y decisión quedan intactos. Referencias vivas
+alineadas: tabla de ADR del arc42 (ADR-0015 → Aceptado; ADR-0017 ya figuraba aceptado y el ADR
+decía propuesto), `README.md`, `frontend/README.md` y `docs/c4/contenedores.md` (ya no cita la
+rama `frontend-mvp`). Las secciones fechadas de este archivo que dicen «propuesto» se conservan
+como registro de su fecha.
+
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Producción construye `master`, no la rama vieja | `curl -s https://laplacita-test.iscoutb.dev/api/v1/openapi \| grep -c Idempotency-Key` → mayor que 0 |
+| La aceptación no reescribió los ADR | `git diff` del commit: en ADR-0015 y ADR-0017 solo cambian las líneas `Estado` y `Decide` |
+
