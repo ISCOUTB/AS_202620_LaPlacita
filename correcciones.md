@@ -776,3 +776,36 @@ el backend local (crear pedido, avanzarlo a Listo y seguirlo), sin desborde hori
 | «Abierta/Cerrada» usa la hora de Colombia, no la del dispositivo | `estaAbierta` en `frontend/lib/stores.ts` calcula con `timeZone: "America/Bogota"` |
 | El PIN no se muestra todavía | Llega con la fase 2 (endpoint autenticado, S13); hoy el seguimiento muestra el código de retiro |
 
+---
+
+## Código corto de pedido · A01 … Z99 (18/10/2026)
+
+Pedido del docente: los pedidos deben poder nombrarse de forma corta para el mostrador, no como
+`pedido-347`. Decisión en [ADR-0020](docs/adr/0020-codigo-corto-de-pedido.md).
+
+| Cambio | Detalle |
+|---|---|
+| Regla | Campo nuevo `codigo`: letra + dos dígitos (A01 → A99 → B01 … Z99), sin I ni O; por tienda; se reinicia cada día en hora de Colombia; nunca repite el código de un pedido no entregado. El `pedidoId` no cambia |
+| Backend | `backend/src/modules/pedidos/codigo.js` (reglas puras) y asignación en `crearPedido`; rehidratación del cursor para que un reinicio a mitad del día no vuelva a A01 |
+| Base de datos | Columnas `codigo` y `creado_en` con `ADD COLUMN IF NOT EXISTS`: la tabla de Dokploy se migra sola al arrancar, sin perder filas (las viejas quedan con NULL) |
+| Contrato | `codigo` y `creadoEn` en el schema `Pedido` (cambio compatible) |
+| Frontend | El seguimiento muestra el código en grande («Tu pedido A07») y Mis pedidos lo muestra como etiqueta; pedidos viejos muestran su `pedidoId` |
+
+**Defecto encontrado y corregido durante la prueba con PostgreSQL local.** La prueba nueva
+reiniciaba el estado en memoria y creaba pedidos con la base activa: en CI, donde todos los
+archivos de prueba comparten la misma base, eso pisaba filas de `persistencia.test.js`. La
+prueba ahora desactiva la persistencia en su propio proceso. Además, el UPSERT conservaba el
+código viejo con `COALESCE` cuando un `pedidoId` se reutilizaba; ahora guarda siempre el del
+pedido actual, igual que el resto de las columnas.
+
+Suites: `npm test` 71 pruebas (70 con PostgreSQL local; 2 omitidas sin base) y
+`npm run contract-test` 28/28. Migración probada sobre una tabla con el esquema anterior y una
+fila vieja: la fila se conserva y los pedidos nuevos reciben A01, A02…
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| La migración no borra pedidos existentes | Arrancar el backend contra una tabla con el esquema anterior: las filas viejas siguen y tienen `codigo` NULL |
+| El código no se repite entre pedidos activos de una tienda | `tests/codigo-pedido.test.js`: «salta los códigos de pedidos que aún no se entregan» |
+| El día se cuenta en hora de Colombia | `tests/codigo-pedido.test.js`: 04:59 UTC del 19/10 todavía es 18/10 |
+

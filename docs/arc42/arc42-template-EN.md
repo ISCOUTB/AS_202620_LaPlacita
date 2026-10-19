@@ -448,6 +448,7 @@ Esta sección registra el historial de decisiones arquitectónicas significativa
 | ADR-0017 | Frontend de usuario con Next.js 16, TypeScript, shadcn/ui y service worker propio | Aceptado | 2026-10-13 | A-05, A-03, A-06 | [0017-frontend-nextjs-pwa-shadcn.md](../adr/0017-frontend-nextjs-pwa-shadcn.md) |
 | ADR-0018 | Retiro de Azure: todo el sistema se despliega en Dokploy (laboratorio de la U) | Aceptado | 2026-10-13 | ESC-01, transversal | [0018-retiro-de-azure-despliegue-en-dokploy.md](../adr/0018-retiro-de-azure-despliegue-en-dokploy.md) |
 | ADR-0019 | No extracción de módulos a servicios independientes (evaluación S11) | Aceptado | 2026-10-12 | Transversal | [0019-no-extraccion-a-servicios.md](../adr/0019-no-extraccion-a-servicios.md) |
+| ADR-0020 | Código corto de pedido por tienda y por día (A01 … Z99) | Aceptado | 2026-10-18 | ESC-05, ESC-02, ESC-01 | [0020-codigo-corto-de-pedido.md](../adr/0020-codigo-corto-de-pedido.md) |
  
 **Relación con los bloques de construcción:**
 - ADR-0001 y ADR-0002 determinan la estructura: un único proceso con módulos de dominio separados.
