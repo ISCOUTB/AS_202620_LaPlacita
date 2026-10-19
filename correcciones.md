@@ -749,3 +749,30 @@ como registro de su fecha.
 | Producción construye `master`, no la rama vieja | `curl -s https://laplacita-test.iscoutb.dev/api/v1/openapi \| grep -c Idempotency-Key` → mayor que 0 |
 | La aceptación no reescribió los ADR | `git diff` del commit: en ADR-0015 y ADR-0017 solo cambian las líneas `Estado` y `Decide` |
 
+---
+
+## Frontend · fase 1: identidad visual UTB (18/10/2026)
+
+Primera fase del plan S12–S15 (Miguel, Front): la PWA deja la estética de la plantilla v0
+(papel, tinta y rojo) y adopta la **identidad actual de la UTB**. Solo toca `frontend/`; el
+contrato y el backend no cambian.
+
+| Cambio | Detalle |
+|---|---|
+| Marca | Colores de la marca renovada en sept. 2023 (estilos de utb.edu.co): azul `#093AD8`, azul noche `#15295A`, violeta `#3B0DC1`, celeste `#6EC1E4`. El manual de 2021 (verde y morado) ya no es la cara pública. Sin logo oficial de la UTB (requiere permiso de Comunicaciones) |
+| Tipografía | DM Sans (títulos) y Rubik (texto), las del sitio de la UTB, **auto-hospedadas** en `frontend/app/fonts/` por el mismo motivo del defecto del 13/10 (el build en Dokploy no alcanza Google) |
+| Sistema visual | Tokens en `frontend/app/globals.css` sobre Tailwind (reemplazan 1.816 líneas de CSS de v0); componentes base en `frontend/components/utb/`; cada estado del pedido con su color y su palabra |
+| Pantallas | Inicio con saludo y tiendas abiertas primero (hora de Colombia, `lib/stores.ts`), nueva ruta `/tiendas`, menú con agotados al final, carrito, seguimiento con línea de tiempo y mis pedidos. Patrones de la UTB App: degradado azul, tarjetas redondeadas y barra inferior en el celular |
+| PWA | Íconos y manifest nuevos; caché del service worker a `laplacita-v5` para que los íconos viejos no queden guardados |
+| Limpieza | Se retiraron componentes, imágenes, íconos y fuentes de v0 sin uso |
+
+Verificado en local: lint y build sin errores; recorrido completo en celular y escritorio contra
+el backend local (crear pedido, avanzarlo a Listo y seguirlo), sin desborde horizontal.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Las fuentes no dependen de Google en el build | `grep -r "next/font/google" frontend/` → sin resultados; `frontend/app/layout.tsx` usa `next/font/local` |
+| «Abierta/Cerrada» usa la hora de Colombia, no la del dispositivo | `estaAbierta` en `frontend/lib/stores.ts` calcula con `timeZone: "America/Bogota"` |
+| El PIN no se muestra todavía | Llega con la fase 2 (endpoint autenticado, S13); hoy el seguimiento muestra el código de retiro |
+
