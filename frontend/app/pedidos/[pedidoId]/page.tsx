@@ -5,6 +5,7 @@ import Link from "next/link"
 import { ArrowLeft, Check } from "lucide-react"
 import { Aviso } from "@/components/utb/aviso"
 import { Boton } from "@/components/utb/boton"
+import { CodigoPedido } from "@/components/utb/codigo-pedido"
 import { EstadoChip } from "@/components/utb/estado-chip"
 import { obtenerNotificaciones, obtenerPedido, type EstadoPedido, type Notificacion } from "@/lib/api"
 import { ESTADOS, INFO_ESTADO, indiceEstado } from "@/lib/estados"
@@ -26,6 +27,7 @@ export default function SeguimientoPage({
   const [pedidoId, setPedidoId] = useState("")
   const [tiendaId, setTiendaId] = useState("")
   const [estado, setEstado] = useState<EstadoPedido | null>(null)
+  const [codigo, setCodigo] = useState<string | null>(null)
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([])
   const [error, setError] = useState<string | null>(null)
   const temporizador = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -49,6 +51,7 @@ export default function SeguimientoPage({
       // en el cuerpo del efecto). El polling se detiene al llegar a Entregado.
       const pedido = await obtenerPedido(pedidoId, tiendaId)
       setEstado(pedido.estado)
+      setCodigo(pedido.codigo ?? null)
       setError(null)
       if (pedido.estado === "Entregado" && temporizador.current) {
         clearInterval(temporizador.current)
@@ -90,7 +93,7 @@ export default function SeguimientoPage({
             Mis pedidos
           </Link>
           <p className="text-sm text-white/75">
-            {nombreTienda} · <span className="font-mono">{pedidoId}</span>
+            {nombreTienda} · <CodigoPedido codigo={codigo} pedidoId={pedidoId} />
           </p>
           <h1 className="font-display text-3xl font-extrabold">{estado ?? "Consultando…"}</h1>
           {estado && <p className="text-white/85">{INFO_ESTADO[estado].detalle}</p>}
@@ -111,21 +114,28 @@ export default function SeguimientoPage({
         {estado && (
           <>
             <section
-              aria-label="Código de retiro"
+              aria-label="Código del pedido"
               className={cn(
                 "flex flex-col items-center gap-2 rounded-3xl p-6 text-center shadow-tarjeta",
                 listo ? "degradado-utb text-white" : "bg-superficie",
               )}
             >
               <p className={cn("text-xs font-medium tracking-widest uppercase", listo ? "text-white/80" : "text-tenue")}>
-                Código de retiro
+                Tu pedido
               </p>
-              <p className={cn("font-mono text-3xl font-bold", listo ? "text-white" : "text-azul")}>{pedidoId}</p>
+              <CodigoPedido
+                codigo={codigo}
+                pedidoId={pedidoId}
+                className={cn(codigo ? "text-6xl" : "text-3xl font-bold", listo ? "text-white" : "text-azul")}
+              />
               <p className={cn("text-sm", listo ? "text-white/85" : "text-suave")}>
                 {estado === "Entregado"
                   ? "Este pedido ya fue entregado."
-                  : `Muéstralo en el mostrador de ${nombreTienda}${listo ? ": ya está listo." : " cuando esté listo."}`}
+                  : `Dilo en el mostrador de ${nombreTienda}${listo ? ": ya está listo." : " cuando esté listo."}`}
               </p>
+              {codigo && (
+                <p className={cn("font-mono text-xs", listo ? "text-white/60" : "text-tenue")}>Referencia: {pedidoId}</p>
+              )}
             </section>
 
             <section aria-labelledby="progreso-titulo" className="rounded-2xl bg-superficie p-5 shadow-tarjeta">

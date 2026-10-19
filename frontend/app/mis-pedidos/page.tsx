@@ -5,6 +5,7 @@ import Link from "next/link"
 import { ChevronRight, ReceiptText, RefreshCw } from "lucide-react"
 import { Aviso } from "@/components/utb/aviso"
 import { BotonEnlace } from "@/components/utb/boton"
+import { CodigoPedido } from "@/components/utb/codigo-pedido"
 import { EstadoChip } from "@/components/utb/estado-chip"
 import { obtenerPedido, type EstadoPedido } from "@/lib/api"
 import { formatCOP } from "@/lib/format"
@@ -15,7 +16,7 @@ import { getStoreByTiendaId } from "@/lib/stores"
 // consulta en vivo contra el contrato — el pedido mismo vive en el backend.
 export default function MisPedidosPage() {
   const [locales, setLocales] = useState<PedidoGuardado[]>([])
-  const [estados, setEstados] = useState<Record<string, EstadoPedido | null>>({})
+  const [estados, setEstados] = useState<Record<string, { estado: EstadoPedido | null; codigo: string | null }>>({})
   const [cargando, setCargando] = useState(true)
 
   const cargar = useCallback(() => {
@@ -24,8 +25,8 @@ export default function MisPedidosPage() {
     Promise.all(
       pedidos.map((p) =>
         obtenerPedido(p.pedidoId, p.tiendaId)
-          .then((pedido) => [p.pedidoId, pedido.estado] as const)
-          .catch(() => [p.pedidoId, null] as const),
+          .then((pedido) => [p.pedidoId, { estado: pedido.estado, codigo: pedido.codigo ?? p.codigo ?? null }] as const)
+          .catch(() => [p.pedidoId, { estado: null, codigo: p.codigo ?? null }] as const),
       ),
     ).then((pares) => {
       setLocales(pedidos)
@@ -81,16 +82,27 @@ export default function MisPedidosPage() {
                 href={`/pedidos/${p.pedidoId}?tiendaId=${encodeURIComponent(p.tiendaId)}`}
                 className="group flex items-center gap-4 rounded-2xl bg-superficie p-4 shadow-tarjeta transition-transform hover:-translate-y-0.5"
               >
+                {estados[p.pedidoId]?.codigo && (
+                  <span className="grid h-14 min-w-16 shrink-0 place-items-center rounded-xl bg-azul/10 px-2 text-azul">
+                    <CodigoPedido codigo={estados[p.pedidoId]?.codigo} pedidoId={p.pedidoId} className="text-2xl" />
+                  </span>
+                )}
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <p className="font-medium text-tinta">
                     {p.productoNombre} × {p.cantidad}
                   </p>
                   <p className="text-sm text-tenue">
-                    {getStoreByTiendaId(p.tiendaId)?.name ?? p.tiendaId} · <span className="font-mono">{p.pedidoId}</span>
+                    {getStoreByTiendaId(p.tiendaId)?.name ?? p.tiendaId}
+                    {!estados[p.pedidoId]?.codigo && (
+                      <>
+                        {" "}
+                        · <span className="font-mono">{p.pedidoId}</span>
+                      </>
+                    )}
                   </p>
                   <p className="font-display font-bold text-azul">{formatCOP(p.total)}</p>
                 </div>
-                <EstadoChip estado={estados[p.pedidoId]} />
+                <EstadoChip estado={estados[p.pedidoId]?.estado} />
                 <ChevronRight aria-hidden="true" className="size-5 shrink-0 text-tenue" />
               </Link>
             </li>

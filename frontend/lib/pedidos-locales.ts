@@ -8,6 +8,8 @@ const CLAVE_CLIENTE = "laplacita.cliente-id"
 
 export interface PedidoGuardado {
   pedidoId: string
+  /** Código corto del pedido (A01 …); ausente en pedidos guardados antes de existir. */
+  codigo?: string | null
   tiendaId: string
   productoId: string
   productoNombre: string
@@ -36,6 +38,7 @@ export function registrarPedidoLocal(pedido: Pedido, productoNombre: string): vo
   const todos = leer().filter((p) => p.pedidoId !== pedido.id)
   todos.push({
     pedidoId: pedido.id,
+    codigo: pedido.codigo ?? null,
     tiendaId: pedido.tiendaId,
     productoId: pedido.productoId,
     productoNombre,

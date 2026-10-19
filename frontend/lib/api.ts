@@ -24,6 +24,9 @@ export type EstadoPedido = "Recibido" | "En preparación" | "Listo" | "Entregado
 
 export interface Pedido {
   id: string
+  /** Código corto para el mostrador (A01 … Z99, por tienda y por día). Null en pedidos viejos. */
+  codigo?: string | null
+  creadoEn?: string | null
   clienteId: string
   tiendaId: string
   productoId: string
