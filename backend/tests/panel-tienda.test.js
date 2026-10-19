@@ -25,6 +25,13 @@ test('las cuentas de tienda se crean desde CUENTAS_TIENDA y las inválidas se de
   assert.equal(usuario.tiendaId, 'tienda-01');
 });
 
+test('las comillas alrededor de CUENTAS_TIENDA no invalidan las cuentas', () => {
+  const leidas = identidad.leerCuentasTienda('"tienda-02|admin|admin.asao@demo.test|clave-asao-01|Admin Asa\'o"');
+  assert.equal(leidas.length, 1);
+  assert.equal(leidas[0].tiendaId, 'tienda-02');
+  assert.equal(leidas[0].nombre, "Admin Asa'o");
+});
+
 test('asegurar las cuentas dos veces no duplica ni cambia la contraseña', async () => {
   await identidad.asegurarCuentasTienda([
     { tiendaId: 'tienda-01', rol: 'admin', correo: 'admin.meson@demo.test', contrasena: 'otra-clave-99', nombre: 'X' },

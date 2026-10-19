@@ -153,7 +153,11 @@ const TIENDA = /^tienda-\d{2}$/;
  * creada (cambiar la contraseña en la variable no la cambia en la base).
  */
 export function leerCuentasTienda(texto = process.env.CUENTAS_TIENDA ?? '') {
+  // Algunos paneles (Dokploy incluido) pueden pasar las comillas del valor
+  // tal cual: se quitan para que `"tienda-01|…"` no invalide la primera cuenta.
   return texto
+    .trim()
+    .replace(/^(['"])([\s\S]*)\1$/, '$2')
     .split(';')
     .map((linea) => linea.trim())
     .filter(Boolean)
