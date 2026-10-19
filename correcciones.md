@@ -809,3 +809,42 @@ fila vieja: la fila se conserva y los pedidos nuevos reciben A01, A02…
 | El código no se repite entre pedidos activos de una tienda | `tests/codigo-pedido.test.js`: «salta los códigos de pedidos que aún no se entregan» |
 | El día se cuenta en hora de Colombia | `tests/codigo-pedido.test.js`: 04:59 UTC del 19/10 todavía es 18/10 |
 
+---
+
+## Login y PIN visible para su dueño (18/10/2026)
+
+Cierra el pendiente de seguridad declarado en «Post-cierre S10 §3» (identidad, opción B: JWT)
+para el lado del cliente, y hace real el flujo «dicta tu PIN en el mostrador». Decisiones en
+[ADR-0021](docs/adr/0021-identidad-cuentas-y-sesion-jwt.md) y
+[ADR-0022](docs/adr/0022-pin-visible-para-su-dueno.md).
+
+| Cambio | Detalle |
+|---|---|
+| Cuentas | Módulo `identidad` y tabla `usuarios`: registro con correo @utb.edu.co, contraseñas con scrypt, sesión JWT HS256 de 7 días, 5 intentos fallidos en 15 min bloquean, mismo mensaje y mismo tiempo para correo inexistente o contraseña errada. Sin dependencias nuevas (`node:crypto`) |
+| API | `POST /auth/registro`, `POST /auth/sesion`, `GET /auth/yo`, `GET /pedidos` (pedidos de la cuenta) y `GET /pedidos/{pedidoId}/pin` (solo el dueño, solo en Listo). Con sesión, `POST /pedidos` toma al dueño del token |
+| Frontend | Página `/cuenta` (ingresar, crear cuenta, perfil), pestaña «Cuenta» en la barra, el carrito exige sesión, Mis pedidos de la cuenta y tarjeta «Tu PIN de retiro» en el seguimiento |
+| Seguridad del navegador | Token en cookie httpOnly que maneja el BFF (`/api/sesion`); el proxy la traduce a `Authorization: Bearer`, no reenvía cookies y no deja pasar las rutas que devuelven el token |
+| Contrato | Rutas nuevas, esquema de seguridad `sesion` (Bearer JWT) y esquemas `Usuario`, `Sesion`, `PinPedido`. Las aserciones S9 siguen en verde: la vista pública del pedido no tiene PIN |
+
+**Configuración requerida en Dokploy (backend):** variable `JWT_SECRET` con al menos 32
+caracteres aleatorios. Sin ella, en producción el inicio de sesión responde error a propósito
+(no se firma con un secreto adivinable).
+
+Verificado: `npm test` 80 pruebas (79 con PostgreSQL 18 local) y `npm run contract-test` 28/28;
+lint y build del frontend; recorrido completo en local (crear cuenta → pedir → Listo → PIN en
+pantalla → validar ese PIN en el mostrador → Entregado, y el PIN desaparece). Pruebas
+negativas por HTTP: otra cuenta (404), sin sesión (401), token falso (401), lectura pública
+sin PIN, correo de otro dominio rechazado y `document.cookie` vacío en el navegador.
+
+**Pendiente declarado:** las rutas de tienda (confirmar pago, marcar listo, validar PIN) aún no
+exigen sesión, y `POST /entrega/{id}/listo` todavía devuelve el PIN al mostrador; ambas cosas
+se cierran con el panel de tiendas (S14). Sin recuperación de contraseña (requiere correo).
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| El navegador nunca ve el token | Con sesión iniciada, en la consola del navegador `document.cookie` no muestra `lp_sesion` (es httpOnly) |
+| Otra cuenta no puede ver un PIN ajeno | Con otra cuenta, `GET /api/v1/pedidos/{id}/pin?tiendaId=…` responde 404 |
+| La base nunca guarda contraseñas | `SELECT hash FROM usuarios` → solo valores `scrypt$16384$…` |
+| No se puede adivinar qué correos tienen cuenta | Correo inexistente y contraseña errada devuelven el mismo mensaje 401 |
+
