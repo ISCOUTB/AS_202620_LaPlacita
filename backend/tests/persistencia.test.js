@@ -144,3 +144,17 @@ test('con persistencia, las cuentas sobreviven al reinicio (ADR-0021)', async (t
   assert.equal(usuario.correo, correo);
   assert.equal('hash' in usuario, false);
 });
+
+test('con persistencia, un cambio de menú del panel sobrevive al reinicio (ADR-0023)', async (t) => {
+  if (!CON_BASE) {
+    t.skip('requiere DATABASE_URL (service container de PostgreSQL en CI)');
+    return;
+  }
+  const catalogo = await import('../src/modules/catalogo/index.js');
+  const precio = 4000 + Math.floor(Math.random() * 1000);
+  await catalogo.actualizarProducto('prod-005', 'tienda-01', { precio }, 'admin');
+
+  // "Reinicio": la caché del catálogo se reconstruye desde la tabla productos.
+  catalogo.restaurarProductosDesde(await persistencia.cargarProductos());
+  assert.equal(catalogo.obtenerProducto('prod-005', 'tienda-01').precio, precio);
+});

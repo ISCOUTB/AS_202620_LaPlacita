@@ -10,7 +10,8 @@
 
 import { randomUUID } from 'node:crypto';
 import { estadoCompartido } from '../../estado-compartido.js';
-import { alCargarUsuarios, guardarUsuario } from '../../persistencia/index.js';
+import { activa, alCargarUsuarios, guardarUsuario } from '../../persistencia/index.js';
+import { error as logError, info } from '../../logger.js';
 import { cifrarContrasena, gastarTiempoEquivalente, verificarContrasena } from './contrasenas.js';
 import { firmarToken, verificarToken } from './tokens.js';
 
@@ -135,6 +136,62 @@ export function usuarioDesdeToken(token) {
   return usuario ? vistaUsuario(usuario) : null;
 }
 
+/** Primer nombre de una cuenta, para que la tienda sepa a quién entregar (minimización de datos). */
+export function nombreCorto(usuarioId) {
+  const usuario = usuariosPorId.get(usuarioId);
+  return usuario ? usuario.nombre.split(' ')[0] : null;
+}
+
+const ROLES_TIENDA = new Set(['trabajador', 'admin']);
+const TIENDA = /^tienda-\d{2}$/;
+
+/**
+ * Cuentas de tienda (ADR-0023). No hay registro abierto: se declaran en la
+ * variable de entorno CUENTAS_TIENDA (un secreto de Dokploy, como DATABASE_URL):
+ *   tienda-01|admin|correo|contraseña|Nombre;tienda-01|trabajador|correo|contraseña|Nombre
+ * Al arrancar se crean las que no existan. Nunca se sobrescribe una cuenta ya
+ * creada (cambiar la contraseña en la variable no la cambia en la base).
+ */
+export function leerCuentasTienda(texto = process.env.CUENTAS_TIENDA ?? '') {
+  return texto
+    .split(';')
+    .map((linea) => linea.trim())
+    .filter(Boolean)
+    .map((linea) => {
+      const [tiendaId, rol, correo, contrasena, ...nombre] = linea.split('|').map((c) => c.trim());
+      return { tiendaId, rol, correo: (correo ?? '').toLowerCase(), contrasena, nombre: nombre.join(' ') || 'Tienda' };
+    })
+    .filter((c) => {
+      const valida = TIENDA.test(c.tiendaId ?? '') && ROLES_TIENDA.has(c.rol) && CORREO.test(c.correo) && (c.contrasena ?? '').length >= 8;
+      if (!valida) logError({ route: 'identidad', mensaje: `CUENTAS_TIENDA: entrada inválida para ${c.correo || 'sin correo'}` });
+      return valida;
+    });
+}
+
+export async function asegurarCuentasTienda(cuentas = leerCuentasTienda()) {
+  for (const c of cuentas) {
+    if (idPorCorreo.has(c.correo)) continue;
+    const usuario = {
+      id: `usr-${randomUUID()}`,
+      correo: c.correo,
+      nombre: c.nombre,
+      hash: cifrarContrasena(c.contrasena),
+      rol: c.rol,
+      tiendaId: c.tiendaId,
+      creadoEn: new Date().toISOString(),
+    };
+    agregar(usuario);
+    try {
+      await guardarUsuario(usuario);
+      info({ route: 'identidad', tiendaId: c.tiendaId, mensaje: `cuenta de tienda creada (${c.rol})` });
+    } catch (e) {
+      usuariosPorId.delete(usuario.id);
+      idPorCorreo.delete(usuario.correo);
+      logError({ route: 'identidad', tiendaId: c.tiendaId, mensaje: `cuenta de tienda: ${e.message}` });
+    }
+  }
+}
+
 // Rehidratación de cuentas desde PostgreSQL (mismo patrón que pedidos, ADR-0014).
 export function restaurarUsuariosDesde(filas) {
   usuariosPorId.clear();
@@ -142,4 +199,13 @@ export function restaurarUsuariosDesde(filas) {
   for (const fila of filas) agregar({ ...fila });
 }
 
-alCargarUsuarios(restaurarUsuariosDesde);
+// Con base: las cuentas de tienda se aseguran después de cargar las existentes.
+// Sin base (desarrollo): se crean en memoria al importar el módulo.
+if (activa()) {
+  alCargarUsuarios((filas) => {
+    restaurarUsuariosDesde(filas);
+    void asegurarCuentasTienda();
+  });
+} else {
+  void asegurarCuentasTienda();
+}

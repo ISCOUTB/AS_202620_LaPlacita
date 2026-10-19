@@ -30,6 +30,8 @@ tags:
     description: Notificaciones de cambio de estado
   - name: identidad
     description: Cuentas e inicio de sesión (ADR-0021)
+  - name: tienda
+    description: Panel del personal de cada tienda; la tienda sale del token (ADR-0023)
 
 paths:
   /auth/registro:
@@ -345,6 +347,11 @@ paths:
       tags: [pagos]
       summary: Confirmar pago de un pedido
       operationId: confirmarPago
+      deprecated: true
+      description: >-
+        Ruta v1 sin sesión, conservada por compatibilidad (mediciones S9 y
+        /docs). El panel usa las rutas /tienda/* con sesión de tienda
+        (ADR-0023); retirarla es una mitigación planeada para S13.
       parameters:
         - name: pedidoId
           in: path
@@ -381,6 +388,11 @@ paths:
       tags: [entrega]
       summary: Marcar pedido como listo y generar PIN
       operationId: marcarListo
+      deprecated: true
+      description: >-
+        Ruta v1 sin sesión, conservada por compatibilidad (mediciones S9 y
+        /docs). El panel usa las rutas /tienda/* con sesión de tienda
+        (ADR-0023); retirarla es una mitigación planeada para S13.
       parameters:
         - name: pedidoId
           in: path
@@ -411,6 +423,11 @@ paths:
       tags: [entrega]
       summary: Validar PIN de entrega
       operationId: validarPin
+      deprecated: true
+      description: >-
+        Ruta v1 sin sesión, conservada por compatibilidad (mediciones S9 y
+        /docs). El panel usa las rutas /tienda/* con sesión de tienda
+        (ADR-0023); retirarla es una mitigación planeada para S13.
       parameters:
         - name: pedidoId
           in: path
@@ -443,6 +460,288 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Pedido no encontrado en la tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tienda/pedidos:
+    get:
+      tags: [tienda]
+      summary: Pedidos de la tienda del token, del más antiguo al más reciente (sin PIN)
+      operationId: listarPedidosDeTienda
+      security:
+        - sesion: []
+      responses:
+        '200':
+          description: Pedidos activos y entregados de hoy
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PedidoTienda'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de una cuenta de tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tienda/pedidos/{pedidoId}/pago:
+    post:
+      tags: [tienda]
+      summary: Confirmar el pago recibido (Recibido → En preparación)
+      operationId: confirmarPagoEnTienda
+      security:
+        - sesion: []
+      parameters:
+        - name: pedidoId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Pedido actualizado (sin PIN)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoTienda'
+        '400':
+          description: Transición no válida o PIN incorrecto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de una cuenta de tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: El pedido no es de esta tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tienda/pedidos/{pedidoId}/listo:
+    post:
+      tags: [tienda]
+      summary: Marcar el pedido como Listo; genera el PIN pero no lo devuelve
+      operationId: marcarListoEnTienda
+      security:
+        - sesion: []
+      parameters:
+        - name: pedidoId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Pedido actualizado (sin PIN)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoTienda'
+        '400':
+          description: Transición no válida o PIN incorrecto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de una cuenta de tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: El pedido no es de esta tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tienda/pedidos/{pedidoId}/entrega:
+    post:
+      tags: [tienda]
+      summary: Entregar con el PIN que dicta el cliente (5 intentos como máximo)
+      operationId: entregarConPin
+      security:
+        - sesion: []
+      parameters:
+        - name: pedidoId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pin:
+                  type: string
+                  pattern: '^[0-9]{4}$'
+              required: [pin]
+      responses:
+        '200':
+          description: Pedido actualizado (sin PIN)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoTienda'
+        '400':
+          description: Transición no válida o PIN incorrecto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de una cuenta de tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: El pedido no es de esta tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tienda/productos:
+    get:
+      tags: [tienda]
+      summary: Menú completo de la tienda del token, incluidos los agotados
+      operationId: listarMenuDeTienda
+      security:
+        - sesion: []
+      responses:
+        '200':
+          description: Productos de la tienda
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Producto'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de una cuenta de tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tienda/productos/{productoId}:
+    patch:
+      tags: [tienda]
+      summary: Marcar agotado/disponible (cualquier cuenta) o cambiar el precio (solo admin)
+      operationId: actualizarProducto
+      security:
+        - sesion: []
+      parameters:
+        - name: productoId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CambioProducto'
+      responses:
+        '200':
+          description: Producto actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Producto'
+        '400':
+          description: Valor inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: No es cuenta de tienda, o un trabajador intenta cambiar el precio
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: El producto no es de esta tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tienda/resumen:
+    get:
+      tags: [tienda]
+      summary: Resumen del día de la tienda del token
+      operationId: obtenerResumenDelDia
+      security:
+        - sesion: []
+      responses:
+        '200':
+          description: Conteos del día; `ventas` solo para el admin (null para el trabajador)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResumenTienda'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de una cuenta de tienda
           content:
             application/json:
               schema:
@@ -768,6 +1067,42 @@ components:
           type: string
           pattern: '^[0-9]{4}$'
       required: [pedidoId, tiendaId, pin]
+
+    PedidoTienda:
+      description: Pedido visto desde el mostrador (sin PIN) con el primer nombre del cliente.
+      allOf:
+        - $ref: '#/components/schemas/Pedido'
+        - type: object
+          properties:
+            clienteNombre:
+              type: [string, 'null']
+
+    CambioProducto:
+      type: object
+      properties:
+        disponible:
+          type: boolean
+        precio:
+          type: integer
+          minimum: 100
+          maximum: 1000000
+          description: Solo el admin de la tienda
+
+    ResumenTienda:
+      type: object
+      properties:
+        fecha:
+          type: string
+          format: date
+        pedidos:
+          type: integer
+        porEstado:
+          type: object
+          additionalProperties:
+            type: integer
+        ventas:
+          type: [number, 'null']
+      required: [fecha, pedidos, porEstado]
 
     Error:
       type: object

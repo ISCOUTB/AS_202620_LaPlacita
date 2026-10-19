@@ -2,8 +2,16 @@
 // Responsabilidad: menús, productos e inventario por establecimiento (ESC-02, ESC-05).
 // Lógica de negocio pura, sin framework HTTP — ver docs/adr/0001-adopcion-monolito-modular.md
 // Aislamiento RES-05: todo acceso se resuelve en el contexto de una tienda (A-02).
+//
+// ADR-0023 (catálogo editable): la lista de abajo es la SEMILLA del menú. Con
+// base de datos, la tabla `productos` es la fuente de verdad y este Map es su
+// caché en memoria: se rehidrata al arrancar y cada cambio del panel se escribe
+// primero en la base (esperando la confirmación) y luego en el Map
+// (write-through: la caché se invalida en el mismo paso en que cambia el dato).
 
 import { estadoCompartido } from '../../estado-compartido.js';
+import { activa, alCargarProductos, guardarProducto } from '../../persistencia/index.js';
+import { error as logError } from '../../logger.js';
 
 const productos = estadoCompartido('productos', () => new Map([
   // El Mesón (tienda-01) — desayunos
@@ -52,4 +60,59 @@ function listarProductosPorTienda(tiendaId) {
   return Array.from(productos.values()).filter((p) => p.tiendaId === tiendaId);
 }
 
-export { obtenerProducto, listarProductosPorTienda };
+function errorCon(mensaje, estado) {
+  const e = new Error(mensaje);
+  e.estado = estado;
+  return e;
+}
+
+/**
+ * Cambia disponibilidad y/o precio de un producto de la tienda (panel).
+ * Cualquier cuenta de la tienda marca agotado/disponible; solo `admin` cambia
+ * el precio. Espera a la base antes de tocar la caché: si la base falla, el
+ * menú que ven los clientes no cambia.
+ */
+async function actualizarProducto(productoId, tiendaId, cambios = {}, rol = 'trabajador') {
+  const actual = productos.get(productoId);
+  if (!actual || actual.tiendaId !== tiendaId) {
+    throw errorCon(`Producto ${productoId} no encontrado en la tienda ${tiendaId}`, 404);
+  }
+  const nuevo = { ...actual };
+  if (cambios.disponible !== undefined) {
+    if (typeof cambios.disponible !== 'boolean') throw errorCon('disponible debe ser verdadero o falso', 400);
+    nuevo.disponible = cambios.disponible;
+  }
+  if (cambios.precio !== undefined) {
+    if (rol !== 'admin') throw errorCon('Solo el administrador de la tienda puede cambiar precios', 403);
+    if (!Number.isInteger(cambios.precio) || cambios.precio < 100 || cambios.precio > 1_000_000) {
+      throw errorCon('El precio debe ser un número entero entre 100 y 1.000.000', 400);
+    }
+    nuevo.precio = cambios.precio;
+  }
+  await guardarProducto(nuevo);
+  productos.set(productoId, nuevo);
+  return nuevo;
+}
+
+// Rehidratación: las filas de la base reemplazan a la semilla; los productos
+// de la semilla que aún no están en la base se insertan (primer arranque).
+function restaurarProductosDesde(filas) {
+  const enBase = new Set();
+  for (const fila of filas) {
+    enBase.add(fila.id);
+    productos.set(fila.id, { ...fila });
+  }
+  for (const producto of productos.values()) {
+    if (!enBase.has(producto.id)) {
+      guardarProducto(producto).catch((err) =>
+        logError({ route: 'catalogo', mensaje: `semilla ${producto.id}: ${err.message}` }),
+      );
+    }
+  }
+}
+
+if (activa()) {
+  alCargarProductos(restaurarProductosDesde);
+}
+
+export { obtenerProducto, listarProductosPorTienda, actualizarProducto, restaurarProductosDesde };

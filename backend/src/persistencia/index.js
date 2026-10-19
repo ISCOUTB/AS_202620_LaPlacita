@@ -50,6 +50,15 @@ CREATE TABLE IF NOT EXISTS usuarios (
   rol        TEXT        NOT NULL,
   tienda_id  TEXT,
   creado_en  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+-- Catálogo editable desde el panel (ADR-0023). Se siembra con el menú del código.
+CREATE TABLE IF NOT EXISTS productos (
+  producto_id    TEXT          PRIMARY KEY,
+  tienda_id      TEXT          NOT NULL,
+  nombre         TEXT          NOT NULL,
+  precio         NUMERIC(10,2) NOT NULL,
+  disponible     BOOLEAN       NOT NULL,
+  actualizado_en TIMESTAMPTZ   NOT NULL DEFAULT now()
 )`;
 
 const COLUMNAS = 'tienda_id, pedido_id, cliente_id, producto_id, cantidad, total, estado, pin, codigo, creado_en';
@@ -64,6 +73,8 @@ let registrosCargados = null;
 const oyentesDeCarga = [];
 let usuariosCargados = null;
 const oyentesDeUsuarios = [];
+let productosCargados = null;
+const oyentesDeProductos = [];
 const escriturasEnVuelo = new Set();
 // Cola de escritura POR PEDIDO (fix D2 de la auditoría del cierre S10):
 // cada mutación captura una instantánea inmutable del pedido y se encadena a
@@ -109,6 +120,16 @@ function filaAUsuario(fila) {
   };
 }
 
+function filaAProducto(fila) {
+  return {
+    id: fila.producto_id,
+    tiendaId: fila.tienda_id,
+    nombre: fila.nombre,
+    precio: Number(fila.precio),
+    disponible: Boolean(fila.disponible),
+  };
+}
+
 // DDL serializado con advisory lock de sesión: el mismo cliente lo toma y lo
 // suelta, así que la tabla se crea exactamente una vez aunque compitan varios
 // procesos de la suite.
@@ -148,9 +169,12 @@ async function arrancar() {
     'SELECT usuario_id, correo, nombre, hash, rol, tienda_id, creado_en FROM usuarios ORDER BY creado_en',
   );
   usuariosCargados = cuentas.rows.map(filaAUsuario);
+  const menu = await pool.query('SELECT producto_id, tienda_id, nombre, precio, disponible FROM productos');
+  productosCargados = menu.rows.map(filaAProducto);
   for (const [oyentes, filas] of [
     [oyentesDeCarga, registrosCargados],
     [oyentesDeUsuarios, usuariosCargados],
+    [oyentesDeProductos, productosCargados],
   ]) {
     for (const oyente of oyentes.splice(0)) {
       try {
@@ -203,6 +227,31 @@ export function alCargarUsuarios(oyente) {
     return;
   }
   oyentesDeUsuarios.push(oyente);
+}
+
+// Igual que `alCargar`, para el catálogo (módulo catalogo).
+export function alCargarProductos(oyente) {
+  if (productosCargados) {
+    oyente(productosCargados);
+    return;
+  }
+  oyentesDeProductos.push(oyente);
+}
+
+// Guarda un producto y espera la confirmación (ADR-0023): el catálogo en
+// memoria es caché de esta tabla y solo cambia si la base aceptó el cambio.
+export async function guardarProducto(producto) {
+  if (!activa()) {
+    return;
+  }
+  await iniciar();
+  await pool.query(
+    `INSERT INTO productos (producto_id, tienda_id, nombre, precio, disponible)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (producto_id) DO UPDATE
+     SET nombre = EXCLUDED.nombre, precio = EXCLUDED.precio, disponible = EXCLUDED.disponible, actualizado_en = now()`,
+    [producto.id, producto.tiendaId, producto.nombre, producto.precio, producto.disponible],
+  );
 }
 
 // Guarda una cuenta y ESPERA la confirmación de la base, a diferencia de los
@@ -315,6 +364,16 @@ export async function esperarEscrituras() {
   // Cubre las cadenas completas: cada tarea encolada se registra en
   // `escriturasEnVuelo` desde el momento del encolado.
   await Promise.allSettled(escriturasEnVuelo);
+}
+
+// Lee el catálogo tal como está en la base (prueba de reinicio del menú).
+export async function cargarProductos() {
+  if (!activa()) {
+    return [];
+  }
+  await iniciar();
+  const { rows } = await pool.query('SELECT producto_id, tienda_id, nombre, precio, disponible FROM productos');
+  return rows.map(filaAProducto);
 }
 
 // Lee las cuentas tal como están en la base (prueba de reinicio de identidad).

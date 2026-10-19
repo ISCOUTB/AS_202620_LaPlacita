@@ -218,6 +218,33 @@ function pedidosDeCliente(usuarioId) {
   return propios.sort((a, b) => String(b.creadoEn ?? '').localeCompare(String(a.creadoEn ?? '')));
 }
 
+// Panel de tienda (ADR-0023): pedidos de UNA tienda, del más antiguo al más
+// reciente (orden de atención), en vista pública. Los entregados solo si son
+// de hoy, para que la columna de entregados no crezca sin fin.
+function pedidosDeTienda(tiendaId, { hoy = fechaColombia() } = {}) {
+  const lista = [];
+  for (const pedido of repoTienda(tiendaId).values()) {
+    const deHoy = pedido.creadoEn && fechaColombia(new Date(pedido.creadoEn)) === hoy;
+    if (pedido.estado !== 'Entregado' || deHoy) lista.push(vistaPublica(pedido.id, tiendaId));
+  }
+  return lista.sort((a, b) => String(a.creadoEn ?? '').localeCompare(String(b.creadoEn ?? '')));
+}
+
+// Resumen del día de una tienda, calculado desde sus pedidos de hoy. Ventas =
+// pedidos con pago confirmado (En preparación, Listo o Entregado).
+function resumenDelDia(tiendaId, { hoy = fechaColombia() } = {}) {
+  const porEstado = Object.fromEntries(ESTADOS.map((e) => [e, 0]));
+  let pedidosHoy = 0;
+  let ventas = 0;
+  for (const pedido of repoTienda(tiendaId).values()) {
+    if (!pedido.creadoEn || fechaColombia(new Date(pedido.creadoEn)) !== hoy) continue;
+    pedidosHoy += 1;
+    porEstado[pedido.estado] += 1;
+    if (pedido.estado !== 'Recibido') ventas += pedido.total;
+  }
+  return { fecha: hoy, pedidos: pedidosHoy, porEstado, ventas };
+}
+
 // V-03: métodos de intención. Pagos y Entrega ya no invocan `cambiarEstado`
 // con el nombre del estado destino (no conocen la máquina de estados);
 // expresan la intención de negocio y Pedidos decide la transición.
@@ -291,6 +318,8 @@ export {
   vistaPublica,
   pinParaDueno,
   pedidosDeCliente,
+  pedidosDeTienda,
+  resumenDelDia,
   cambiarEstado,
   asignarPin,
   confirmarPago,
