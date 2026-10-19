@@ -14,6 +14,7 @@
 import { obtenerProducto } from '../catalogo/index.js';
 import { contar } from '../../metricas.js';
 import { escribirPedido, alCargar } from '../../persistencia/index.js';
+import { asignarCodigo, fechaColombia, indiceDesdeCodigo, TOTAL_CODIGOS } from './codigo.js';
 
 const ESTADOS = ['Recibido', 'En preparación', 'Listo', 'Entregado'];
 
@@ -25,6 +26,9 @@ const contadoresPorTienda = estadoCompartido('contadoresPorTienda', () => new Ma
 // con la misma `Idempotency-Key` devuelve el pedido original en vez de crear
 // otro. Vive en memoria (deuda declarada: no sobrevive a un reinicio).
 const idempotenciaPorTienda = estadoCompartido('idempotenciaPorTienda', () => new Map());
+// Código corto del pedido (A01 … Z99, ver codigo.js): posición de la
+// secuencia de cada tienda en el día. Se reconstruye en la rehidratación.
+const cursoresCodigo = estadoCompartido('cursoresCodigo', () => new Map());
 
 function repoTienda(tiendaId) {
   if (!pedidosPorTienda.has(tiendaId)) {
@@ -37,6 +41,20 @@ function siguienteId(tiendaId) {
   const n = (contadoresPorTienda.get(tiendaId) ?? 0) + 1;
   contadoresPorTienda.set(tiendaId, n);
   return `pedido-${n}`;
+}
+
+// Asigna el código del pedido nuevo: libre entre los pedidos aún no
+// entregados de la tienda y reiniciado cada día (hora de Colombia).
+function siguienteCodigo(tiendaId, creadoEn) {
+  const ocupados = new Set();
+  for (const pedido of repoTienda(tiendaId).values()) {
+    if (pedido.codigo && pedido.estado !== 'Entregado') {
+      ocupados.add(pedido.codigo);
+    }
+  }
+  const { codigo, cursor } = asignarCodigo(cursoresCodigo.get(tiendaId), fechaColombia(creadoEn), ocupados);
+  cursoresCodigo.set(tiendaId, cursor);
+  return codigo;
 }
 
 function pedidoMutable(pedidoId, tiendaId) {
@@ -66,9 +84,12 @@ function crearPedido({ productoId, cantidad, clienteId, tiendaId }) {
   }
 
   const producto = obtenerProducto(productoId, tiendaId);
+  const creadoEn = new Date();
 
   const pedido = {
     id: siguienteId(tiendaId),
+    codigo: siguienteCodigo(tiendaId, creadoEn),
+    creadoEn: creadoEn.toISOString(),
     clienteId,
     tiendaId: producto.tiendaId,
     productoId: producto.id,
@@ -189,9 +210,16 @@ function confirmarEntrega(pedidoId, tiendaId) {
 function restaurarEstadoDesde(registros) {
   pedidosPorTienda.clear();
   contadoresPorTienda.clear();
+  cursoresCodigo.clear();
+  const hoy = fechaColombia();
+  const ultimoDeHoy = new Map();
   for (const fila of registros) {
     const pedido = {
       id: fila.id,
+      // Filas anteriores a la columna `codigo` quedan con null: el frontend
+      // muestra el pedidoId en ese caso.
+      codigo: fila.codigo ?? null,
+      creadoEn: fila.creadoEn ?? null,
       clienteId: fila.clienteId,
       tiendaId: fila.tiendaId,
       productoId: fila.productoId,
@@ -204,6 +232,20 @@ function restaurarEstadoDesde(registros) {
     const numero = Number(String(pedido.id).replace(/^pedido-/, ''));
     if (Number.isInteger(numero) && numero > (contadoresPorTienda.get(pedido.tiendaId) ?? 0)) {
       contadoresPorTienda.set(pedido.tiendaId, numero);
+    }
+    // El cursor de códigos sigue al pedido de HOY creado más recientemente:
+    // tras un reinicio a mitad del día no se vuelve a A01.
+    if (pedido.codigo && pedido.creadoEn && fechaColombia(new Date(pedido.creadoEn)) === hoy) {
+      const previo = ultimoDeHoy.get(pedido.tiendaId);
+      if (!previo || pedido.creadoEn > previo.creadoEn) {
+        ultimoDeHoy.set(pedido.tiendaId, pedido);
+      }
+    }
+  }
+  for (const [tiendaId, pedido] of ultimoDeHoy) {
+    const indice = indiceDesdeCodigo(pedido.codigo);
+    if (indice >= 0) {
+      cursoresCodigo.set(tiendaId, { fecha: hoy, siguiente: (indice + 1) % TOTAL_CODIGOS });
     }
   }
 }

@@ -413,6 +413,20 @@ components:
       properties:
         id:
           type: string
+        codigo:
+          type: [string, 'null']
+          pattern: '^[A-HJ-NP-Z][0-9]{2}$'
+          example: A07
+          description: >-
+            Código corto para reconocer el pedido en el mostrador (A01 … Z99,
+            sin las letras I y O, que se confunden con 1 y 0).
+            Por tienda, se reinicia cada día (hora de Colombia) y no se repite
+            entre pedidos no entregados. No reemplaza a `id`. Null en pedidos
+            creados antes de existir el campo.
+        creadoEn:
+          type: [string, 'null']
+          format: date-time
+          description: Momento de creación del pedido (null en pedidos anteriores al campo).
         clienteId:
           type: string
         tiendaId:

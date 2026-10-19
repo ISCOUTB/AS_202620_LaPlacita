@@ -81,6 +81,9 @@ test('con persistencia, tras un reinicio los pedidos se restauran desde la base'
   const leido = pedidos.obtenerPedido(pedido.id, 'tienda-01');
   assert.equal(leido.estado, 'En preparación');
   assert.equal(leido.pin, '4321');
+  // El código corto (A01 …) y la fecha de creación también sobreviven al reinicio.
+  assert.equal(leido.codigo, pedido.codigo);
+  assert.equal(leido.creadoEn, pedido.creadoEn);
 
   // Fix D2 (auditoría del cierre S10): mutaciones rápidas del MISMO pedido
   // deben persistir en orden — la fila final es la ÚLTIMA mutación, no un

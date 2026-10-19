@@ -35,9 +35,14 @@ CREATE TABLE IF NOT EXISTS pedidos (
   pin            TEXT,
   actualizado_en TIMESTAMPTZ   NOT NULL DEFAULT now(),
   PRIMARY KEY (tienda_id, pedido_id)
-)`;
+);
+-- Código corto del pedido (A01 … Z99) y fecha de creación. ADD COLUMN IF NOT
+-- EXISTS migra la tabla ya desplegada sin perder filas; las filas anteriores
+-- quedan con NULL y el frontend muestra el pedidoId en ese caso.
+ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS codigo TEXT;
+ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS creado_en TIMESTAMPTZ`;
 
-const COLUMNAS = 'tienda_id, pedido_id, cliente_id, producto_id, cantidad, total, estado, pin';
+const COLUMNAS = 'tienda_id, pedido_id, cliente_id, producto_id, cantidad, total, estado, pin, codigo, creado_en';
 // Llave de advisory lock para el DDL: node --test levanta un proceso por
 // archivo en paralelo y todos importan este módulo; sin la llave, dos
 // `CREATE TABLE IF NOT EXISTS` simultáneos chocan en el catálogo de PostgreSQL.
@@ -75,6 +80,8 @@ function filaAPedido(fila) {
     total: Number(fila.total),
     estado: fila.estado,
     pin: fila.pin ?? null,
+    codigo: fila.codigo ?? null,
+    creadoEn: fila.creado_en ? new Date(fila.creado_en).toISOString() : null,
   };
 }
 
@@ -170,7 +177,7 @@ async function escribirFila(instantanea) {
   await iniciar();
   await pool.query(
     `INSERT INTO pedidos (${COLUMNAS})
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
      ON CONFLICT (tienda_id, pedido_id) DO UPDATE
      SET cliente_id = EXCLUDED.cliente_id,
          producto_id = EXCLUDED.producto_id,
@@ -178,6 +185,8 @@ async function escribirFila(instantanea) {
          total = EXCLUDED.total,
          estado = EXCLUDED.estado,
          pin = EXCLUDED.pin,
+         codigo = EXCLUDED.codigo,
+         creado_en = EXCLUDED.creado_en,
          actualizado_en = now()`,
     [
       instantanea.tiendaId,
@@ -188,6 +197,8 @@ async function escribirFila(instantanea) {
       instantanea.total,
       instantanea.estado,
       instantanea.pin,
+      instantanea.codigo,
+      instantanea.creadoEn,
     ],
   );
 }
@@ -212,6 +223,8 @@ export function escribirPedido(pedido) {
     total: pedido.total,
     estado: pedido.estado,
     pin: pedido.pin ?? null,
+    codigo: pedido.codigo ?? null,
+    creadoEn: pedido.creadoEn ?? null,
   });
   const clave = `${instantanea.tiendaId}::${instantanea.id}`;
   const tarea = colasDeEscritura
