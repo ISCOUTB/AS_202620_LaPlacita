@@ -2,21 +2,23 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, Check } from "lucide-react"
+import { ArrowLeft, Check, KeyRound } from "lucide-react"
 import { Aviso } from "@/components/utb/aviso"
-import { Boton } from "@/components/utb/boton"
+import { Boton, BotonEnlace } from "@/components/utb/boton"
 import { CodigoPedido } from "@/components/utb/codigo-pedido"
 import { EstadoChip } from "@/components/utb/estado-chip"
-import { obtenerNotificaciones, obtenerPedido, type EstadoPedido, type Notificacion } from "@/lib/api"
+import { ErrorApi, obtenerNotificaciones, obtenerPedido, obtenerPin, type EstadoPedido, type Notificacion } from "@/lib/api"
 import { ESTADOS, INFO_ESTADO, indiceEstado } from "@/lib/estados"
+import { useSesion } from "@/lib/sesion"
 import { getStoreByTiendaId } from "@/lib/stores"
 import { cn } from "@/lib/utils"
 
 const HORA = new Intl.DateTimeFormat("es-CO", { hour: "numeric", minute: "2-digit", timeZone: "America/Bogota" })
 
 // Seguimiento en vivo: consulta el estado cada 3 s mientras el pedido no esté
-// Entregado. El PIN no viaja por la lectura (ADR-0013, A-06): el código de
-// retiro del usuario es el pedidoId; el PIN lo maneja el mostrador.
+// Entregado. La lectura pública no trae el PIN (ADR-0013); cuando el pedido
+// está Listo y hay sesión, se pide aparte a GET /pedidos/{id}/pin, que solo
+// responde al dueño del pedido (ADR-0022).
 export default function SeguimientoPage({
   params,
   searchParams,
@@ -30,6 +32,9 @@ export default function SeguimientoPage({
   const [codigo, setCodigo] = useState<string | null>(null)
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [pin, setPin] = useState<string | null>(null)
+  const [avisoPin, setAvisoPin] = useState<string | null>(null)
+  const { usuario, cargando: cargandoSesion } = useSesion()
   const temporizador = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
@@ -77,9 +82,38 @@ export default function SeguimientoPage({
     }
   }, [consultar, pedidoId, tiendaId])
 
+  // PIN: solo con el pedido Listo y sesión iniciada. Se pide una vez por
+  // llegada a Listo; los setState ocurren tras el await (React 19).
+  useEffect(() => {
+    if (estado !== "Listo" || !usuario || !pedidoId || !tiendaId) return
+    let vigente = true
+    obtenerPin(pedidoId, tiendaId)
+      .then((r) => {
+        if (vigente) {
+          setPin(r.pin)
+          setAvisoPin(null)
+        }
+      })
+      .catch((e: Error) => {
+        if (!vigente) return
+        setPin(null)
+        setAvisoPin(
+          e instanceof ErrorApi && e.estado === 404
+            ? "Este pedido no está en tu cuenta: el PIN solo lo ve quien lo pidió."
+            : e.message,
+        )
+      })
+    return () => {
+      vigente = false
+    }
+  }, [estado, usuario, pedidoId, tiendaId])
+
   const indice = indiceEstado(estado)
   const nombreTienda = getStoreByTiendaId(tiendaId)?.name ?? tiendaId
   const listo = estado === "Listo"
+  const pinVisible = Boolean(listo && usuario && pin)
+  // Con el PIN en pantalla, la tarjeta azul es la del PIN; la del código pasa a blanca.
+  const tarjetaAzul = listo && !pinVisible
 
   return (
     <>
@@ -111,30 +145,68 @@ export default function SeguimientoPage({
 
         {!error && !estado && <div className="h-64 animate-pulse rounded-2xl bg-superficie shadow-tarjeta" />}
 
+        {pinVisible && (
+          <section
+            aria-label="PIN de retiro"
+            className="degradado-utb flex flex-col items-center gap-2 rounded-3xl p-6 text-center text-white shadow-flotante"
+          >
+            <p className="flex items-center gap-2 text-xs font-medium tracking-widest text-white/80 uppercase">
+              <KeyRound aria-hidden="true" className="size-4" />
+              Tu PIN de retiro
+            </p>
+            <p className="font-sans text-7xl font-bold tracking-[0.2em] tabular-nums slashed-zero">{pin}</p>
+            <p className="text-sm text-white/85">
+              Díctalo en el mostrador de {nombreTienda} con tu pedido{" "}
+              <CodigoPedido codigo={codigo} pedidoId={pedidoId} className="text-white" />.
+            </p>
+            <p className="text-xs text-white/60">Solo tú lo ves. No lo compartas por mensaje.</p>
+          </section>
+        )}
+
+        {listo && !cargandoSesion && !usuario && (
+          <div className="flex items-center gap-4 rounded-2xl bg-azul/10 p-4">
+            <KeyRound aria-hidden="true" className="size-8 shrink-0 text-azul" />
+            <p className="flex-1 text-sm text-noche">Tu pedido está listo. Ingresa con tu cuenta para ver el PIN de retiro.</p>
+            <BotonEnlace
+              href={`/cuenta?volver=${encodeURIComponent(`/pedidos/${pedidoId}?tiendaId=${tiendaId}`)}`}
+              variante="azul"
+              className="px-4 py-2 text-sm"
+            >
+              Ingresar
+            </BotonEnlace>
+          </div>
+        )}
+
+        {listo && usuario && avisoPin && (
+          <p role="status" className="rounded-2xl bg-preparacion-fondo px-4 py-3 text-sm text-preparacion-texto">
+            {avisoPin}
+          </p>
+        )}
+
         {estado && (
           <>
             <section
               aria-label="Código del pedido"
               className={cn(
                 "flex flex-col items-center gap-2 rounded-3xl p-6 text-center shadow-tarjeta",
-                listo ? "degradado-utb text-white" : "bg-superficie",
+                tarjetaAzul ? "degradado-utb text-white" : "bg-superficie",
               )}
             >
-              <p className={cn("text-xs font-medium tracking-widest uppercase", listo ? "text-white/80" : "text-tenue")}>
+              <p className={cn("text-xs font-medium tracking-widest uppercase", tarjetaAzul ? "text-white/80" : "text-tenue")}>
                 Tu pedido
               </p>
               <CodigoPedido
                 codigo={codigo}
                 pedidoId={pedidoId}
-                className={cn(codigo ? "text-6xl" : "text-3xl font-bold", listo ? "text-white" : "text-azul")}
+                className={cn(codigo ? "text-6xl" : "text-3xl font-bold", tarjetaAzul ? "text-white" : "text-azul")}
               />
-              <p className={cn("text-sm", listo ? "text-white/85" : "text-suave")}>
+              <p className={cn("text-sm", tarjetaAzul ? "text-white/85" : "text-suave")}>
                 {estado === "Entregado"
                   ? "Este pedido ya fue entregado."
                   : `Dilo en el mostrador de ${nombreTienda}${listo ? ": ya está listo." : " cuando esté listo."}`}
               </p>
               {codigo && (
-                <p className={cn("font-mono text-xs", listo ? "text-white/60" : "text-tenue")}>Referencia: {pedidoId}</p>
+                <p className={cn("font-mono text-xs", tarjetaAzul ? "text-white/60" : "text-tenue")}>Referencia: {pedidoId}</p>
               )}
             </section>
 

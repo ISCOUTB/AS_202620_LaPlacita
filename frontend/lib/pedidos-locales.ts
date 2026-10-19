@@ -1,10 +1,9 @@
-// "Mis pedidos": el contrato solo consulta por pedidoId + tiendaId, así que el
-// cliente guarda los pedidos que crea en localStorage (sobrevive cierres y
-// alimenta la pantalla de seguimiento).
+// Pedidos guardados en el dispositivo (localStorage). Con las cuentas
+// (ADR-0021) la fuente principal es GET /pedidos de la sesión; esta lista
+// sigue mostrando los pedidos hechos antes de iniciar sesión en este equipo.
 import type { Pedido } from "./api"
 
 const CLAVE_PEDIDOS = "laplacita.mis-pedidos"
-const CLAVE_CLIENTE = "laplacita.cliente-id"
 
 export interface PedidoGuardado {
   pedidoId: string
@@ -51,14 +50,4 @@ export function registrarPedidoLocal(pedido: Pedido, productoNombre: string): vo
 
 export function limpiarPedidosLocales(): void {
   guardar([])
-}
-
-/** clienteId estable por dispositivo (el contrato lo exige al crear pedidos). */
-export function clienteId(): string {
-  let id = localStorage.getItem(CLAVE_CLIENTE)
-  if (!id) {
-    id = `web-${crypto.randomUUID()}`
-    localStorage.setItem(CLAVE_CLIENTE, id)
-  }
-  return id
 }

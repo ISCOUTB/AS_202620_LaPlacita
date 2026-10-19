@@ -4,6 +4,7 @@ import { Suspense } from "react"
 import { CartProvider } from "@/components/cart/cart-provider"
 import { FloatingCart } from "@/components/cart/floating-cart"
 import { RegistroSw } from "@/components/registro-sw"
+import { SesionProvider } from "@/lib/sesion"
 import { BarraInferior, BarraInferiorVista } from "@/components/utb/barra-inferior"
 import { Encabezado, EncabezadoVista } from "@/components/utb/encabezado"
 import { Pie } from "@/components/utb/pie"
@@ -58,6 +59,7 @@ export default function RootLayout({
   return (
     <html lang="es" data-scroll-behavior="smooth" className={`${dmSans.variable} ${rubik.variable}`}>
       <body className="font-sans antialiased">
+        <SesionProvider>
         <CartProvider>
           <Suspense fallback={<EncabezadoVista ruta="" />}>
             <Encabezado />
@@ -69,6 +71,7 @@ export default function RootLayout({
             <BarraInferior />
           </Suspense>
         </CartProvider>
+        </SesionProvider>
         <RegistroSw />
       </body>
     </html>

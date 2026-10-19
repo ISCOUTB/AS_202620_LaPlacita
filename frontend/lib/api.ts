@@ -54,9 +54,19 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       typeof cuerpo === "object" && cuerpo !== null && "error" in cuerpo
         ? String((cuerpo as { error: unknown }).error)
         : `HTTP ${respuesta.status}`
-    throw new Error(mensaje)
+    throw new ErrorApi(mensaje, respuesta.status)
   }
   return cuerpo as T
+}
+
+/** Error del contrato con su código HTTP (401 sin sesión, 404, 409…). */
+export class ErrorApi extends Error {
+  constructor(
+    mensaje: string,
+    readonly estado: number,
+  ) {
+    super(mensaje)
+  }
 }
 
 // ── Operaciones del contrato ────────────────────────────────────────────────
@@ -89,6 +99,21 @@ export function crearPedido(entrada: {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(entrada),
+  })
+}
+
+/** GET /pedidos — pedidos de la cuenta con sesión (ADR-0021), sin PIN. */
+export function obtenerMisPedidos(): Promise<Pedido[]> {
+  return request<Pedido[]>("/pedidos", { cache: "no-store" })
+}
+
+/** GET /pedidos/{pedidoId}/pin?tiendaId=… — solo el dueño, con el pedido Listo (ADR-0022). */
+export function obtenerPin(
+  pedidoId: string,
+  tiendaId: string,
+): Promise<{ pedidoId: string; tiendaId: string; codigo?: string | null; pin: string }> {
+  return request(`/pedidos/${encodeURIComponent(pedidoId)}/pin?tiendaId=${encodeURIComponent(tiendaId)}`, {
+    cache: "no-store",
   })
 }
 

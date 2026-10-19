@@ -26,7 +26,7 @@ export function BarraInferiorVista({ ruta }: { ruta: string }) {
                 href={href}
                 aria-current={esActivo ? "page" : undefined}
                 className={cn(
-                  "flex min-w-20 flex-col items-center gap-1 px-3 pt-2.5 pb-2 text-xs font-medium",
+                  "flex min-w-16 flex-col items-center gap-1 px-2 pt-2.5 pb-2 text-xs font-medium",
                   esActivo ? "text-azul" : "text-tenue",
                 )}
               >

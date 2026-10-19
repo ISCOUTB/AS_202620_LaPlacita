@@ -8,7 +8,8 @@ import { useCart, type CartItem } from "@/components/cart/cart-provider"
 import { Boton } from "@/components/utb/boton"
 import { crearPedido } from "@/lib/api"
 import { formatCOP } from "@/lib/format"
-import { clienteId, registrarPedidoLocal } from "@/lib/pedidos-locales"
+import { registrarPedidoLocal } from "@/lib/pedidos-locales"
+import { useSesion } from "@/lib/sesion"
 import { getStoreByTiendaId } from "@/lib/stores"
 
 function groupByStore(items: CartItem[]) {
@@ -79,6 +80,7 @@ function CartLine({ item }: { item: CartItem }) {
 
 export function FloatingCart() {
   const { items, itemCount, total, removeItem, clearCart } = useCart()
+  const { usuario } = useSesion()
   const router = useRouter()
   const [pidiendo, setPidiendo] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -87,10 +89,17 @@ export function FloatingCart() {
   // /pedidos por línea, agrupado por tienda. Cada pedido creado se registra en
   // el dispositivo; si uno falla, los anteriores quedan y el carrito conserva
   // el resto — sin perdidas silenciosas.
+  // ADR-0021: pedir exige sesión; el backend toma al dueño del token (el
+  // clienteId del cuerpo se ignora con sesión) y así el PIN queda en la cuenta.
   async function hacerPedidos() {
+    if (!usuario) {
+      // El carrito vive en el layout: sobrevive al ir a /cuenta y volver.
+      router.push(`/cuenta?volver=${encodeURIComponent(window.location.pathname)}`)
+      return
+    }
     setPidiendo(true)
     setError(null)
-    const cliente = clienteId()
+    const cliente = usuario.id
     for (const item of items) {
       try {
         const pedido = await crearPedido({
@@ -175,7 +184,7 @@ export function FloatingCart() {
             <span className="font-display text-2xl font-extrabold text-noche">{formatCOP(total)}</span>
           </div>
           <Boton disabled={pidiendo} onClick={hacerPedidos} className="w-full py-4 text-lg">
-            {pidiendo ? "Creando pedidos…" : "Hacer pedido"}
+            {pidiendo ? "Creando pedidos…" : usuario ? "Hacer pedido" : "Ingresa para hacer el pedido"}
           </Boton>
           <p className="text-center text-xs text-tenue">
             Pagas por transferencia o en efectivo; la tienda confirma el pago y empieza a prepararlo.

@@ -55,8 +55,9 @@ Abrir `http://localhost:3001`. En despliegue, `BACKEND_URL` apunta al backend re
 | `/tiendas` | Las 5 tiendas con estado abierta/cerrada, ubicación y descripción | — (contenido estático, `lib/stores.ts`) |
 | `/tiendas/[slug]` | Menú con filtro por categoría, carrito y checkout | `GET /catalogo/tiendas/{tiendaId}/productos` |
 | Carrito (drawer) | Multi-item agrupado por tienda; "Hacer pedido" crea **un POST por línea** (contrato v1) | `POST /pedidos` |
-| `/pedidos/[pedidoId]` | Seguimiento en vivo (polling 3 s): estado, línea de tiempo, código de retiro e historial | `GET /pedidos/{id}`, `GET /notificaciones/{id}` |
-| `/mis-pedidos` | Pedidos del dispositivo con estado en vivo | localStorage + `GET /pedidos/{id}` |
+| `/pedidos/[pedidoId]` | Seguimiento en vivo (polling 3 s): estado, línea de tiempo, código del pedido, historial y **PIN de retiro** cuando está Listo (solo el dueño, con sesión) | `GET /pedidos/{id}`, `GET /notificaciones/{id}` |
+| `/mis-pedidos` | Con sesión: pedidos de la cuenta en cualquier dispositivo; sin sesión: los del equipo | `GET /pedidos` (sesión) o localStorage + `GET /pedidos/{id}` |
+| `/cuenta` | Ingresar o crear cuenta (correo @utb.edu.co) y perfil con cerrar sesión | BFF `/api/sesion` → `/auth/sesion`, `/auth/registro`, `/auth/yo` |
 | `/~offline` | Página sin conexión | service worker |
 
 ## Despliegue (entorno de pruebas)
@@ -79,6 +80,7 @@ Nota: el `service worker` solo se registra en builds de producción
   pedido, entrega del PIN al usuario) están documentados en
   [`../docs/adr/0017-frontend-nextjs-pwa-shadcn.md`](../docs/adr/0017-frontend-nextjs-pwa-shadcn.md)
   y [`../correcciones.md`](../correcciones.md).
-- El `tiendaId` sigue siendo parte de la petición (identidad de tenant pendiente, plan en
-  [`../correcciones.md`](../correcciones.md) §3).
+- Sesión (ADR-0021): el token vive en la cookie httpOnly `lp_sesion`, la maneja `/api/sesion`
+  y el proxy `/api/v1` la convierte en `Authorization: Bearer`. El navegador nunca ve el token.
+- Pedir exige sesión: el dueño del pedido es la cuenta, y solo ella ve el PIN (ADR-0022).
 - El dominio vive en el backend; aquí solo hay vista, navegación y carrito local.
