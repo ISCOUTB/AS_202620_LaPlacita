@@ -40,7 +40,17 @@ CREATE TABLE IF NOT EXISTS pedidos (
 -- EXISTS migra la tabla ya desplegada sin perder filas; las filas anteriores
 -- quedan con NULL y el frontend muestra el pedidoId en ese caso.
 ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS codigo TEXT;
-ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS creado_en TIMESTAMPTZ`;
+ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS creado_en TIMESTAMPTZ;
+-- Cuentas (ADR-0021). La contraseña se guarda solo como derivada scrypt.
+CREATE TABLE IF NOT EXISTS usuarios (
+  usuario_id TEXT        PRIMARY KEY,
+  correo     TEXT        NOT NULL UNIQUE,
+  nombre     TEXT        NOT NULL,
+  hash       TEXT        NOT NULL,
+  rol        TEXT        NOT NULL,
+  tienda_id  TEXT,
+  creado_en  TIMESTAMPTZ NOT NULL DEFAULT now()
+)`;
 
 const COLUMNAS = 'tienda_id, pedido_id, cliente_id, producto_id, cantidad, total, estado, pin, codigo, creado_en';
 // Llave de advisory lock para el DDL: node --test levanta un proceso por
@@ -52,6 +62,8 @@ let pool = null;
 let inicio = null;
 let registrosCargados = null;
 const oyentesDeCarga = [];
+let usuariosCargados = null;
+const oyentesDeUsuarios = [];
 const escriturasEnVuelo = new Set();
 // Cola de escritura POR PEDIDO (fix D2 de la auditoría del cierre S10):
 // cada mutación captura una instantánea inmutable del pedido y se encadena a
@@ -81,6 +93,18 @@ function filaAPedido(fila) {
     estado: fila.estado,
     pin: fila.pin ?? null,
     codigo: fila.codigo ?? null,
+    creadoEn: fila.creado_en ? new Date(fila.creado_en).toISOString() : null,
+  };
+}
+
+function filaAUsuario(fila) {
+  return {
+    id: fila.usuario_id,
+    correo: fila.correo,
+    nombre: fila.nombre,
+    hash: fila.hash,
+    rol: fila.rol,
+    tiendaId: fila.tienda_id ?? null,
     creadoEn: fila.creado_en ? new Date(fila.creado_en).toISOString() : null,
   };
 }
@@ -120,11 +144,20 @@ async function arrancar() {
     `SELECT ${COLUMNAS} FROM pedidos ORDER BY actualizado_en, pedido_id`,
   );
   registrosCargados = rows.map(filaAPedido);
-  for (const oyente of oyentesDeCarga.splice(0)) {
-    try {
-      oyente(registrosCargados);
-    } catch (err) {
-      logError({ route: 'persistencia', mensaje: `oyente de carga: ${err.message}` });
+  const cuentas = await pool.query(
+    'SELECT usuario_id, correo, nombre, hash, rol, tienda_id, creado_en FROM usuarios ORDER BY creado_en',
+  );
+  usuariosCargados = cuentas.rows.map(filaAUsuario);
+  for (const [oyentes, filas] of [
+    [oyentesDeCarga, registrosCargados],
+    [oyentesDeUsuarios, usuariosCargados],
+  ]) {
+    for (const oyente of oyentes.splice(0)) {
+      try {
+        oyente(filas);
+      } catch (err) {
+        logError({ route: 'persistencia', mensaje: `oyente de carga: ${err.message}` });
+      }
     }
   }
   return registrosCargados;
@@ -161,6 +194,33 @@ export function alCargar(oyente) {
     return;
   }
   oyentesDeCarga.push(oyente);
+}
+
+// Igual que `alCargar`, para las cuentas (módulo identidad).
+export function alCargarUsuarios(oyente) {
+  if (usuariosCargados) {
+    oyente(usuariosCargados);
+    return;
+  }
+  oyentesDeUsuarios.push(oyente);
+}
+
+// Guarda una cuenta y ESPERA la confirmación de la base, a diferencia de los
+// pedidos (fire-and-forget ordenado): perder una cuenta recién registrada es
+// peor que tardar unos milisegundos en responder. La ruta de registro deshace
+// el alta en memoria si esta promesa falla.
+export async function guardarUsuario(usuario) {
+  if (!activa()) {
+    return;
+  }
+  await iniciar();
+  await pool.query(
+    `INSERT INTO usuarios (usuario_id, correo, nombre, hash, rol, tienda_id, creado_en)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     ON CONFLICT (usuario_id) DO UPDATE
+     SET nombre = EXCLUDED.nombre, hash = EXCLUDED.hash, rol = EXCLUDED.rol, tienda_id = EXCLUDED.tienda_id`,
+    [usuario.id, usuario.correo, usuario.nombre, usuario.hash, usuario.rol, usuario.tiendaId, usuario.creadoEn],
+  );
 }
 
 // Promesa que resuelve cuando la base está lista (esquema creado y estado
@@ -255,6 +315,18 @@ export async function esperarEscrituras() {
   // Cubre las cadenas completas: cada tarea encolada se registra en
   // `escriturasEnVuelo` desde el momento del encolado.
   await Promise.allSettled(escriturasEnVuelo);
+}
+
+// Lee las cuentas tal como están en la base (prueba de reinicio de identidad).
+export async function cargarUsuarios() {
+  if (!activa()) {
+    return [];
+  }
+  await iniciar();
+  const { rows } = await pool.query(
+    'SELECT usuario_id, correo, nombre, hash, rol, tienda_id, creado_en FROM usuarios ORDER BY creado_en',
+  );
+  return rows.map(filaAUsuario);
 }
 
 // Lee todas las filas tal como están en la base (lo usa la prueba que

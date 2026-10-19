@@ -28,8 +28,93 @@ tags:
     description: Validación de entrega por PIN
   - name: notificaciones
     description: Notificaciones de cambio de estado
+  - name: identidad
+    description: Cuentas e inicio de sesión (ADR-0021)
 
 paths:
+  /auth/registro:
+    post:
+      tags: [identidad]
+      summary: Crear una cuenta de la comunidad (correo institucional) y abrir sesión
+      operationId: registrar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistroRequest'
+      responses:
+        '201':
+          description: Cuenta creada; incluye el token de sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sesion'
+        '400':
+          description: Datos inválidos (correo de otro dominio, contraseña corta…)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Ya existe una cuenta con ese correo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/sesion:
+    post:
+      tags: [identidad]
+      summary: Iniciar sesión con correo y contraseña
+      operationId: iniciarSesion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SesionRequest'
+      responses:
+        '200':
+          description: Sesión abierta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sesion'
+        '401':
+          description: Correo o contraseña incorrectos (mismo mensaje en ambos casos)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Demasiados intentos fallidos (5 en 15 minutos)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/yo:
+    get:
+      tags: [identidad]
+      summary: Datos de la cuenta de la sesión actual
+      operationId: obtenerCuenta
+      security:
+        - sesion: []
+      responses:
+        '200':
+          description: Cuenta autenticada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        '401':
+          description: Sin sesión o token inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /health:
     get:
       tags: [health]
@@ -154,6 +239,28 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+    get:
+      tags: [pedidos]
+      summary: Pedidos de la cuenta autenticada, en todas las tiendas (sin PIN)
+      operationId: listarMisPedidos
+      security:
+        - sesion: []
+      responses:
+        '200':
+          description: Pedidos del usuario, del más reciente al más antiguo
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pedido'
+        '401':
+          description: Sin sesión o token inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /pedidos/{pedidoId}:
     get:
       tags: [pedidos]
@@ -179,6 +286,55 @@ paths:
                 $ref: '#/components/schemas/Pedido'
         '404':
           description: Pedido no encontrado en la tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /pedidos/{pedidoId}/pin:
+    get:
+      tags: [pedidos]
+      summary: PIN de retiro, solo para el dueño del pedido y con el pedido en Listo
+      description: >-
+        ADR-0022. Única lectura que devuelve el PIN y exige sesión. La vista
+        pública del pedido (GET /pedidos/{pedidoId}) sigue sin PIN (ADR-0013).
+        Un pedido ajeno o inexistente responde igual (404) para no revelar
+        pedidos de otras cuentas.
+      operationId: obtenerPinDelDueno
+      security:
+        - sesion: []
+      parameters:
+        - name: pedidoId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: tiendaId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: PIN del pedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PinPedido'
+        '401':
+          description: Sin sesión o token inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: El pedido no existe o no es de esta cuenta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: El pedido todavía no está Listo
           content:
             application/json:
               schema:
@@ -338,6 +494,15 @@ paths:
                   $ref: '#/components/schemas/Notificacion'
 
 components:
+  securitySchemes:
+    sesion:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >-
+        Token de sesión de POST /auth/sesion o /auth/registro (ADR-0021). En la
+        app web lo agrega el BFF del frontend desde una cookie httpOnly.
+
   schemas:
     Health:
       type: object
@@ -533,6 +698,76 @@ components:
         - estado
         - mensaje
         - enviadaEn
+
+    Usuario:
+      type: object
+      description: Cuenta sin datos sensibles (nunca incluye el hash de la contraseña).
+      properties:
+        id:
+          type: string
+        correo:
+          type: string
+          format: email
+        nombre:
+          type: string
+        rol:
+          type: string
+          enum: [cliente, trabajador, admin]
+        tiendaId:
+          type: [string, 'null']
+      required: [id, correo, nombre, rol]
+
+    RegistroRequest:
+      type: object
+      properties:
+        correo:
+          type: string
+          format: email
+          description: Correo institucional (por defecto @utb.edu.co)
+        nombre:
+          type: string
+          minLength: 2
+          maxLength: 60
+        contrasena:
+          type: string
+          minLength: 8
+          maxLength: 128
+      required: [correo, nombre, contrasena]
+
+    SesionRequest:
+      type: object
+      properties:
+        correo:
+          type: string
+          format: email
+        contrasena:
+          type: string
+      required: [correo, contrasena]
+
+    Sesion:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT HS256, vence a los 7 días
+        usuario:
+          $ref: '#/components/schemas/Usuario'
+      required: [token, usuario]
+
+    PinPedido:
+      type: object
+      description: PIN de retiro para el dueño del pedido (ADR-0022).
+      properties:
+        pedidoId:
+          type: string
+        tiendaId:
+          type: string
+        codigo:
+          type: [string, 'null']
+        pin:
+          type: string
+          pattern: '^[0-9]{4}$'
+      required: [pedidoId, tiendaId, pin]
 
     Error:
       type: object

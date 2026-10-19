@@ -125,3 +125,22 @@ test('alCargar invoca de inmediato cuando la carga de arranque ya terminó', asy
   assert.ok(Array.isArray(recibido));
   assert.ok(recibido.length <= filas.length);
 });
+
+test('con persistencia, las cuentas sobreviven al reinicio (ADR-0021)', async (t) => {
+  if (!CON_BASE) {
+    t.skip('requiere DATABASE_URL (service container de PostgreSQL en CI)');
+    return;
+  }
+  const identidad = await import('../src/modules/identidad/index.js');
+  const correo = `persistencia-${Date.now()}-${Math.floor(Math.random() * 1e6)}@utb.edu.co`;
+  await identidad.registrar({ correo, nombre: 'Cuenta persistida', contrasena: 'clave-segura-1' });
+
+  // "Reinicio": memoria de cuentas vacía y rehidratación desde la base. El
+  // registro esperó la confirmación de la base, así que la cuenta ya está ahí.
+  identidad.restaurarUsuariosDesde([]);
+  identidad.restaurarUsuariosDesde(await persistencia.cargarUsuarios());
+
+  const { usuario } = identidad.iniciarSesion({ correo, contrasena: 'clave-segura-1' });
+  assert.equal(usuario.correo, correo);
+  assert.equal('hash' in usuario, false);
+});

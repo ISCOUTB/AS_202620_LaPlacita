@@ -186,6 +186,38 @@ function asignarPin(pedidoId, tiendaId, pin) {
   return instantanea(pedido);
 }
 
+// ADR-0022: el PIN se entrega a su DUEÑO, autenticado, y solo cuando el
+// pedido está Listo. Es la vía de emisión al cliente; la vista pública
+// (`vistaPublica`, ADR-0013) sigue sin exponerlo a nadie más. El error no
+// distingue «no existe» de «no es tuyo» para no revelar pedidos ajenos.
+function pinParaDueno(pedidoId, tiendaId, usuarioId) {
+  const pedido = repoTienda(tiendaId ?? '').get(pedidoId);
+  if (!pedido || !usuarioId || pedido.clienteId !== usuarioId) {
+    const e = new Error('Pedido no encontrado en tu cuenta');
+    e.estado = 404;
+    throw e;
+  }
+  if (pedido.estado !== 'Listo' || !pedido.pin) {
+    const e = new Error('El PIN aparece cuando tu pedido está Listo');
+    e.estado = 409;
+    throw e;
+  }
+  return Object.freeze({ pedidoId: pedido.id, tiendaId: pedido.tiendaId, codigo: pedido.codigo ?? null, pin: pedido.pin });
+}
+
+// Pedidos de una cuenta en todas las tiendas, del más reciente al más antiguo,
+// en vista pública (sin PIN). Es lectura del propio cliente: el aislamiento
+// RES-05 separa tiendas entre sí, no impide que un cliente vea lo suyo.
+function pedidosDeCliente(usuarioId) {
+  const propios = [];
+  for (const repo of pedidosPorTienda.values()) {
+    for (const pedido of repo.values()) {
+      if (pedido.clienteId === usuarioId) propios.push(vistaPublica(pedido.id, pedido.tiendaId));
+    }
+  }
+  return propios.sort((a, b) => String(b.creadoEn ?? '').localeCompare(String(a.creadoEn ?? '')));
+}
+
 // V-03: métodos de intención. Pagos y Entrega ya no invocan `cambiarEstado`
 // con el nombre del estado destino (no conocen la máquina de estados);
 // expresan la intención de negocio y Pedidos decide la transición.
@@ -257,6 +289,8 @@ export {
   crearPedidoIdempotente,
   obtenerPedido,
   vistaPublica,
+  pinParaDueno,
+  pedidosDeCliente,
   cambiarEstado,
   asignarPin,
   confirmarPago,
