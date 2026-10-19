@@ -49,6 +49,22 @@ test('registro con correo institucional abre sesión y no expone el hash', async
   assert.equal(identidad.usuarioDesdeToken(token).id, usuario.id);
 });
 
+test('sin JWT_SECRET en producción el registro falla sin dejar la cuenta creada', async () => {
+  const entorno = { NODE_ENV: process.env.NODE_ENV, JWT_SECRET: process.env.JWT_SECRET };
+  process.env.NODE_ENV = 'production';
+  delete process.env.JWT_SECRET;
+  const correo = correoNuevo();
+  try {
+    await assert.rejects(identidad.registrar({ correo, nombre: 'Sin secreto', contrasena: 'clave-segura-1' }), /JWT_SECRET/);
+  } finally {
+    process.env.NODE_ENV = entorno.NODE_ENV;
+    if (entorno.JWT_SECRET) process.env.JWT_SECRET = entorno.JWT_SECRET;
+  }
+  // Con el secreto disponible, el mismo correo se puede registrar: no quedó a medias.
+  const { usuario } = await identidad.registrar({ correo, nombre: 'Sin secreto', contrasena: 'clave-segura-1' });
+  assert.equal(usuario.correo, correo);
+});
+
 test('el registro rechaza otros dominios, contraseñas cortas y correos repetidos', async () => {
   await assert.rejects(identidad.registrar({ correo: 'ana@gmail.com', nombre: 'Ana', contrasena: 'clave-segura-1' }), (e) => e.estado === 400);
   await assert.rejects(identidad.registrar({ correo: correoNuevo(), nombre: 'Ana', contrasena: 'corta' }), (e) => e.estado === 400);

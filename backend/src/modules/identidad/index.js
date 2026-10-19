@@ -86,6 +86,11 @@ export async function registrar({ correo, nombre, contrasena } = {}) {
     tiendaId: null,
     creadoEn: new Date().toISOString(),
   };
+  // La sesión se firma ANTES de guardar: si falta JWT_SECRET (o la firma
+  // falla por cualquier motivo), la cuenta no queda creada a medias. Defecto
+  // visto en producción el 18/10/2026: la cuenta se guardaba, la firma fallaba
+  // y el reintento respondía «Ya existe una cuenta con ese correo».
+  const sesion = sesionPara(usuario);
   agregar(usuario);
   try {
     await guardarUsuario(usuario);
@@ -94,7 +99,7 @@ export async function registrar({ correo, nombre, contrasena } = {}) {
     idPorCorreo.delete(usuario.correo);
     throw errorCon(`No se pudo guardar la cuenta: ${e.message}`, 500);
   }
-  return sesionPara(usuario);
+  return sesion;
 }
 
 function fallosRecientes(correo, ahora) {

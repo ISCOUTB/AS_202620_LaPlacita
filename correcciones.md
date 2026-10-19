@@ -848,3 +848,12 @@ se cierran con el panel de tiendas (S14). Sin recuperación de contraseña (requ
 | La base nunca guarda contraseñas | `SELECT hash FROM usuarios` → solo valores `scrypt$16384$…` |
 | No se puede adivinar qué correos tienen cuenta | Correo inexistente y contraseña errada devuelven el mismo mensaje 401 |
 
+
+### Actualización (18/10/2026) — defecto del registro sin JWT_SECRET
+
+En el primer despliegue, `JWT_SECRET` quedó en *Build-time Secrets* de Dokploy (solo existe
+durante el build) y no en las variables de entorno de ejecución. El registro guardaba la cuenta,
+fallaba al firmar el token y el reintento respondía «Ya existe una cuenta con ese correo». Ahora
+la sesión se firma **antes** de guardar: sin secreto, la cuenta no queda creada a medias. Prueba
+nueva en `backend/tests/identidad.test.js` («sin JWT_SECRET en producción el registro falla sin
+dejar la cuenta creada»). La variable va en **Environment** de la app del backend.
