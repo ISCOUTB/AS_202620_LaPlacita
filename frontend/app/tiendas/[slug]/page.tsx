@@ -1,7 +1,5 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { SiteHeader } from "@/components/site-header"
-import { SiteFooter } from "@/components/site-footer"
 import { StoreHero } from "@/components/store/store-hero"
 import { ProductCatalog } from "@/components/store/product-catalog"
 import { getStoreBySlug, stores } from "@/lib/stores"
@@ -35,13 +33,8 @@ export default async function StorePage({ params }: StorePageProps) {
   // de la tienda (contrato v1, GET /catalogo/tiendas/{tiendaId}/productos).
   return (
     <>
-      <div className="grain-overlay" aria-hidden="true" />
-      <SiteHeader />
-      <main>
-        <StoreHero store={store} />
-        <ProductCatalog tiendaId={store.tiendaId} storeName={store.name} />
-      </main>
-      <SiteFooter />
+      <StoreHero store={store} />
+      <ProductCatalog tiendaId={store.tiendaId} storeName={store.name} />
     </>
   )
 }

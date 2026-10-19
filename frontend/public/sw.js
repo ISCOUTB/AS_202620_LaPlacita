@@ -12,7 +12,7 @@
  * no depende del pipeline de build. Cada línea es defendible en sustentación.
  */
 
-const CACHE = "laplacita-v4"
+const CACHE = "laplacita-v5" // v5: piel UTB (íconos nuevos)
 const OFFLINE = "/~offline"
 const PRECACHE = [OFFLINE, "/manifest.webmanifest"]
 

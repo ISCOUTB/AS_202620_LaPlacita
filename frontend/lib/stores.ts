@@ -1,6 +1,11 @@
 export type StoreIcon = "coffee" | "flame" | "salad" | "ice-cream" | "cookie"
 
-export type StoreTheme = "red" | "dark" | "beige"
+/** Franja de atención: días ISO (1 = lunes … 7 = domingo) y horas "HH:MM" en hora de Colombia. */
+export type Franja = {
+  dias: number[]
+  abre: string
+  cierra: string
+}
 
 export type StoreSchedule = {
   days: string
@@ -15,10 +20,15 @@ export type Store = {
   category: string
   description: string
   icon: StoreIcon
-  theme: StoreTheme
   location: string
+  /** Texto del horario para mostrar. */
   schedule: StoreSchedule[]
+  /** El mismo horario, estructurado para calcular si está abierta ahora. */
+  franjas: Franja[]
 }
+
+const LUN_VIE = [1, 2, 3, 4, 5]
+const SAB = [6]
 
 export const stores: Store[] = [
   {
@@ -28,11 +38,14 @@ export const stores: Store[] = [
     category: "Desayunos",
     description: "Desayunos y menú del día.",
     icon: "coffee",
-    theme: "red",
     location: "Bloque A, primer piso",
     schedule: [
       { days: "Lun – Vie", time: "6:30 a. m. – 3:00 p. m." },
       { days: "Sáb", time: "7:00 a. m. – 12:00 m." },
+    ],
+    franjas: [
+      { dias: LUN_VIE, abre: "06:30", cierra: "15:00" },
+      { dias: SAB, abre: "07:00", cierra: "12:00" },
     ],
   },
   {
@@ -42,11 +55,14 @@ export const stores: Store[] = [
     category: "Asados",
     description: "Pollo y cerdo asado, hamburguesas, perros y salchipapa.",
     icon: "flame",
-    theme: "dark",
     location: "Plazoleta central",
     schedule: [
       { days: "Lun – Vie", time: "11:00 a. m. – 8:00 p. m." },
       { days: "Sáb", time: "11:00 a. m. – 3:00 p. m." },
+    ],
+    franjas: [
+      { dias: LUN_VIE, abre: "11:00", cierra: "20:00" },
+      { dias: SAB, abre: "11:00", cierra: "15:00" },
     ],
   },
   {
@@ -56,11 +72,14 @@ export const stores: Store[] = [
     category: "Saludable",
     description: "Platos livianos, ensaladas, batidos y bebidas bajas en azúcar.",
     icon: "salad",
-    theme: "beige",
     location: "Junto al coliseo",
     schedule: [
       { days: "Lun – Vie", time: "7:00 a. m. – 6:00 p. m." },
       { days: "Sáb", time: "8:00 a. m. – 1:00 p. m." },
+    ],
+    franjas: [
+      { dias: LUN_VIE, abre: "07:00", cierra: "18:00" },
+      { dias: SAB, abre: "08:00", cierra: "13:00" },
     ],
   },
   {
@@ -70,11 +89,14 @@ export const stores: Store[] = [
     category: "Dulce y salado",
     description: "Sándwiches, crispetas, waffles, paletas y helados.",
     icon: "ice-cream",
-    theme: "red",
     location: "Biblioteca, entrada norte",
     schedule: [
       { days: "Lun – Vie", time: "8:00 a. m. – 7:00 p. m." },
       { days: "Sáb", time: "9:00 a. m. – 2:00 p. m." },
+    ],
+    franjas: [
+      { dias: LUN_VIE, abre: "08:00", cierra: "19:00" },
+      { dias: SAB, abre: "09:00", cierra: "14:00" },
     ],
   },
   {
@@ -84,11 +106,14 @@ export const stores: Store[] = [
     category: "Snacks",
     description: "Fritos, empanadas, snacks, bebidas y dulces.",
     icon: "cookie",
-    theme: "dark",
     location: "Bloque C, zona de estudio",
     schedule: [
       { days: "Lun – Vie", time: "7:00 a. m. – 8:00 p. m." },
       { days: "Sáb", time: "8:00 a. m. – 2:00 p. m." },
+    ],
+    franjas: [
+      { dias: LUN_VIE, abre: "07:00", cierra: "20:00" },
+      { dias: SAB, abre: "08:00", cierra: "14:00" },
     ],
   },
 ]
@@ -104,4 +129,35 @@ export function getStoreBySlug(slug: string) {
  */
 export function getStoreByTiendaId(tiendaId: string) {
   return stores.find((store) => store.tiendaId === tiendaId)
+}
+
+const DIAS_ISO: Record<string, number> = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 }
+
+/** Día ISO y minutos desde medianoche en hora de Colombia, sin importar la zona del dispositivo. */
+export function ahoraEnColombia(fecha: Date = new Date()) {
+  const partes = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Bogota",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(fecha)
+  const valor = (tipo: string) => partes.find((p) => p.type === tipo)?.value ?? "0"
+  return {
+    dia: DIAS_ISO[valor("weekday")] ?? 1,
+    minutos: Number(valor("hour")) * 60 + Number(valor("minute")),
+  }
+}
+
+function aMinutos(hhmm: string) {
+  const [h, m] = hhmm.split(":").map(Number)
+  return h * 60 + m
+}
+
+/** ¿La tienda atiende en este momento? */
+export function estaAbierta(store: Store, fecha: Date = new Date()) {
+  const { dia, minutos } = ahoraEnColombia(fecha)
+  return store.franjas.some(
+    (f) => f.dias.includes(dia) && minutos >= aMinutos(f.abre) && minutos < aMinutos(f.cierra),
+  )
 }
