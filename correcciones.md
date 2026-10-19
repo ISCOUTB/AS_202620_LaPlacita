@@ -857,3 +857,42 @@ fallaba al firmar el token y el reintento respondía «Ya existe una cuenta con 
 la sesión se firma **antes** de guardar: sin secreto, la cuenta no queda creada a medias. Prueba
 nueva en `backend/tests/identidad.test.js` («sin JWT_SECRET en producción el registro falla sin
 dejar la cuenta creada»). La variable va en **Environment** de la app del backend.
+
+---
+
+## Panel de tienda (18/10/2026)
+
+El «Portal Establecimiento», planeado desde el corte 1 en el C4, queda implementado como la
+ruta `/panel` de la misma app web. Decisión en [ADR-0023](docs/adr/0023-panel-de-tienda.md).
+
+| Cambio | Detalle |
+|---|---|
+| Cuentas de tienda | Roles `trabajador` y `admin` ligados a un `tiendaId`; se declaran en la variable `CUENTAS_TIENDA` (secreto de Dokploy) y se crean al arrancar si no existen. Sin registro abierto |
+| Identidad de la tienda | Las rutas `/tienda/*` toman la tienda **del token**, no de la petición: una cuenta no puede operar otra tienda (cierre de ESC-02 para el panel; pendiente de identidad del corte 3) |
+| Pedidos en vivo | `GET /tienda/pedidos` (cola en orden de llegada, sin PIN, con el primer nombre del cliente), `POST …/pago`, `…/listo` (ya **no** devuelve el PIN) y `…/entrega` con el PIN que dicta el cliente |
+| Menú editable | Catálogo en la tabla `productos` (sembrada con el menú del código); el Map en memoria es su caché con invalidación write-through. Agotado: cualquier cuenta; precio: solo admin (403 al trabajador) |
+| Resumen del día | Pedidos de hoy por estado; ventas solo para el admin |
+| Frontend | `/panel`: ingreso del personal, columnas Por pagar / En preparación / Listos, aviso sonoro opcional para pedidos nuevos, entregados de hoy, pestañas Menú y Resumen del día |
+| Rutas v1 de tienda | `/pagos/…/confirmar`, `/entrega/…/listo` y `/entrega/…/validar` siguen sin sesión por compatibilidad (mediciones S9, `/docs`) y quedan marcadas `deprecated` en el contrato: retirarlas es una mitigación para S13 |
+
+**Configuración en Dokploy (backend):** variable `CUENTAS_TIENDA` con al menos un admin por
+tienda (formato en `backend/.env.example`). Requiere también `JWT_SECRET`.
+
+Verificado: `npm test` 89 pruebas (88 con PostgreSQL 18 local) y contrato 28/28; lint y build
+del frontend; recorrido en local: un cliente pide (A21), el trabajador lo ve en «Por pagar»,
+confirma el pago, lo marca listo, un PIN equivocado muestra «PIN incorrecto» y el PIN que el
+cliente ve en su app lo entrega. Por HTTP: el cliente recibe 403 en el panel, el trabajador 403
+al cambiar un precio, una tienda 404 al editar un producto de otra, y las ventas solo las ve el
+admin.
+
+**Pendiente declarado:** gestión del equipo desde el panel (hoy las cuentas se declaran en la
+variable de entorno); tiempo promedio de preparación (requiere guardar la hora de cada
+transición); las rutas v1 de tienda sin sesión.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| El panel nunca recibe el PIN | `POST /api/v1/tienda/pedidos/{id}/listo` responde sin campo `pin`; el PIN solo lo ve el cliente en su app |
+| La tienda sale del token | Con la cuenta de El Mesón, `PATCH /api/v1/tienda/productos/prod-003` (de El Asa'o) responde 404 |
+| El menú editado sobrevive al reinicio | `tests/persistencia.test.js`: «un cambio de menú del panel sobrevive al reinicio» |
+

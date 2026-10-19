@@ -451,6 +451,7 @@ Esta sección registra el historial de decisiones arquitectónicas significativa
 | ADR-0020 | Código corto de pedido por tienda y por día (A01 … Z99) | Aceptado | 2026-10-18 | ESC-05, ESC-02, ESC-01 | [0020-codigo-corto-de-pedido.md](../adr/0020-codigo-corto-de-pedido.md) |
 | ADR-0021 | Identidad: cuentas con correo institucional y sesión con JWT | Aceptado | 2026-10-18 | ESC-02, ESC-03, A-06 | [0021-identidad-cuentas-y-sesion-jwt.md](../adr/0021-identidad-cuentas-y-sesion-jwt.md) |
 | ADR-0022 | El PIN de retiro se muestra a su dueño en la app (precisa ADR-0013) | Aceptado | 2026-10-18 | ESC-03, A-06 | [0022-pin-visible-para-su-dueno.md](../adr/0022-pin-visible-para-su-dueno.md) |
+| ADR-0023 | Panel de tienda: cuentas por tienda, roles y catálogo editable en PostgreSQL | Aceptado | 2026-10-18 | ESC-02, ESC-03, ESC-05 | [0023-panel-de-tienda.md](../adr/0023-panel-de-tienda.md) |
  
 **Relación con los bloques de construcción:**
 - ADR-0001 y ADR-0002 determinan la estructura: un único proceso con módulos de dominio separados.

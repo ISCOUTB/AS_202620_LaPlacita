@@ -18,8 +18,8 @@ flowchart TD
     establecimiento["<b>Establecimiento</b><br/>[Person]<br/><i>Personal del local de comida</i>"]:::person
 
     subgraph laPlacita ["Sistema LaPlacita"]
-        app_user["<b>App / Web Cliente</b><br/>[Next.js PWA]<br/><i>Explora menús, arma el pedido y sigue su estado</i> <br/>IMPLEMENTADO — rama frontend-mvp"]:::container
-        app_local["<b>Portal Establecimiento</b><br/>[React / Web App]<br/><i>Gestiona menú, ve pedidos y valida PINs</i> <br/>PLANEADO — corte 3"]:::planned
+        app_user["<b>App / Web Cliente</b><br/>[Next.js PWA]<br/><i>Explora menús, pide con su cuenta, sigue el estado y ve su PIN</i> <br/>IMPLEMENTADO — frontend/, Dokploy"]:::container
+        app_local["<b>Portal Establecimiento</b><br/>[Next.js, ruta /panel]<br/><i>Pedidos en vivo, estados, entrega con PIN, menú y resumen</i> <br/>IMPLEMENTADO — misma app web (ADR-0023)"]:::container
         api["<b>API Backend Central</b><br/>[Next.js / Node.js]<br/><i>API Routes, reglas de negocio, pedidos y PIN</i> <br/>IMPLEMENTADO — corte vertical (tiendaId)"]:::container
         cache[("<b>Caché y Colas</b><br/>[Redis]<br/><i>Gestión de PINs y colas de tareas</i> <br/>PLANEADO — corte 3")]:::planned
         db[("<b>Base de Datos Principal</b><br/>[PostgreSQL]<br/><i>Pedidos y su estado (ADR-0014)</i> <br/>IMPLEMENTADO — Dokploy, condicional a DATABASE_URL")]:::container
@@ -60,8 +60,8 @@ flowchart TD
 | Contenedor | Estado | Evidencia |
 | --- | --- | --- |
 | API Backend Central | Implementado (`tiendaId` en todo el flujo) | `backend/src/modules/*`, `backend/src/corte-vertical.js`, `backend/tests/aislamiento.test.js` |
-| App / Web Cliente | **Implementado** (PWA Next.js 16, diseño v0) | `frontend/` (en `master` desde el 13/10), BFF `frontend/app/api/v1/[...path]/route.js`, desplegada en Dokploy (ADR-0017) |
+| App / Web Cliente | **Implementado** (PWA Next.js 16, identidad UTB, cuentas y PIN) | `frontend/`, BFF `frontend/app/api/v1/[...path]/route.js` y sesión `frontend/app/api/sesion/route.ts`, desplegada en Dokploy (ADR-0017, ADR-0021, ADR-0022) |
 | Base de Datos Principal (PostgreSQL) | **Implementado** (Dokploy, condicional a `DATABASE_URL`; en su ausencia el dominio conserva Maps en memoria) | [ADR-0014](../adr/0014-base-de-datos-postgresql-dokploy.md), `backend/src/persistencia/index.js`, experimento ESC-01 3/3 ([evidencias-s10 §6](../evidencias/evidencias-s10.md)) |
-| Portal Establecimiento | Planeado (corte 3) | Las operaciones de tienda se realizan hoy con el contrato (`/docs`) |
+| Portal Establecimiento | **Implementado** como ruta `/panel` de la misma app web (un solo despliegue) | `frontend/app/panel/page.tsx`, `frontend/components/panel/*`, rutas `backend/app/api/v1/tienda/*` con sesión de tienda (ADR-0023) |
 | Caché y Colas (Redis) | Planeado (corte 3) | ADR-0011 lo reserva para PINs/colas |
 | Pasarela de Pagos / Servicio Push | Externo, no integrado | Deuda declarada (A-04, V-05) |
