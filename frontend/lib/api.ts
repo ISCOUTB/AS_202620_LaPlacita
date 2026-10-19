@@ -157,3 +157,63 @@ export function obtenerNotificaciones(
     `/notificaciones/${encodeURIComponent(pedidoId)}?tiendaId=${encodeURIComponent(tiendaId)}`
   )
 }
+
+// ── Panel de tienda (ADR-0023): la tienda sale del token de la sesión ────────
+
+/** Pedido visto desde el mostrador: sin PIN, con el primer nombre del cliente. */
+export interface PedidoTienda extends Pedido {
+  clienteNombre?: string | null
+}
+
+export interface ProductoTienda {
+  id: string
+  tiendaId: string
+  nombre: string
+  precio: number
+  disponible: boolean
+}
+
+export interface ResumenTienda {
+  fecha: string
+  pedidos: number
+  porEstado: Record<EstadoPedido, number>
+  /** Solo para el admin; null para el trabajador. */
+  ventas: number | null
+}
+
+const SIN_CACHE: RequestInit = { cache: "no-store" }
+
+export function listarPedidosTienda(): Promise<PedidoTienda[]> {
+  return request<PedidoTienda[]>("/tienda/pedidos", SIN_CACHE)
+}
+
+function accionTienda(pedidoId: string, accion: "pago" | "listo" | "entrega", cuerpo?: object) {
+  return request<PedidoTienda>(`/tienda/pedidos/${encodeURIComponent(pedidoId)}/${accion}`, {
+    method: "POST",
+    headers: cuerpo ? { "content-type": "application/json" } : undefined,
+    body: cuerpo ? JSON.stringify(cuerpo) : undefined,
+  })
+}
+
+export const confirmarPagoTienda = (pedidoId: string) => accionTienda(pedidoId, "pago")
+export const marcarListoTienda = (pedidoId: string) => accionTienda(pedidoId, "listo")
+export const entregarConPin = (pedidoId: string, pin: string) => accionTienda(pedidoId, "entrega", { pin })
+
+export function listarMenuTienda(): Promise<ProductoTienda[]> {
+  return request<ProductoTienda[]>("/tienda/productos", SIN_CACHE)
+}
+
+export function actualizarProductoTienda(
+  productoId: string,
+  cambios: { disponible?: boolean; precio?: number },
+): Promise<ProductoTienda> {
+  return request<ProductoTienda>(`/tienda/productos/${encodeURIComponent(productoId)}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(cambios),
+  })
+}
+
+export function resumenTienda(): Promise<ResumenTienda> {
+  return request<ResumenTienda>("/tienda/resumen", SIN_CACHE)
+}

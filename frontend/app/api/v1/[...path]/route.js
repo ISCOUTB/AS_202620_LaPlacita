@@ -80,4 +80,4 @@ async function forward(request, { params }) {
   }
 }
 
-export { forward as GET, forward as POST }
+export { forward as GET, forward as POST, forward as PATCH }

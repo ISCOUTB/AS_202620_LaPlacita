@@ -57,6 +57,7 @@ Abrir `http://localhost:3001`. En despliegue, `BACKEND_URL` apunta al backend re
 | Carrito (drawer) | Multi-item agrupado por tienda; "Hacer pedido" crea **un POST por línea** (contrato v1) | `POST /pedidos` |
 | `/pedidos/[pedidoId]` | Seguimiento en vivo (polling 3 s): estado, línea de tiempo, código del pedido, historial y **PIN de retiro** cuando está Listo (solo el dueño, con sesión) | `GET /pedidos/{id}`, `GET /notificaciones/{id}` |
 | `/mis-pedidos` | Con sesión: pedidos de la cuenta en cualquier dispositivo; sin sesión: los del equipo | `GET /pedidos` (sesión) o localStorage + `GET /pedidos/{id}` |
+| `/panel` | **Panel de tienda** (personal): pedidos en vivo por columnas con aviso sonoro, confirmar pago, marcar listo, entregar con PIN; menú (agotados; precios solo admin) y resumen del día | `/tienda/*` con sesión de tienda (ADR-0023) |
 | `/cuenta` | Ingresar o crear cuenta (correo @utb.edu.co) y perfil con cerrar sesión | BFF `/api/sesion` → `/auth/sesion`, `/auth/registro`, `/auth/yo` |
 | `/~offline` | Página sin conexión | service worker |
 
