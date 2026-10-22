@@ -6,6 +6,8 @@ import { lista } from '../../../../../../src/persistencia/index.js';
 // 12/10/2026): sin la espera, un `listo` temprano se aplicaba sobre el estado
 // en blanco y la rehidratación posterior lo descartaba.
 export async function POST(request, { params }) {
+  // Next 15+: `params` es una promesa.
+  const { pedidoId } = await params;
   try {
     await lista();
     const { searchParams } = request.nextUrl;
@@ -17,7 +19,7 @@ export async function POST(request, { params }) {
 
     // Contrato v1 (deprecated): devuelve el pedido con su PIN (PedidoConPin),
     // pero nunca el token de seguimiento (ADR-0025), que solo se entrega al crear.
-    const resultado = { ...entrega.marcarListo(params.pedidoId, tiendaId) };
+    const resultado = { ...entrega.marcarListo(pedidoId, tiendaId) };
     delete resultado.seguimiento;
     return NextResponse.json(resultado, { status: 200 });
   } catch (error) {

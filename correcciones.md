@@ -1006,3 +1006,39 @@ Verificado:
 | Las alertas de Dependabot del frontend se cierran | Tras el push, GitHub vuelve a analizar el lockfile; las alertas de `next`, `sharp` y `postcss` del frontend pasan a cerradas |
 | Las alertas de `braces` siguen abiertas hasta descartarlas | En GitHub → Security → Dependabot, descartarlas con «Risk is tolerable» y el motivo |
 
+---
+
+## Backend en Next 16 (22/10/2026, rama `chore/next-16-backend`)
+
+Cierra las alertas de Dependabot de `backend/package-lock.json` y el riesgo **R-5** declarado en
+S8 (`docs/semana-08.md`: «migración programada tras S8, con revalidación del contrato y del
+`output: standalone`»). Se hace en una rama para que producción no cambie hasta probarlo.
+
+| Cambio | Detalle |
+|---|---|
+| Dependencias | `next` 14.2.35 → **16.4.2**, `react` y `react-dom` 18 → **19.2.0** (las mismas versiones del frontend). `npm audit` del backend: **0 vulnerabilidades** |
+| Rutas | En Next 15+ el segundo argumento trae `params` como promesa. Las 7 rutas que leían `params.x` ahora hacen `const { x } = await params` al empezar; las otras 5 ya lo hacían |
+| `next.config.mjs` | `experimental.serverComponentsExternalPackages` → `serverExternalPackages` (`pg` sigue fuera del bundle) |
+| Sin cambios | Contrato, dominio, Dockerfile (Node 22 cumple el mínimo de Next 16) y CI |
+
+Verificado en local:
+- `npm test` con PostgreSQL 18: 111 en verde y 1 omitida. Sin base: 106 en verde y 6 omitidas.
+  Contrato: 28/28.
+- `npm run build` con Turbopack sin advertencias; el *standalone* incluye `pg`.
+- Recorrido HTTP del **build de producción** (`node .next/standalone/server.js`) por las rutas
+  del contrato: **37/37** como se esperaba. Incluye pedido sin cuenta con idempotencia, token de
+  seguimiento, flujo v1 de pago, listo y PIN, registro y sesión, pedido con cuenta y PIN del
+  dueño, y el panel completo (pago, listo sin PIN, entrega, agotado, otra tienda 404, resumen).
+- Reinicio del servidor: el pedido vuelve de la base con su token y el siguiente id continúa.
+- No se construyó la imagen Docker en local (no hay Docker instalado). La construye el
+  despliegue de Dokploy.
+
+**Antes de unir a `master`:** que el CI de la rama pase (incluye las pruebas con PostgreSQL y
+SonarCloud). Al unir, Dokploy redespliega el backend solo.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Las rutas con parámetro leen bien el id en Next 16 | `GET /api/v1/catalogo/productos/prod-001?tiendaId=tienda-01` responde el producto (con `params` sin `await` respondería 404) |
+| Las alertas del backend se cierran | Tras unir a `master`, GitHub → Security → Dependabot ya no lista alertas de `backend/package-lock.json` |
+

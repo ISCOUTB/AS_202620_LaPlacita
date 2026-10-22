@@ -14,6 +14,8 @@ import { usuarioDeLaPeticion } from '../../../../../src/http/autenticacion.js';
 // V-03 del ADR-0007 enuncia. Exponer un setter genérico permitía recorrer
 // Recibido -> En preparación -> Listo -> Entregado sin pago ni PIN.
 export async function GET(request, { params }) {
+  // Next 15+: `params` es una promesa.
+  const { pedidoId } = await params;
   try {
     // ESC-01 · ADR-0014: tras un reinicio, la primera lectura debe esperar a
     // que el estado se rehidrate desde PostgreSQL; sin esta espera un GET
@@ -28,7 +30,7 @@ export async function GET(request, { params }) {
 
     // ADR-0025: solo el dueño con sesión o quien trae el token de seguimiento.
     // A cualquier otro se le responde 404, igual que a un id inexistente.
-    const pedido = pedidos.vistaConAcceso(params.pedidoId, tiendaId, {
+    const pedido = pedidos.vistaConAcceso(pedidoId, tiendaId, {
       seguimiento: searchParams.get('seguimiento'),
       usuarioId: usuarioDeLaPeticion(request)?.id,
     });
