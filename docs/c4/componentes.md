@@ -17,13 +17,12 @@ flowchart TB
         PAG["Pagos<br/>backend/src/modules/pagos/"]:::container
         ENT["Entrega<br/>backend/src/modules/entrega/"]:::container
         NOT["Notificaciones (OHS)<br/>backend/src/modules/notificaciones/"]:::container
-        S_CAT[("productos<br/>Map")]:::containerDb
+        S_CAT[("productos<br/>Map — caché write-through")]:::containerDb
         S_PED[("pedidosPorTienda<br/>contadoresPorTienda")]:::containerDb
         S_PAG[("pagosConfirmados<br/>tienda:pedido")]:::containerDb
         S_NOT[("notificacionesEnviadas<br/>array")]:::containerDb
     end
     DB[("PostgreSQL<br/>IMPLEMENTADO — ADR-0014<br/>(condicional a DATABASE_URL)")]:::container
-    REDIS[("Redis<br/>PLANEADO Corte 2")]:::planned
     PASARELA["Pasarela de Pagos ext.<br/>(tras ACL)"]:::extSystem
 
     CV -.->|orquestación| CAT
@@ -42,8 +41,8 @@ flowchart TB
     PED --> S_PED
     PAG --> S_PAG
     NOT --> S_NOT
-    PED -.->|"sustituible sin cambiar lógica (ADR-0001)<br/>PostgreSQL / TCP"| DB
-    ENT -.->|"PINs futuros<br/>Redis / TCP"| REDIS
+    PED -.->|"write-behind ordenado por pedido (ADR-0014)<br/>PostgreSQL / TCP"| DB
+    CAT -.->|"write-through: espera la base (ADR-0023)<br/>PostgreSQL / TCP"| DB
 ```
 
 

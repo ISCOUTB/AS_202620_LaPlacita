@@ -393,7 +393,7 @@ flowchart TB
 | Rutas `/api/v1/*` + dominio `backend/src/modules/*` | Dentro del contenedor del backend (mismo proceso, ESM síncrono) | `backend/app/api/v1/**/route.js`, ADR-0001/0006 |
 | Pipeline `test` + `contract-test` + `frontend` | GitHub Actions runners `ubuntu-latest` + Node 22 en cada push/PR a `master` | `.github/workflows/ci.yml` |
 | Análisis estático + Quality Gate | SonarCloud, organización `isco-utb`, proyecto `ISCOUTB_AS_202620_LaPlacita` | `sonar-project.properties`, ADR-0016 |
-| Persistencia | PostgreSQL gestionado por Dokploy en la misma red interna (implementado, condicional a `DATABASE_URL`); Redis planeado | ADR-0014, C4 contenedores, ESC-01 3/3 (evidencias-s10 §6) |
+| Persistencia | PostgreSQL gestionado por Dokploy en la misma red interna (implementado, condicional a `DATABASE_URL`); Redis descartado en S12 (§8.5) | ADR-0014, C4 contenedores, ESC-01 3/3 (evidencias-s10 §6) |
 | Desarrollo local | Puesto del desarrollador (`npm ci` → `npm run dev` → `localhost:3000/3001`) | `README.md`, `backend/.env.example`, `frontend/.env.example` |
 
 ---
@@ -425,6 +425,34 @@ Proyección a código: `docs/c4/componentes.md`. Decisiones: ADR-0001 (estilo), 
 3. **Frontera de módulo:** comunicación solo vía `index.js` público; prohibido tocar el Map ajeno (violaciones V-01…V-06 en `docs/dominio/auditoria-modularidad.md`).
 4. **RES-01:** nunca tarjeta en el repo; solo confirmación (ACL).
 
+### 8.4 Consistencia por operación (S12)
+La consistencia se elige por operación, no para todo el sistema. Tabla completa (O-01…O-14) en
+[evidencias-s12 §2](../evidencias/evidencias-s12.md).
+- **Fuerte:** crear pedido (con idempotencia), precio y disponibilidad al pedir, transiciones de
+  estado (pago, listo, entrega), intentos de PIN, edición del menú y registro de cuentas. Se
+  cumple porque hay **un solo proceso** (ADR-0019): cada operación síncrona del dominio corre
+  completa en el event loop sin intercalarse con otra.
+- **Read-your-writes:** el cliente ve su pedido y su PIN justo después de crearlo; tras un
+  reinicio, las lecturas esperan la rehidratación (`persistencia.lista()`).
+- **Eventual con plazo:** seguimiento del pedido (≤ 3 s), cola del panel (≤ 4 s), resumen del
+  día (≤ 15 s), por consulta periódica; `/api` nunca se cachea en el navegador ni en el proxy.
+- **Durabilidad de pedidos write-behind, ordenada por pedido** (ADR-0014, `cola-escrituras.js`):
+  riesgo aceptado de perder la última mutación si el proceso cae antes de escribirla.
+- **Condición:** con más de una réplica, las garantías fuertes exigirían transacciones en
+  PostgreSQL (`SELECT … FOR UPDATE` o restricciones únicas).
+
+### 8.5 Caché (S12)
+Diseño completo en [evidencias-s12 §3](../evidencias/evidencias-s12.md).
+- **Catálogo:** caché local en memoria de la tabla `productos`, **write-through** con
+  invalidación por escritura (ADR-0023): se espera a PostgreSQL y luego se actualiza el Map; sin
+  TTL porque toda escritura pasa por `actualizarProducto`. Válida mientras haya un proceso y
+  nadie edite la tabla a mano.
+- **Pedidos:** el Map actúa como caché write-behind de PostgreSQL (§8.4).
+- **No se cachea:** `/api/*` en el service worker y en el proxy del frontend. **Redis
+  descartado:** con un solo proceso una caché distribuida no aporta (C4 corregido).
+- **Decisión de datos más costosa de revertir:** la identidad del pedido (`tiendaId`,
+  `pedido-N`), [ADR-0024](../adr/0024-identidad-del-pedido.md).
+
 ---
 
 ## 9. Decisiones Arquitectónicas
@@ -452,6 +480,7 @@ Esta sección registra el historial de decisiones arquitectónicas significativa
 | ADR-0021 | Identidad: cuentas con correo institucional y sesión con JWT | Aceptado | 2026-10-18 | ESC-02, ESC-03, A-06 | [0021-identidad-cuentas-y-sesion-jwt.md](../adr/0021-identidad-cuentas-y-sesion-jwt.md) |
 | ADR-0022 | El PIN de retiro se muestra a su dueño en la app (precisa ADR-0013) | Aceptado | 2026-10-18 | ESC-03, A-06 | [0022-pin-visible-para-su-dueno.md](../adr/0022-pin-visible-para-su-dueno.md) |
 | ADR-0023 | Panel de tienda: cuentas por tienda, roles y catálogo editable en PostgreSQL | Aceptado | 2026-10-18 | ESC-02, ESC-03, ESC-05 | [0023-panel-de-tienda.md](../adr/0023-panel-de-tienda.md) |
+| ADR-0024 | Identidad del pedido `pedido-N` por tienda: la decisión de datos más costosa de revertir | Propuesto | 2026-10-22 | ESC-02, ESC-01, ESC-05 | [0024-identidad-del-pedido.md](../adr/0024-identidad-del-pedido.md) |
  
 **Relación con los bloques de construcción:**
 - ADR-0001 y ADR-0002 determinan la estructura: un único proceso con módulos de dominio separados.

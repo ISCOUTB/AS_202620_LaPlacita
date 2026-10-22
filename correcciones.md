@@ -896,3 +896,30 @@ transición); las rutas v1 de tienda sin sesión.
 | La tienda sale del token | Con la cuenta de El Mesón, `PATCH /api/v1/tienda/productos/prod-003` (de El Asa'o) responde 404 |
 | El menú editado sobrevive al reinicio | `tests/persistencia.test.js`: «un cambio de menú del panel sobrevive al reinicio» |
 
+
+---
+
+## Evidencia S12 — Estrategia de datos y eventos (22/10/2026)
+
+Documento [evidencias-s12](docs/evidencias/evidencias-s12.md) y
+[ADR-0024](docs/adr/0024-identidad-del-pedido.md), pendientes de validación del equipo. Sin
+cambios de código.
+
+| Cambio | Detalle |
+|---|---|
+| Tabla operación → garantía | 14 operaciones reales (O-01…O-14) con garantía, qué pasa si el dato llega tarde y dónde se cumple en el código |
+| Caché | Catálogo: write-through con invalidación por escritura, sin TTL, válida con un proceso. Pedidos: la memoria es una caché write-behind de PostgreSQL. `/api` nunca se cachea |
+| ADR-0024 | La identidad del pedido (`tiendaId`, `pedido-N`) es la decisión de datos más costosa de revertir: salió del sistema (URLs, contrato, `localStorage` de los celulares). Se compara con ADR-0014 y con el motor |
+| C4 nivel 2 | Se retira el contenedor Redis planeado; PostgreSQL con sus tres tablas y el tipo de escritura; se declara que no hay broker. Componentes: catálogo → PostgreSQL write-through |
+| arc42 | §8.4 Consistencia por operación, §8.5 Caché y fila de ADR-0024 en §9 |
+
+**Hallazgos declarados (sin corregir en S12):** un `pedidoId` puede reutilizarse si el proceso
+cae entre crear el pedido y guardarlo; los ids consecutivos permiten recorrer la vista pública,
+que muestra estado, total y `clienteId` (para el STRIDE de S13).
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Cada fila de la tabla corresponde a código real | Abrir la ruta o función citada en la columna «Cómo se cumple» de evidencias-s12 §2 |
+| El C4 ya no promete Redis | `docs/c4/contenedores.md` y `docs/c4/componentes.md` no tienen el nodo Redis; el estado lo explica |
+| El costo de reversión está argumentado, no solo afirmado | ADR-0024, tabla «Candidatas comparadas»: qué haría falta para revertir cada decisión y qué queda fuera de nuestro control |

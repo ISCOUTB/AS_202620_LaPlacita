@@ -20,9 +20,8 @@ flowchart TD
     subgraph laPlacita ["Sistema LaPlacita"]
         app_user["<b>App / Web Cliente</b><br/>[Next.js PWA]<br/><i>Explora menús, pide con su cuenta, sigue el estado y ve su PIN</i> <br/>IMPLEMENTADO — frontend/, Dokploy"]:::container
         app_local["<b>Portal Establecimiento</b><br/>[Next.js, ruta /panel]<br/><i>Pedidos en vivo, estados, entrega con PIN, menú y resumen</i> <br/>IMPLEMENTADO — misma app web (ADR-0023)"]:::container
-        api["<b>API Backend Central</b><br/>[Next.js / Node.js]<br/><i>API Routes, reglas de negocio, pedidos y PIN</i> <br/>IMPLEMENTADO — corte vertical (tiendaId)"]:::container
-        cache[("<b>Caché y Colas</b><br/>[Redis]<br/><i>Gestión de PINs y colas de tareas</i> <br/>PLANEADO — corte 3")]:::planned
-        db[("<b>Base de Datos Principal</b><br/>[PostgreSQL]<br/><i>Pedidos y su estado (ADR-0014)</i> <br/>IMPLEMENTADO — Dokploy, condicional a DATABASE_URL")]:::container
+        api["<b>API Backend Central</b><br/>[Next.js / Node.js]<br/><i>API Routes, reglas de negocio, pedidos y PIN; estado en memoria y caché del catálogo (write-through)</i> <br/>IMPLEMENTADO — corte vertical (tiendaId)"]:::container
+        db[("<b>Base de Datos Principal</b><br/>[PostgreSQL]<br/><i>Tablas pedidos, usuarios y productos (ADR-0014, ADR-0021, ADR-0023)</i> <br/>IMPLEMENTADO — Dokploy, condicional a DATABASE_URL")]:::container
     end
 
     pago["<b>Pasarela de Pagos</b><br/>[Software System]<br/><i>Procesamiento PCI-DSS</i>"]:::extSystem
@@ -34,8 +33,7 @@ flowchart TD
     app_user -->|Contrato /api/v1 mismo origen<br/>BFF (route handler)| api
     app_local -->|Actualiza orden y valida PIN<br/>HTTPS / REST API| api
 
-    api -->|Espejo y rehidratación de pedidos<br/>TCP / pg (SQL, UPSERT)| db
-    api -->|Almacena PINs y encola tareas<br/>PLANEADO| cache
+    api -->|Pedidos: write-behind ordenado por pedido<br/>Cuentas y menú: espera la confirmación<br/>Rehidratación al arrancar<br/>TCP / pg (SQL, UPSERT)| db
 
     api -->|Inicia cobro y confirma<br/>HTTPS / JSON| pago
     api -->|Solicita envío de alerta<br/>PLANEADO (deuda V-05)| push
@@ -63,5 +61,6 @@ flowchart TD
 | App / Web Cliente | **Implementado** (PWA Next.js 16, identidad UTB, cuentas y PIN) | `frontend/`, BFF `frontend/app/api/v1/[...path]/route.js` y sesión `frontend/app/api/sesion/route.ts`, desplegada en Dokploy (ADR-0017, ADR-0021, ADR-0022) |
 | Base de Datos Principal (PostgreSQL) | **Implementado** (Dokploy, condicional a `DATABASE_URL`; en su ausencia el dominio conserva Maps en memoria) | [ADR-0014](../adr/0014-base-de-datos-postgresql-dokploy.md), `backend/src/persistencia/index.js`, experimento ESC-01 3/3 ([evidencias-s10 §6](../evidencias/evidencias-s10.md)) |
 | Portal Establecimiento | **Implementado** como ruta `/panel` de la misma app web (un solo despliegue) | `frontend/app/panel/page.tsx`, `frontend/components/panel/*`, rutas `backend/app/api/v1/tienda/*` con sesión de tienda (ADR-0023) |
-| Caché y Colas (Redis) | Planeado (corte 3) | ADR-0011 lo reserva para PINs/colas |
+| Caché y Colas (Redis) | **Retirado del diagrama (S12, 22/10/2026).** Con un solo proceso (ADR-0019) una caché distribuida no aporta: la caché del catálogo vive dentro de la API (write-through) y los PINs se guardan con su pedido en PostgreSQL | [evidencias-s12 §3](../evidencias/evidencias-s12.md) |
+| Broker de mensajes | **No existe.** Las escrituras a PostgreSQL se encolan dentro del proceso de la API (cola por pedido); no hay contenedor de mensajería | [evidencias-s12 §4](../evidencias/evidencias-s12.md) |
 | Pasarela de Pagos / Servicio Push | Externo, no integrado | Deuda declarada (A-04, V-05) |
