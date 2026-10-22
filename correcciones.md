@@ -966,3 +966,43 @@ Verificado:
 | Crear con la base caída no deja un id huérfano | Con la base detenida, `POST /pedidos` responde 503 y `GET /pedidos/{id}` de ese id responde 404 |
 | El token solo se entrega una vez | Solo la respuesta de `POST /pedidos` trae `seguimiento`; la vista pública, el panel y la ruta v1 `…/listo` no |
 | Tras desplegar, los pedidos sin cuenta anteriores al token pierden el seguimiento | Esperado (ADR-0025): solo su dueño con sesión los ve |
+
+---
+
+## Dependencias y SonarCloud (22/10/2026)
+
+Revisión de las 73 alertas de **Dependabot** del repositorio (el *code scanning* no tiene
+alertas abiertas) y de los 7 avisos abiertos de **SonarCloud** (Quality Gate en verde).
+
+| Cambio | Detalle |
+|---|---|
+| Frontend `next` 16.0.10 → **16.4.2** | Cierra las alertas críticas y altas de `next`, `sharp` y `postcss` en `frontend/package-lock.json`. `eslint-config-next` alineado a 16.4.2 |
+| Sonar S8786 (confiabilidad) | La regex del correo podía retroceder en tiempo super-lineal; ahora `esCorreo()` valida lo mismo en un solo recorrido |
+| Sonar S9382 (×3) | `await` dentro de ciclos: los reintentos del despachador son recursivos; las cuentas de tienda se aseguran en paralelo con `Promise.all` (la comprobación síncrona de cada una evita duplicados igual que antes) |
+| Sonar S7785 | Arranque sin base: `await asegurarCuentasTienda()` de nivel superior en vez de `void` |
+| Sonar S7747 y S6582 | `Promise.allSettled(enVuelo)` sin copiar a un arreglo; `cursor?.fecha` |
+
+**Pendiente, a propósito:**
+- **Backend `next` 14.2.35:** sus alertas solo se cierran con Next 16, un salto de versión mayor
+  (las rutas reciben `params` asíncrono, React 19). Se hará en una rama aparte con todas las
+  pruebas antes de llegar a `master`. Las alertas críticas no aplican al backend: la ejecución
+  remota es para servidores Windows o para la optimización de imágenes, que no se usa; los demás
+  fallos necesitan *rewrites* o *middleware*, que el backend no tiene.
+- **`braces` → `micromatch` → `fast-glob` → `eslint-config-next` (5 altas):** no existe versión
+  corregida. Solo se usa al revisar el código y no llega a producción. Se descartan en GitHub con
+  el motivo «riesgo tolerable».
+
+Verificado:
+- `npm test` del backend con PostgreSQL 18 local (111 en verde, 1 omitida) y sin base (106 en
+  verde, 6 omitidas); contrato 28/28; `npm run build` del backend.
+- Frontend: `npm run lint` y `npm run build` con Next 16.4.2; `npm audit` solo deja la cadena de
+  `braces`.
+- El frontend construido, contra la API de producción: portada, tiendas, El Mesón, mis pedidos,
+  panel, seguimiento y el proxy `/api/v1` responden 200.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Las alertas de Dependabot del frontend se cierran | Tras el push, GitHub vuelve a analizar el lockfile; las alertas de `next`, `sharp` y `postcss` del frontend pasan a cerradas |
+| Las alertas de `braces` siguen abiertas hasta descartarlas | En GitHub → Security → Dependabot, descartarlas con «Risk is tolerable» y el motivo |
+

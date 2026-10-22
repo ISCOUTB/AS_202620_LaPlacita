@@ -22,7 +22,17 @@ const fallosPorCorreo = estadoCompartido('fallosPorCorreo', () => new Map());
 
 export const MAX_FALLOS = 5;
 export const VENTANA_FALLOS_MS = 15 * 60 * 1000;
-const CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Correo con forma `algo@dominio.tld`, sin espacios y con una sola arroba.
+// Antes era la regex /^[^\s@]+@[^\s@]+\.[^\s@]+$/, que con entradas largas
+// puede retroceder en tiempo super-lineal (Sonar S8786); esto acepta lo mismo
+// en un solo recorrido.
+function esCorreo(texto) {
+  if (typeof texto !== 'string' || /\s/.test(texto)) return false;
+  const arroba = texto.indexOf('@');
+  if (arroba <= 0 || arroba !== texto.lastIndexOf('@')) return false;
+  const dominio = texto.slice(arroba + 1);
+  return dominio.slice(1, -1).includes('.');
+}
 
 function errorCon(mensaje, estado) {
   const e = new Error(mensaje);
@@ -66,7 +76,7 @@ function agregar(usuario) {
 export async function registrar({ correo, nombre, contrasena } = {}) {
   const correoLimpio = String(correo ?? '').trim().toLowerCase();
   const nombreLimpio = String(nombre ?? '').trim().replace(/\s+/g, ' ');
-  if (!CORREO.test(correoLimpio)) throw errorCon('Escribe un correo válido', 400);
+  if (!esCorreo(correoLimpio)) throw errorCon('Escribe un correo válido', 400);
   const dominio = correoLimpio.split('@')[1];
   if (!dominiosPermitidos().includes(dominio)) {
     throw errorCon(`Usa tu correo institucional (@${dominiosPermitidos()[0]})`, 400);
@@ -166,33 +176,38 @@ export function leerCuentasTienda(texto = process.env.CUENTAS_TIENDA ?? '') {
       return { tiendaId, rol, correo: (correo ?? '').toLowerCase(), contrasena, nombre: nombre.join(' ') || 'Tienda' };
     })
     .filter((c) => {
-      const valida = TIENDA.test(c.tiendaId ?? '') && ROLES_TIENDA.has(c.rol) && CORREO.test(c.correo) && (c.contrasena ?? '').length >= 8;
+      const valida = TIENDA.test(c.tiendaId ?? '') && ROLES_TIENDA.has(c.rol) && esCorreo(c.correo) && (c.contrasena ?? '').length >= 8;
       if (!valida) logError({ route: 'identidad', mensaje: `CUENTAS_TIENDA: entrada inválida para ${c.correo || 'sin correo'}` });
       return valida;
     });
 }
 
+// Las cuentas se guardan en paralelo: son independientes. La comprobación y el
+// alta en memoria de cada una son síncronos, así que un correo repetido en la
+// variable se salta igual que antes.
 export async function asegurarCuentasTienda(cuentas = leerCuentasTienda()) {
-  for (const c of cuentas) {
-    if (idPorCorreo.has(c.correo)) continue;
-    const usuario = {
-      id: `usr-${randomUUID()}`,
-      correo: c.correo,
-      nombre: c.nombre,
-      hash: cifrarContrasena(c.contrasena),
-      rol: c.rol,
-      tiendaId: c.tiendaId,
-      creadoEn: new Date().toISOString(),
-    };
-    agregar(usuario);
-    try {
-      await guardarUsuario(usuario);
-      info({ route: 'identidad', tiendaId: c.tiendaId, mensaje: `cuenta de tienda creada (${c.rol})` });
-    } catch (e) {
-      usuariosPorId.delete(usuario.id);
-      idPorCorreo.delete(usuario.correo);
-      logError({ route: 'identidad', tiendaId: c.tiendaId, mensaje: `cuenta de tienda: ${e.message}` });
-    }
+  await Promise.all(cuentas.map((c) => asegurarCuenta(c)));
+}
+
+async function asegurarCuenta(c) {
+  if (idPorCorreo.has(c.correo)) return;
+  const usuario = {
+    id: `usr-${randomUUID()}`,
+    correo: c.correo,
+    nombre: c.nombre,
+    hash: cifrarContrasena(c.contrasena),
+    rol: c.rol,
+    tiendaId: c.tiendaId,
+    creadoEn: new Date().toISOString(),
+  };
+  agregar(usuario);
+  try {
+    await guardarUsuario(usuario);
+    info({ route: 'identidad', tiendaId: c.tiendaId, mensaje: `cuenta de tienda creada (${c.rol})` });
+  } catch (e) {
+    usuariosPorId.delete(usuario.id);
+    idPorCorreo.delete(usuario.correo);
+    logError({ route: 'identidad', tiendaId: c.tiendaId, mensaje: `cuenta de tienda: ${e.message}` });
   }
 }
 
@@ -211,5 +226,5 @@ if (activa()) {
     void asegurarCuentasTienda();
   });
 } else {
-  void asegurarCuentasTienda();
+  await asegurarCuentasTienda();
 }

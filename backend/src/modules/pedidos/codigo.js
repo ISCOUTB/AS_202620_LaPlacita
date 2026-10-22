@@ -51,7 +51,7 @@ export function fechaColombia(fecha = new Date()) {
  * @returns {{codigo: string, cursor: {fecha: string, siguiente: number}}}
  */
 export function asignarCodigo(cursor, hoy, ocupados) {
-  const inicio = cursor && cursor.fecha === hoy ? cursor.siguiente : 0;
+  const inicio = cursor?.fecha === hoy ? cursor.siguiente : 0;
   for (let paso = 0; paso < TOTAL_CODIGOS; paso += 1) {
     const indice = (inicio + paso) % TOTAL_CODIGOS;
     const codigo = codigoDesdeIndice(indice);

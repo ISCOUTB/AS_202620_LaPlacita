@@ -111,37 +111,38 @@ export function crearDespachador({
     });
   }
 
-  async function entregar(mensaje) {
-    for (let intento = 1; ; intento += 1) {
-      try {
-        const aplicado = await consumir(mensaje);
-        if (aplicado) {
-          traza(mensaje, 'info', `aplicado (intento ${intento})`, { intento });
-        } else {
-          contar('escriturasDescartadas');
-          traza(mensaje, 'info', `descartado por duplicado u obsoleto (intento ${intento})`, { intento });
-        }
-        return { aplicado, intentos: intento };
-      } catch (err) {
-        if (intento >= maxIntentos) {
-          if (fallidos.size >= maxFallidos) {
-            // Tope de memoria: se conserva el más reciente (el más viejo de un
-            // pedido sería descartado por la secuencia de todos modos).
-            fallidos.delete(fallidos.keys().next().value);
-          }
-          fallidos.set(mensaje.id, { mensaje, error: motivo(err), intentos: intento, fallidoEn: new Date().toISOString() });
-          contar('escriturasFallidas');
-          traza(mensaje, 'error', `a la cola de fallidos tras ${intento} intentos: ${motivo(err)}`, { intento });
-          const error = new Error(`No se pudo guardar el pedido ${mensaje.datos.id}: ${motivo(err)}`);
-          error.mensajeId = mensaje.id;
-          error.fallido = true;
-          throw error;
-        }
-        const espera = esperaDelIntento(intento, { baseMs, topeMs, azar });
-        contar('escriturasReintentadas');
-        traza(mensaje, 'error', `intento ${intento} falló (${motivo(err)}); reintento en ${espera} ms`, { intento });
-        await esperar(espera);
+  // Un intento por llamada: si falla y quedan intentos, espera y se llama de
+  // nuevo con el siguiente número (los reintentos son secuenciales a propósito).
+  async function entregar(mensaje, intento = 1) {
+    try {
+      const aplicado = await consumir(mensaje);
+      if (aplicado) {
+        traza(mensaje, 'info', `aplicado (intento ${intento})`, { intento });
+      } else {
+        contar('escriturasDescartadas');
+        traza(mensaje, 'info', `descartado por duplicado u obsoleto (intento ${intento})`, { intento });
       }
+      return { aplicado, intentos: intento };
+    } catch (err) {
+      if (intento >= maxIntentos) {
+        if (fallidos.size >= maxFallidos) {
+          // Tope de memoria: se conserva el más reciente (el más viejo de un
+          // pedido sería descartado por la secuencia de todos modos).
+          fallidos.delete(fallidos.keys().next().value);
+        }
+        fallidos.set(mensaje.id, { mensaje, error: motivo(err), intentos: intento, fallidoEn: new Date().toISOString() });
+        contar('escriturasFallidas');
+        traza(mensaje, 'error', `a la cola de fallidos tras ${intento} intentos: ${motivo(err)}`, { intento });
+        const error = new Error(`No se pudo guardar el pedido ${mensaje.datos.id}: ${motivo(err)}`);
+        error.mensajeId = mensaje.id;
+        error.fallido = true;
+        throw error;
+      }
+      const espera = esperaDelIntento(intento, { baseMs, topeMs, azar });
+      contar('escriturasReintentadas');
+      traza(mensaje, 'error', `intento ${intento} falló (${motivo(err)}); reintento en ${espera} ms`, { intento });
+      await esperar(espera);
+      return entregar(mensaje, intento + 1);
     }
   }
 
@@ -165,6 +166,14 @@ export function crearDespachador({
       if (ultimaEntrega.get(clave) === entrega) ultimaEntrega.delete(clave);
     });
     return entrega;
+  }
+
+  // Espera las entregas en vuelo; las que se publiquen mientras tanto (un
+  // reproceso de la DLQ) se esperan en la vuelta siguiente.
+  async function esperarTodo() {
+    if (enVuelo.size === 0) return;
+    await Promise.allSettled(enVuelo);
+    return esperarTodo();
   }
 
   return {
@@ -201,10 +210,6 @@ export function crearDespachador({
     },
 
     /** Espera todas las entregas en vuelo (pruebas y simulación de reinicio). */
-    async esperarTodo() {
-      while (enVuelo.size > 0) {
-        await Promise.allSettled([...enVuelo]);
-      }
-    },
+    esperarTodo,
   };
 }
