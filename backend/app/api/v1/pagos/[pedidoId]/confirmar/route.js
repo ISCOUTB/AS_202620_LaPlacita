@@ -8,6 +8,8 @@ import { lista } from '../../../../../../src/persistencia/index.js';
 // 12/10/2026): sin la espera, una transición temprana se aplicaba sobre el
 // estado en blanco y la rehidratación posterior la descartaba.
 export async function POST(request, { params }) {
+  // Next 15+: `params` es una promesa.
+  const { pedidoId } = await params;
   try {
     await lista();
     const { searchParams } = request.nextUrl;
@@ -17,8 +19,8 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'tiendaId es obligatorio' }, { status: 400 });
     }
 
-    pagos.confirmarPago(params.pedidoId, tiendaId);
-    return NextResponse.json(pedidos.vistaPublica(params.pedidoId, tiendaId), { status: 200 });
+    pagos.confirmarPago(pedidoId, tiendaId);
+    return NextResponse.json(pedidos.vistaPublica(pedidoId, tiendaId), { status: 200 });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
