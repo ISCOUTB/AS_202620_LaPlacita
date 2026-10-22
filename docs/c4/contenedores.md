@@ -33,7 +33,7 @@ flowchart TD
     app_user -->|Contrato /api/v1 mismo origen<br/>BFF (route handler)| api
     app_local -->|Actualiza orden y valida PIN<br/>HTTPS / REST API| api
 
-    api -->|Pedidos: write-behind ordenado por pedido<br/>Cuentas y menú: espera la confirmación<br/>Rehidratación al arrancar<br/>TCP / pg (SQL, UPSERT)| db
+    api -->|Pedidos: creación confirmada, transiciones write-behind at-least-once (ADR-0026)<br/>Cuentas y menú: espera la confirmación<br/>Rehidratación al arrancar<br/>TCP / pg (SQL, UPSERT)| db
 
     api -->|Inicia cobro y confirma<br/>HTTPS / JSON| pago
     api -->|Solicita envío de alerta<br/>PLANEADO (deuda V-05)| push
@@ -62,5 +62,5 @@ flowchart TD
 | Base de Datos Principal (PostgreSQL) | **Implementado** (Dokploy, condicional a `DATABASE_URL`; en su ausencia el dominio conserva Maps en memoria) | [ADR-0014](../adr/0014-base-de-datos-postgresql-dokploy.md), `backend/src/persistencia/index.js`, experimento ESC-01 3/3 ([evidencias-s10 §6](../evidencias/evidencias-s10.md)) |
 | Portal Establecimiento | **Implementado** como ruta `/panel` de la misma app web (un solo despliegue) | `frontend/app/panel/page.tsx`, `frontend/components/panel/*`, rutas `backend/app/api/v1/tienda/*` con sesión de tienda (ADR-0023) |
 | Caché y Colas (Redis) | **Retirado del diagrama (S12, 22/10/2026).** Con un solo proceso (ADR-0019) una caché distribuida no aporta: la caché del catálogo vive dentro de la API (write-through) y los PINs se guardan con su pedido en PostgreSQL | [evidencias-s12 §3](../evidencias/evidencias-s12.md) |
-| Broker de mensajes | **No existe.** Las escrituras a PostgreSQL se encolan dentro del proceso de la API (cola por pedido); no hay contenedor de mensajería | [evidencias-s12 §4](../evidencias/evidencias-s12.md) |
+| Broker de mensajes | **No existe.** Las escrituras a PostgreSQL son mensajes dentro del proceso de la API (cola por pedido, reintentos y cola de fallidos, ADR-0026); no hay contenedor de mensajería | [evidencias-s12 §4](../evidencias/evidencias-s12.md) |
 | Pasarela de Pagos / Servicio Push | Externo, no integrado | Deuda declarada (A-04, V-05) |

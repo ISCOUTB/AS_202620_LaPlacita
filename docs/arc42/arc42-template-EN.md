@@ -436,8 +436,11 @@ La consistencia se elige por operación, no para todo el sistema. Tabla completa
   reinicio, las lecturas esperan la rehidratación (`persistencia.lista()`).
 - **Eventual con plazo:** seguimiento del pedido (≤ 3 s), cola del panel (≤ 4 s), resumen del
   día (≤ 15 s), por consulta periódica; `/api` nunca se cachea en el navegador ni en el proxy.
-- **Durabilidad de pedidos write-behind, ordenada por pedido** (ADR-0014, `cola-escrituras.js`):
-  riesgo aceptado de perder la última mutación si el proceso cae antes de escribirla.
+- **Durabilidad de las transiciones write-behind, ordenada por pedido y at-least-once**
+  (ADR-0014, ADR-0026): reintentos con backoff, cola de fallidos y consumidor idempotente por
+  secuencia; riesgo aceptado de perder la última transición si el proceso cae con ella pendiente.
+  **La creación sí espera la confirmación de la base** (503 si no llega).
+- **Lectura pública del pedido con llave** (ADR-0025): token de seguimiento o sesión del dueño.
 - **Condición:** con más de una réplica, las garantías fuertes exigirían transacciones en
   PostgreSQL (`SELECT … FOR UPDATE` o restricciones únicas).
 
@@ -481,6 +484,8 @@ Esta sección registra el historial de decisiones arquitectónicas significativa
 | ADR-0022 | El PIN de retiro se muestra a su dueño en la app (precisa ADR-0013) | Aceptado | 2026-10-18 | ESC-03, A-06 | [0022-pin-visible-para-su-dueno.md](../adr/0022-pin-visible-para-su-dueno.md) |
 | ADR-0023 | Panel de tienda: cuentas por tienda, roles y catálogo editable en PostgreSQL | Aceptado | 2026-10-18 | ESC-02, ESC-03, ESC-05 | [0023-panel-de-tienda.md](../adr/0023-panel-de-tienda.md) |
 | ADR-0024 | Identidad del pedido `pedido-N` por tienda: la decisión de datos más costosa de revertir | Propuesto | 2026-10-22 | ESC-02, ESC-01, ESC-05 | [0024-identidad-del-pedido.md](../adr/0024-identidad-del-pedido.md) |
+| ADR-0025 | Token de seguimiento: la vista pública del pedido exige una llave | Propuesto | 2026-10-22 | ESC-02, ESC-03, A-06 | [0025-token-de-seguimiento-del-pedido.md](../adr/0025-token-de-seguimiento-del-pedido.md) |
+| ADR-0026 | Escrituras de pedidos como mensajes at-least-once y creación confirmada por la base (precisa ADR-0014) | Propuesto | 2026-10-22 | ESC-01, ESC-05 | [0026-escrituras-at-least-once-y-creacion-confirmada.md](../adr/0026-escrituras-at-least-once-y-creacion-confirmada.md) |
  
 **Relación con los bloques de construcción:**
 - ADR-0001 y ADR-0002 determinan la estructura: un único proceso con módulos de dominio separados.

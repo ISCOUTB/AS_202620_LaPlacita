@@ -913,9 +913,9 @@ cambios de código.
 | C4 nivel 2 | Se retira el contenedor Redis planeado; PostgreSQL con sus tres tablas y el tipo de escritura; se declara que no hay broker. Componentes: catálogo → PostgreSQL write-through |
 | arc42 | §8.4 Consistencia por operación, §8.5 Caché y fila de ADR-0024 en §9 |
 
-**Hallazgos declarados (sin corregir en S12):** un `pedidoId` puede reutilizarse si el proceso
-cae entre crear el pedido y guardarlo; los ids consecutivos permiten recorrer la vista pública,
-que muestra estado, total y `clienteId` (para el STRIDE de S13).
+**Hallazgos de la evidencia:** un `pedidoId` podía reutilizarse si el proceso caía entre crear
+el pedido y guardarlo; los ids consecutivos permitían recorrer la vista pública (estado, total y
+`clienteId`). Ambos se corrigieron el mismo día (sección siguiente).
 
 ### Resumen de correcciones que el sistema automatizado no detecta automáticamente
 | Corrección invisible al sistema | Cómo verificarla manualmente |
@@ -923,3 +923,46 @@ que muestra estado, total y `clienteId` (para el STRIDE de S13).
 | Cada fila de la tabla corresponde a código real | Abrir la ruta o función citada en la columna «Cómo se cumple» de evidencias-s12 §2 |
 | El C4 ya no promete Redis | `docs/c4/contenedores.md` y `docs/c4/componentes.md` no tienen el nodo Redis; el estado lo explica |
 | El costo de reversión está argumentado, no solo afirmado | ADR-0024, tabla «Candidatas comparadas»: qué haría falta para revertir cada decisión y qué queda fuera de nuestro control |
+
+---
+
+## Taller S12 y corrección de los hallazgos (22/10/2026)
+
+Taller en [taller-s12-mensajes](docs/evidencias/taller-s12-mensajes.md). Decisiones en
+[ADR-0025](docs/adr/0025-token-de-seguimiento-del-pedido.md) y
+[ADR-0026](docs/adr/0026-escrituras-at-least-once-y-creacion-confirmada.md), pendientes de
+validación del equipo.
+
+| Cambio | Detalle |
+|---|---|
+| Escrituras como mensajes (Taller) | `persistencia/despachador.js`: contrato `pedido.instantanea` v1, entrega at-least-once con 4 intentos y backoff exponencial, orden por pedido, cola de fallidos en memoria que se reprocesa cuando la base vuelve, trazas con `mensajeId` y `correlacion` |
+| Consumidor idempotente | Columna `pedidos.secuencia`: el UPSERT solo aplica si la secuencia es mayor; duplicados y mensajes viejos se descartan |
+| Métricas | `escriturasReintentadas`, `escriturasDescartadas`, `escriturasFallidas` y `escriturasEnColaDeFallidos` en `GET /metricas` |
+| Creación confirmada (hallazgo 1) | `POST /pedidos` espera a PostgreSQL; si no confirma, retira el pedido y responde 503 con `Retry-After` (`src/http/crear-pedido.js`) |
+| Token de seguimiento (hallazgo 2) | `POST /pedidos` devuelve `seguimiento` (128 bits); `GET /pedidos/{id}` y `GET /notificaciones/{id}` lo exigen salvo al dueño con sesión; 404 igual que un id inexistente. Columna `pedidos.seguimiento` |
+| Frontend | Guarda el token con el pedido local y lo envía en el seguimiento y en «Mis pedidos» |
+| Contrato | Esquema `PedidoCreado`, parámetro `seguimiento`, respuestas 404 y 503, campos nuevos de métricas |
+| Scripts de medición | `medir-exposicion-pin.js` y `medir-persistencia.js` envían el token (las evidencias fechadas no se reescriben) |
+| Defecto de paso | `cola-escrituras.js` nunca liberaba la clave al terminar (comparaba con otra promesa); ahora se libera sola |
+| Defecto de paso | La ruta v1 `POST /entrega/{id}/listo` devolvía la instantánea completa: se le quita el token |
+
+Verificado:
+- `npm test` con PostgreSQL 18 local: 112 pruebas, 111 en verde y 1 omitida. Sin base: 106 en
+  verde y 6 omitidas.
+- Contrato: 28/28.
+- `npm run build` del backend; `npm run lint` y `npm run build` del frontend.
+- Recorrido HTTP local:
+  - Sin token, 404; con el token, 200 sin `seguimiento` ni `pin`.
+  - Al recorrer 30 ids sin token, ninguno fue visible.
+  - Con la base detenida, crear respondió 503 en 767 ms.
+  - Un pago hecho con la base caída pasó a la DLQ y se aplicó al volver la base (traza en el
+    documento del taller).
+- `medir-exposicion-pin.js --url`: 0/100 lecturas con PIN y 0/100 lecturas sin respuesta 200.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| La DLQ se vacía cuando la base vuelve | Detener PostgreSQL, confirmar un pago, encender la base, crear otro pedido: `GET /metricas` muestra `escriturasEnColaDeFallidos: 0` y la fila queda en «En preparación» |
+| Crear con la base caída no deja un id huérfano | Con la base detenida, `POST /pedidos` responde 503 y `GET /pedidos/{id}` de ese id responde 404 |
+| El token solo se entrega una vez | Solo la respuesta de `POST /pedidos` trae `seguimiento`; la vista pública, el panel y la ruta v1 `…/listo` no |
+| Tras desplegar, los pedidos sin cuenta anteriores al token pierden el seguimiento | Esperado (ADR-0025): solo su dueño con sesión los ve |

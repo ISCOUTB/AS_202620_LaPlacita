@@ -97,10 +97,13 @@ Invariantes que el equipo se compromete a mantener:
   - **Reutilización tras una caída** (rompe la invariante 2): el contador se recupera del mayor
     `N` guardado en la base, y la escritura del pedido es write-behind. Si el proceso cae entre
     crear `pedido-N` y guardarlo, al reiniciar se vuelve a emitir `pedido-N` para otro cliente,
-    y el enlace del primero apuntaría a un pedido ajeno. Mitigación pendiente: esperar la base
-    solo en la creación del pedido o persistir el contador.
+    y el enlace del primero apuntaría a un pedido ajeno. **Mitigado el 22/10 por
+    [ADR-0026](0026-escrituras-at-least-once-y-creacion-confirmada.md):** la creación espera la
+    confirmación de la base y, si no llega, el pedido se retira y la ruta responde 503.
   - **Enumeración:** como los ids son consecutivos, cualquiera puede recorrer
     `GET /pedidos/pedido-1…N?tiendaId=…` sin sesión. La vista pública no muestra el PIN
-    (ADR-0013) pero sí el estado, el total y el `clienteId`. Se lleva como amenaza al análisis
+    (ADR-0013) pero sí el estado, el total y el `clienteId`. **Mitigado el 22/10 por
+    [ADR-0025](0025-token-de-seguimiento-del-pedido.md):** la lectura pública exige un token de
+    seguimiento o la sesión del dueño; sin ellos responde 404. Queda como amenaza tratada en el
     STRIDE de S13.
   - Con varias réplicas el contador colisionaría; mientras rija ADR-0019 no aplica.

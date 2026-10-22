@@ -41,7 +41,7 @@ flowchart TB
     PED --> S_PED
     PAG --> S_PAG
     NOT --> S_NOT
-    PED -.->|"write-behind ordenado por pedido (ADR-0014)<br/>PostgreSQL / TCP"| DB
+    PED -.->|"mensajes at-least-once, orden por pedido (ADR-0014, ADR-0026)<br/>PostgreSQL / TCP"| DB
     CAT -.->|"write-through: espera la base (ADR-0023)<br/>PostgreSQL / TCP"| DB
 ```
 
