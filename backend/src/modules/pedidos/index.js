@@ -11,6 +11,8 @@
 // copia frozen para que una mutación externa falle en vez de corromper el
 // almacén.
 
+import { randomBytes, timingSafeEqual } from 'node:crypto';
+
 import { obtenerProducto } from '../catalogo/index.js';
 import { contar } from '../../metricas.js';
 import { escribirPedido, alCargar } from '../../persistencia/index.js';
@@ -97,6 +99,9 @@ function crearPedido({ productoId, cantidad, clienteId, tiendaId }) {
     total: producto.precio * cantidad,
     estado: 'Recibido',
     pin: null,
+    // ADR-0025: llave de la vista pública. 128 bits al azar: los `pedidoId`
+    // son consecutivos y se pueden adivinar; este token no.
+    seguimiento: randomBytes(16).toString('base64url'),
   };
 
   repoTienda(tiendaId).set(pedido.id, pedido);
@@ -150,7 +155,42 @@ function obtenerPedido(pedidoId, tiendaId) {
 function vistaPublica(pedidoId, tiendaId) {
   const publico = { ...pedidoMutable(pedidoId, tiendaId) };
   delete publico.pin;
+  // ADR-0025: el token de seguimiento solo se entrega una vez, al crear.
+  delete publico.seguimiento;
   return Object.freeze(publico);
+}
+
+function tokenCoincide(guardado, recibido) {
+  if (!guardado || typeof recibido !== 'string') return false;
+  const a = Buffer.from(guardado);
+  const b = Buffer.from(recibido);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+// ADR-0025: lectura de un pedido desde fuera. Responde solo a quien prueba
+// que el pedido es suyo: su dueño con sesión o quien trae el token de
+// seguimiento que se entregó al crearlo. Para todos los demás el pedido «no
+// existe» (404, mismo mensaje que un id inexistente): recorrer pedido-1…N ya
+// no revela nada. Los pedidos anteriores al token solo los ve su dueño.
+function vistaConAcceso(pedidoId, tiendaId, { seguimiento, usuarioId } = {}) {
+  const pedido = repoTienda(tiendaId ?? '').get(pedidoId);
+  const esDueno = Boolean(pedido && usuarioId && pedido.clienteId === usuarioId);
+  if (!pedido || !(esDueno || tokenCoincide(pedido.seguimiento, seguimiento))) {
+    const e = new Error(`Pedido ${pedidoId} no encontrado en la tienda ${tiendaId}`);
+    e.estado = 404;
+    throw e;
+  }
+  return vistaPublica(pedidoId, tiendaId);
+}
+
+// ADR-0026 (hallazgo 1 de S12): la creación de un pedido no se pudo guardar
+// en la base. Se retira de la memoria junto con su clave de idempotencia, para
+// que el cliente reintente y no quede un `pedidoId` que la base no conoce.
+function descartarPedido(pedidoId, tiendaId) {
+  repoTienda(tiendaId).delete(pedidoId);
+  for (const [llave, entrada] of idempotenciaPorTienda) {
+    if (llave.startsWith(`${tiendaId}::`) && entrada.pedidoId === pedidoId) idempotenciaPorTienda.delete(llave);
+  }
 }
 
 function cambiarEstado(pedidoId, tiendaId, nuevoEstado) {
@@ -286,6 +326,7 @@ function restaurarEstadoDesde(registros) {
       total: fila.total,
       estado: fila.estado,
       pin: fila.pin ?? null,
+      seguimiento: fila.seguimiento ?? null,
     };
     repoTienda(pedido.tiendaId).set(pedido.id, pedido);
     const numero = Number(String(pedido.id).replace(/^pedido-/, ''));
@@ -316,6 +357,8 @@ export {
   crearPedidoIdempotente,
   obtenerPedido,
   vistaPublica,
+  vistaConAcceso,
+  descartarPedido,
   pinParaDueno,
   pedidosDeCliente,
   pedidosDeTienda,

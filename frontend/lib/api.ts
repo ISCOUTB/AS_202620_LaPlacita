@@ -34,6 +34,13 @@ export interface Pedido {
   total: number
   estado: EstadoPedido
   pin?: string | null
+  /** Llave de la vista pública (ADR-0025). Solo llega en la respuesta de POST /pedidos. */
+  seguimiento?: string
+}
+
+/** Sufijo `&seguimiento=…` para las lecturas públicas del pedido (ADR-0025); vacío sin token. */
+function conSeguimiento(seguimiento?: string | null): string {
+  return seguimiento ? `&seguimiento=${encodeURIComponent(seguimiento)}` : ""
 }
 
 export interface Notificacion {
@@ -117,10 +124,13 @@ export function obtenerPin(
   })
 }
 
-/** GET /pedidos/{pedidoId}?tiendaId=… — vista pública, sin pin (ADR-0013). */
-export function obtenerPedido(pedidoId: string, tiendaId: string): Promise<Pedido> {
+/**
+ * GET /pedidos/{pedidoId}?tiendaId=…&seguimiento=… — vista pública, sin pin (ADR-0013).
+ * Responde al dueño con sesión o a quien trae el token de seguimiento (ADR-0025); si no, 404.
+ */
+export function obtenerPedido(pedidoId: string, tiendaId: string, seguimiento?: string | null): Promise<Pedido> {
   return request<Pedido>(
-    `/pedidos/${encodeURIComponent(pedidoId)}?tiendaId=${encodeURIComponent(tiendaId)}`
+    `/pedidos/${encodeURIComponent(pedidoId)}?tiendaId=${encodeURIComponent(tiendaId)}${conSeguimiento(seguimiento)}`
   )
 }
 
@@ -151,10 +161,11 @@ export function validarEntrega(
 /** GET /notificaciones/{pedidoId}?tiendaId=… — historial de cambios de estado. */
 export function obtenerNotificaciones(
   pedidoId: string,
-  tiendaId: string
+  tiendaId: string,
+  seguimiento?: string | null
 ): Promise<Notificacion[]> {
   return request<Notificacion[]>(
-    `/notificaciones/${encodeURIComponent(pedidoId)}?tiendaId=${encodeURIComponent(tiendaId)}`
+    `/notificaciones/${encodeURIComponent(pedidoId)}?tiendaId=${encodeURIComponent(tiendaId)}${conSeguimiento(seguimiento)}`
   )
 }
 

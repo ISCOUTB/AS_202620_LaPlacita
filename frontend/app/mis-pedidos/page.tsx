@@ -16,6 +16,8 @@ import { getStoreByTiendaId } from "@/lib/stores"
 type Fila = {
   pedidoId: string
   tiendaId: string
+  /** Token de seguimiento de los pedidos de este equipo; con sesión no hace falta. */
+  seguimiento?: string | null
   codigo: string | null
   estado: EstadoPedido | null
   nombre: string
@@ -52,12 +54,13 @@ async function filasDeLaCuenta(): Promise<Fila[]> {
 async function filasDelEquipo(): Promise<Fila[]> {
   return Promise.all(
     listarPedidosLocales().map((p) =>
-      obtenerPedido(p.pedidoId, p.tiendaId)
+      obtenerPedido(p.pedidoId, p.tiendaId, p.seguimiento)
         .then((pedido) => ({ estado: pedido.estado, codigo: pedido.codigo ?? p.codigo ?? null }))
         .catch(() => ({ estado: null, codigo: p.codigo ?? null }))
         .then(({ estado, codigo }) => ({
           pedidoId: p.pedidoId,
           tiendaId: p.tiendaId,
+          seguimiento: p.seguimiento ?? null,
           codigo,
           estado,
           nombre: p.productoNombre,
@@ -145,7 +148,9 @@ export default function MisPedidosPage() {
           {filas.map((p) => (
             <li key={`${p.tiendaId}/${p.pedidoId}`}>
               <Link
-                href={`/pedidos/${p.pedidoId}?tiendaId=${encodeURIComponent(p.tiendaId)}`}
+                href={`/pedidos/${p.pedidoId}?tiendaId=${encodeURIComponent(p.tiendaId)}${
+                  p.seguimiento ? `&seguimiento=${encodeURIComponent(p.seguimiento)}` : ""
+                }`}
                 className="group flex items-center gap-4 rounded-2xl bg-superficie p-4 shadow-tarjeta transition-transform hover:-translate-y-0.5"
               >
                 {p.codigo && (

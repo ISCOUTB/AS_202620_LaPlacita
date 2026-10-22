@@ -15,7 +15,10 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'tiendaId es obligatorio' }, { status: 400 });
     }
 
-    const resultado = entrega.marcarListo(params.pedidoId, tiendaId);
+    // Contrato v1 (deprecated): devuelve el pedido con su PIN (PedidoConPin),
+    // pero nunca el token de seguimiento (ADR-0025), que solo se entrega al crear.
+    const resultado = { ...entrega.marcarListo(params.pedidoId, tiendaId) };
+    delete resultado.seguimiento;
     return NextResponse.json(resultado, { status: 200 });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });

@@ -125,6 +125,7 @@ async function medirHttp(baseUrl) {
   let getConPin = 0;
   let putConEfecto = 0;
   let intents = 0;
+  let lecturasSin200 = 0;
 
   for (let i = 0; i < CARGA; i += 1) {
     const creado = await post('/api/v1/pedidos', {
@@ -144,8 +145,12 @@ async function medirHttp(baseUrl) {
       .then(() => null)
       .catch(() => null);
 
-    // 2a. Lectura: el GET no debe devolver `pin`.
-    const res = await fetch(`${baseUrl}/api/v1/pedidos/${id}?tiendaId=${TIENDA}`);
+    // 2a. Lectura: el GET no debe devolver `pin`. Desde ADR-0025 la lectura
+    // pide el token de seguimiento que entregó la creación; sin él sería un
+    // 404 y la medición no probaría nada sobre el `pin`.
+    const seguimiento = encodeURIComponent(creado.body?.seguimiento ?? '');
+    const res = await fetch(`${baseUrl}/api/v1/pedidos/${id}?tiendaId=${TIENDA}&seguimiento=${seguimiento}`);
+    if (res.status !== 200) lecturasSin200 += 1;
     const cuerpo = await res.json().catch(() => ({}));
     if (Object.prototype.hasOwnProperty.call(cuerpo, 'pin')) getConPin += 1;
 
@@ -159,7 +164,7 @@ async function medirHttp(baseUrl) {
     void pinEsperado;
   }
 
-  return { getConPin, putConEfecto, intents };
+  return { getConPin, putConEfecto, intents, lecturasSin200 };
 }
 
 // ── Reporte ────────────────────────────────────────────────────
@@ -188,6 +193,7 @@ if (argUrl) {
   console.log(`-- plano 2: HTTP real contra ${argUrl} --`);
   console.log(`getQueDevuelvenPin=${http.getConPin}/${CARGA}`);
   console.log(`putQueTienenEfecto=${http.putConEfecto}/${CARGA}`);
+  console.log(`lecturasQueNoRespondieron200=${http.lecturasSin200}/${CARGA} (debe ser 0: si no, el GET no midio nada)`);
 } else {
   console.log('');
   console.log('-- plano 2: HTTP real --');

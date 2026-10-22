@@ -222,11 +222,14 @@ paths:
               $ref: '#/components/schemas/CrearPedidoRequest'
       responses:
         '201':
-          description: Pedido creado en estado Recibido
+          description: >-
+            Pedido creado en estado Recibido y CONFIRMADO por la base de datos
+            (ADR-0026). Incluye `seguimiento`, la llave de la vista pública
+            (ADR-0025); es la única respuesta que la entrega.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Pedido'
+                $ref: '#/components/schemas/PedidoCreado'
         '400':
           description: Datos de entrada inválidos
           content:
@@ -236,6 +239,14 @@ paths:
 
         '409':
           description: Idempotency-Key reutilizada con otro contenido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: >-
+            La base de datos no confirmó el pedido tras los reintentos (ADR-0026).
+            El pedido NO existe: reintentar (cabecera Retry-After).
           content:
             application/json:
               schema:
@@ -266,8 +277,11 @@ paths:
   /pedidos/{pedidoId}:
     get:
       tags: [pedidos]
-      summary: Obtener un pedido por ID y tienda
+      summary: Obtener un pedido por ID y tienda (dueño con sesión o token de seguimiento)
       operationId: obtenerPedido
+      security:
+        - {}
+        - sesion: []
       parameters:
         - name: pedidoId
           in: path
@@ -279,6 +293,14 @@ paths:
           required: true
           schema:
             type: string
+        - name: seguimiento
+          in: query
+          required: false
+          description: >-
+            Token de seguimiento recibido al crear el pedido (ADR-0025). Sin él,
+            solo el dueño con sesión puede leer el pedido.
+          schema:
+            type: string
       responses:
         '200':
           description: Pedido encontrado
@@ -287,7 +309,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/Pedido'
         '404':
-          description: Pedido no encontrado en la tienda
+          description: >-
+            Pedido no encontrado en la tienda, o sin el token ni la sesión de su
+            dueño: las dos situaciones responden igual para que recorrer ids
+            consecutivos no revele qué pedidos existen (ADR-0025).
           content:
             application/json:
               schema:
@@ -769,8 +794,11 @@ paths:
   /notificaciones/{pedidoId}:
     get:
       tags: [notificaciones]
-      summary: Obtener notificaciones de un pedido por tienda
+      summary: Obtener notificaciones de un pedido por tienda (dueño con sesión o token de seguimiento)
       operationId: obtenerNotificaciones
+      security:
+        - {}
+        - sesion: []
       parameters:
         - name: pedidoId
           in: path
@@ -782,6 +810,14 @@ paths:
           required: true
           schema:
             type: string
+        - name: seguimiento
+          in: query
+          required: false
+          description: >-
+            Token de seguimiento recibido al crear el pedido (ADR-0025). Sin él,
+            solo el dueño con sesión puede leer el pedido.
+          schema:
+            type: string
       responses:
         '200':
           description: Lista de notificaciones
@@ -791,6 +827,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Notificacion'
+        '404':
+          description: Pedido no encontrado, o sin el token ni la sesión de su dueño (ADR-0025)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
 components:
   securitySchemes:
@@ -839,6 +881,22 @@ components:
           type: integer
           minimum: 0
           description: Intentos sobre pedidos bloqueados tras 5 fallos (ESC-03, A-06)
+        escriturasReintentadas:
+          type: integer
+          minimum: 0
+          description: Reintentos de escritura de pedidos a PostgreSQL (Taller S12, ADR-0026)
+        escriturasDescartadas:
+          type: integer
+          minimum: 0
+          description: Mensajes de escritura descartados por duplicados u obsoletos (secuencia)
+        escriturasFallidas:
+          type: integer
+          minimum: 0
+          description: Mensajes que agotaron los reintentos y pasaron a la cola de fallidos
+        escriturasEnColaDeFallidos:
+          type: integer
+          minimum: 0
+          description: Tamaño actual de la cola de fallidos (debe volver a 0 cuando la base responde)
       required:
         - pedidosCreados
         - pagosConfirmados
@@ -933,6 +991,23 @@ components:
               maxLength: 4
           required:
             - pin
+
+    PedidoCreado:
+      type: object
+      description: >-
+        Respuesta de POST /pedidos: la vista pública más el token de
+        seguimiento (ADR-0025). Guárdalo: es la llave para leer el pedido sin
+        sesión (`?seguimiento=`) y no se vuelve a entregar.
+      allOf:
+        - $ref: '#/components/schemas/Pedido'
+        - type: object
+          properties:
+            seguimiento:
+              type: string
+              pattern: '^[A-Za-z0-9_-]{22}$'
+              description: 128 bits al azar en base64url.
+          required:
+            - seguimiento
 
     CrearPedidoRequest:
       type: object

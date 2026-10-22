@@ -24,10 +24,13 @@ export default function SeguimientoPage({
   searchParams,
 }: {
   params: Promise<{ pedidoId: string }>
-  searchParams: Promise<{ tiendaId?: string }>
+  searchParams: Promise<{ tiendaId?: string; seguimiento?: string }>
 }) {
   const [pedidoId, setPedidoId] = useState("")
   const [tiendaId, setTiendaId] = useState("")
+  // ADR-0025: llave de la vista pública cuando se llega por el enlace de
+  // seguimiento; con sesión el dueño no la necesita.
+  const [seguimiento, setSeguimiento] = useState<string | null>(null)
   const [estado, setEstado] = useState<EstadoPedido | null>(null)
   const [codigo, setCodigo] = useState<string | null>(null)
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([])
@@ -43,6 +46,7 @@ export default function SeguimientoPage({
       if (!vigente) return
       setPedidoId(p.pedidoId)
       setTiendaId(s.tiendaId ?? "")
+      setSeguimiento(s.seguimiento ?? null)
     })
     return () => {
       vigente = false
@@ -54,7 +58,7 @@ export default function SeguimientoPage({
     try {
       // Todo setState ocurre tras el await (React 19: sin setState sincrono
       // en el cuerpo del efecto). El polling se detiene al llegar a Entregado.
-      const pedido = await obtenerPedido(pedidoId, tiendaId)
+      const pedido = await obtenerPedido(pedidoId, tiendaId, seguimiento)
       setEstado(pedido.estado)
       setCodigo(pedido.codigo ?? null)
       setError(null)
@@ -62,13 +66,13 @@ export default function SeguimientoPage({
         clearInterval(temporizador.current)
         temporizador.current = null
       }
-      obtenerNotificaciones(pedidoId, tiendaId)
+      obtenerNotificaciones(pedidoId, tiendaId, seguimiento)
         .then(setNotificaciones)
         .catch(() => setNotificaciones([]))
     } catch (e) {
       setError((e as Error).message)
     }
-  }, [pedidoId, tiendaId])
+  }, [pedidoId, tiendaId, seguimiento])
 
   useEffect(() => {
     if (!pedidoId || !tiendaId) return
@@ -168,7 +172,9 @@ export default function SeguimientoPage({
             <KeyRound aria-hidden="true" className="size-8 shrink-0 text-azul" />
             <p className="flex-1 text-sm text-noche">Tu pedido está listo. Ingresa con tu cuenta para ver el PIN de retiro.</p>
             <BotonEnlace
-              href={`/cuenta?volver=${encodeURIComponent(`/pedidos/${pedidoId}?tiendaId=${tiendaId}`)}`}
+              href={`/cuenta?volver=${encodeURIComponent(
+                `/pedidos/${pedidoId}?tiendaId=${tiendaId}${seguimiento ? `&seguimiento=${seguimiento}` : ""}`,
+              )}`}
               variante="azul"
               className="px-4 py-2 text-sm"
             >

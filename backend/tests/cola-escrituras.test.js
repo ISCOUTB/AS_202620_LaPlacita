@@ -67,6 +67,17 @@ test('un fallo en una escritura no rompe la cola del pedido', async () => {
   assert.deepEqual(estados, ['En preparación']);
 });
 
+test('la cola no acumula: al terminar, la clave se libera', async () => {
+  const cola = crearColaEscrituras();
+  await Promise.all([
+    cola.encolar('tienda-01::pedido-5', async () => {}),
+    cola.encolar('tienda-01::pedido-5', async () => {}),
+    cola.encolar('tienda-02::pedido-5', async () => {}),
+  ]);
+  await new Promise((r) => setImmediate(r));
+  assert.equal(cola.pendientes(), 0);
+});
+
 test('la instantánea se congela al encolar, no al ejecutar (patrón del adaptador)', async () => {
   const cola = crearColaEscrituras();
   const escritas = [];

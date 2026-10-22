@@ -62,12 +62,14 @@ async function crearPedido(i) {
   if (respuesta.status !== 201) {
     throw new Error(`POST /pedidos respondió ${respuesta.status}: ${JSON.stringify(cuerpo)}`);
   }
-  return { id: cuerpo.id, estado: cuerpo.estado };
+  // ADR-0025: el token de seguimiento es la llave para releer el pedido en la fase post.
+  return { id: cuerpo.id, estado: cuerpo.estado, seguimiento: cuerpo.seguimiento ?? null };
 }
 
-async function leerPedido(id) {
+async function leerPedido(id, seguimiento) {
+  const llave = seguimiento ? `&seguimiento=${encodeURIComponent(seguimiento)}` : '';
   const respuesta = await fetch(
-    `${urlBase}/api/v1/pedidos/${encodeURIComponent(id)}?tiendaId=${TIENDA}`,
+    `${urlBase}/api/v1/pedidos/${encodeURIComponent(id)}?tiendaId=${TIENDA}${llave}`,
   );
   if (respuesta.status === 404) {
     return null;
@@ -123,8 +125,8 @@ async function fasePost() {
   const supervivientes = [];
   const perdidos = [];
 
-  for (const { id, estado } of registro.pedidos) {
-    const pedido = await leerPedido(id);
+  for (const { id, estado, seguimiento } of registro.pedidos) {
+    const pedido = await leerPedido(id, seguimiento);
     if (pedido && pedido.estado === estado) {
       supervivientes.push(id);
       console.log(`pedidoSobrevivio=${id} estado=${pedido.estado}`);

@@ -33,19 +33,20 @@ export function crearColaEscrituras() {
       const tarea = anterior.then(() => trabajo());
       // La cadena continúa aunque esta tarea falle: el siguiente trabajo de
       // la clave corre igual (el error queda para quien observe `tarea`).
-      colas.set(clave, tarea.catch(() => {}));
+      const eslabon = tarea.catch(() => {});
+      colas.set(clave, eslabon);
+      // La cola vacía no acumula: al terminar, la entrada se borra si nadie
+      // encadenó otro trabajo detrás. (S12: la versión anterior comparaba con
+      // `tarea` en vez del eslabón guardado y nunca borraba la entrada.)
+      void eslabon.then(() => {
+        if (colas.get(clave) === eslabon) colas.delete(clave);
+      });
       return tarea;
     },
 
-    /**
-     * Libera la entrada de la clave si la última tarea sigue siendo `tarea`
-     * (la cola vacía no acumula). Si se encadenó un trabajo posterior, la
-     * entrada se conserva para ese trabajo.
-     */
-    liberar(clave, tarea) {
-      if (colas.get(clave) === tarea) {
-        colas.delete(clave);
-      }
+    /** Claves con trabajo pendiente (prueba de que la cola no acumula). */
+    pendientes() {
+      return colas.size;
     },
   };
 }

@@ -10,6 +10,8 @@ export interface PedidoGuardado {
   /** Código corto del pedido (A01 …); ausente en pedidos guardados antes de existir. */
   codigo?: string | null
   tiendaId: string
+  /** Token de seguimiento (ADR-0025): sin él solo el dueño con sesión ve el pedido. */
+  seguimiento?: string | null
   productoId: string
   productoNombre: string
   cantidad: number
@@ -39,6 +41,7 @@ export function registrarPedidoLocal(pedido: Pedido, productoNombre: string): vo
     pedidoId: pedido.id,
     codigo: pedido.codigo ?? null,
     tiendaId: pedido.tiendaId,
+    seguimiento: pedido.seguimiento ?? null,
     productoId: pedido.productoId,
     productoNombre,
     cantidad: pedido.cantidad,

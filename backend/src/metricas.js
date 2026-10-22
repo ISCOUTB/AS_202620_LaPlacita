@@ -14,6 +14,10 @@ const contadores = estadoCompartido('contadores', () => ({
   entregasValidadas: 0,
   pinesRechazados: 0,
   pinesBloqueados: 0,
+  // Taller S12 (ADR-0026): salud de la entrega de escrituras a PostgreSQL.
+  escriturasReintentadas: 0,
+  escriturasDescartadas: 0,
+  escriturasFallidas: 0,
 }));
 
 function contar(evento) {

@@ -3,7 +3,15 @@
 // Formato de línea: {"ts","level","service","route","tiendaId","pedidoId","mensaje"}.
 // Nunca se registra el PIN ni datos de tarjeta (RES-01, A-06).
 
-function linea({ level = 'info', service = 'laplacita', route = '', tiendaId = '', pedidoId = '', mensaje = '' }) {
+// Campos de traza opcionales (Taller S12): solo aparecen si vienen. Con
+// `correlacion` se sigue un pedido de productor a consumidor en la bitácora.
+const CAMPOS_DE_TRAZA = ['correlacion', 'mensajeId', 'intento'];
+
+function linea({ level = 'info', service = 'laplacita', route = '', tiendaId = '', pedidoId = '', mensaje = '', ...resto }) {
+  const traza = {};
+  for (const campo of CAMPOS_DE_TRAZA) {
+    if (resto[campo] !== undefined) traza[campo] = resto[campo];
+  }
   return JSON.stringify({
     ts: new Date().toISOString(),
     level,
@@ -12,6 +20,7 @@ function linea({ level = 'info', service = 'laplacita', route = '', tiendaId = '
     tiendaId,
     pedidoId,
     mensaje,
+    ...traza,
   });
 }
 

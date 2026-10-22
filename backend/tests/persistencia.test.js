@@ -84,6 +84,9 @@ test('con persistencia, tras un reinicio los pedidos se restauran desde la base'
   // El código corto (A01 …) y la fecha de creación también sobreviven al reinicio.
   assert.equal(leido.codigo, pedido.codigo);
   assert.equal(leido.creadoEn, pedido.creadoEn);
+  // El token de seguimiento (ADR-0025) también: el enlace sigue funcionando tras el reinicio.
+  assert.equal(leido.seguimiento, pedido.seguimiento);
+  assert.equal(pedidos.vistaConAcceso(pedido.id, 'tienda-01', { seguimiento: pedido.seguimiento }).id, pedido.id);
 
   // Fix D2 (auditoría del cierre S10): mutaciones rápidas del MISMO pedido
   // deben persistir en orden — la fila final es la ÚLTIMA mutación, no un
@@ -157,4 +160,41 @@ test('con persistencia, un cambio de menú del panel sobrevive al reinicio (ADR-
   // "Reinicio": la caché del catálogo se reconstruye desde la tabla productos.
   catalogo.restaurarProductosDesde(await persistencia.cargarProductos());
   assert.equal(catalogo.obtenerProducto('prod-005', 'tienda-01').precio, precio);
+});
+
+// ── Taller S12 (ADR-0026): consumidor idempotente contra PostgreSQL real ──
+
+test('con persistencia, la creación espera la confirmación: la fila ya está en la base al responder (hallazgo 1)', async (t) => {
+  if (!CON_BASE) {
+    t.skip('requiere DATABASE_URL (service container de PostgreSQL en CI)');
+    return;
+  }
+  const pedido = crearPedidoUnico();
+  // Lo mismo que hace POST /pedidos antes de responder (src/http/crear-pedido.js).
+  await persistencia.confirmacionDe('tienda-01', pedido.id);
+  const fila = (await persistencia.cargarTodo()).find((f) => f.tiendaId === 'tienda-01' && f.id === pedido.id);
+  assert.ok(fila, 'la fila existe sin esperar el resto de escrituras');
+  assert.equal(fila.seguimiento, pedido.seguimiento);
+});
+
+test('con persistencia, el consumidor descarta el duplicado y el mensaje obsoleto (secuencia)', async (t) => {
+  if (!CON_BASE) {
+    t.skip('requiere DATABASE_URL (service container de PostgreSQL en CI)');
+    return;
+  }
+  const { crearMensaje } = await import('../src/persistencia/despachador.js');
+  const pedido = crearPedidoUnico();
+  await persistencia.esperarEscrituras();
+  const base = pedidos.obtenerPedido(pedido.id, 'tienda-01');
+  const datos = (estado) => Object.freeze({ ...base, pin: null, estado });
+
+  const nuevo = crearMensaje(datos('Listo'));
+  assert.equal(await persistencia.aplicarMensaje(nuevo), true, 'el mensaje nuevo se aplica');
+  assert.equal(await persistencia.aplicarMensaje(nuevo), false, 'el duplicado no cambia la fila');
+
+  const viejo = crearMensaje(datos('Recibido'), { secuencia: nuevo.secuencia - 1 });
+  assert.equal(await persistencia.aplicarMensaje(viejo), false, 'el obsoleto (p. ej. reprocesado desde la DLQ) no pisa al nuevo');
+
+  const fila = (await persistencia.cargarTodo()).find((f) => f.tiendaId === 'tienda-01' && f.id === pedido.id);
+  assert.equal(fila.estado, 'Listo');
 });

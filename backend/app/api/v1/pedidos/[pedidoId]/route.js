@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import * as pedidos from '../../../../../src/modules/pedidos/index.js';
 import { lista } from '../../../../../src/persistencia/index.js';
+import { usuarioDeLaPeticion } from '../../../../../src/http/autenticacion.js';
 
 // S9 · ADR-0013. Esta ruta usa `pedidos.vistaPublica`, no `pedidos.obtenerPedido`:
 // la respuesta de lectura no debe incluir `pin`. El PIN es el mecanismo de
@@ -25,7 +26,12 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'tiendaId es obligatorio' }, { status: 400 });
     }
 
-    const pedido = pedidos.vistaPublica(params.pedidoId, tiendaId);
+    // ADR-0025: solo el dueño con sesión o quien trae el token de seguimiento.
+    // A cualquier otro se le responde 404, igual que a un id inexistente.
+    const pedido = pedidos.vistaConAcceso(params.pedidoId, tiendaId, {
+      seguimiento: searchParams.get('seguimiento'),
+      usuarioId: usuarioDeLaPeticion(request)?.id,
+    });
     return NextResponse.json(pedido);
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 404 });
