@@ -100,7 +100,7 @@ async function actualizarProducto(productoId, tiendaId, cambios = {}, rol = 'tra
  * la base confirma y después se actualiza la caché, que es exactamente el
  * orden del `actualizarProducto` (el menú que ven los clientes no cambia si
  * la base falla) mientras el objeto del almacén queda subido — si el panel
- * reintenta con el mismo archivo, sale otro uuid y no hay nada degenerado.
+ * reintenta con el mismo archivo, sale otro uuid y el estado queda limpio.
  */
 async function asignarImagen(productoId, tiendaId, imagenId) {
   const actual = productos.get(productoId);

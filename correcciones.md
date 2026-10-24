@@ -1117,3 +1117,15 @@ que el gate). El bloque se movió a su lugar correcto: después del
 `CREATE TABLE productos` y antes del cierre del template literal. Reparado y
 verificado: 120 pass / 0 fail con PostgreSQL real, 28/28 de contrato y 115
 sin base. `pg-test` de Podman retirado tras la verificación.
+
+**Limpieza de textos (25/10/2026)**: ronda de revisión lingüística sobre los
+archivos de la feature (comentarios de `almacen`, `imagenes-fijas`,
+`catalogo` y la tarjeta del panel, más el ADR-0028 y `ia.md`): palabras
+distorsionadas y algún anglicismo torpe.
+ La guía `docs/despliegue-garage-dokploy.md` se
+reescribió para la **versión web de Dokploy**: servicio Compose con el
+compose en Raw, `garage.toml` como File Mount (Advanced → Mounts, referenciado
+como `../files/garage.toml`) y la configuración del clúster desde la terminal
+web del servicio — verificado contra la documentación oficial de Mounts de
+Compose de Dokploy. Suite completa re-verificada (120/0 con BD
+PM, 28/28 contrato, lint/build limpios).

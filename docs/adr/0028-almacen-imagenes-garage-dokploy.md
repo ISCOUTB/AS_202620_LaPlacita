@@ -11,13 +11,13 @@ Los candidatos reales evaluados el 24-25/10/2026 fueron:
 
 1. **`bytea` en PostgreSQL** (propuesta inicial del 24/10, descartada por el equipo).
 2. **MinIO** en Dokploy (intentos previos del equipo tropezaron con el certificado SSL al exponerlo).
-3. **Garage S3** (deuxfleurs) en Dokploy, **sin exposición pública** — el elegido: api S3 estándar, binario único ligero, pensado para self-hosting modesto.
+3. **Garage S3** (deuxfleurs) en Dokploy, **sin exposición pública** — el elegido: API S3 estándar, binario único y ligero, pensado para self-hosting modesto.
 
 Hay una condición del dominio más importante que la elección del motor: **la
 imagen es contenido público del menú** (como el nombre y el precio) pero **solo
-la store sube** imagen (sesión de tienda del panel, ADR-0023). Y el enlace
-entre producto y foto debe sobrevivir reinicios, como ya lo hace el resto del
-catalogo (ADR-0023 write-through en la tabla `productos`).
+la tienda sube** (sesión del panel, ADR-0023). Y el vínculo producto↔foto
+debe sobrevivir reinicios, como ya lo hace el resto del catálogo
+(write-through del ADR-0023 en la tabla `productos`).
 
 ## Por qué Garage y por qué SIN exposición
 
@@ -74,14 +74,14 @@ rutas):
 | 4 | `Content-Type` saliente re-determinado por sniffing en cada lectura + `X-Content-Type-Options: nosniff` (el navegador no adivina) | `obtenerImagen` en el módulo (defensa en profundidad) |
 | 5 | **Claves mal formadas no llegan al almacén** (uuid v4 obligatorio): ni path traversal ni recorridos | `obtenerImagen('../etc/passwd')` → null |
 | 6 | **404 uniforme** en la lectura pública: no revela qué ids existen | test de la ruta y del módulo |
-| 7 | Autorización de subida = misma sesión de tienda apenas del PATCH de productos; el producto de otra tienda responde 404 uniforme (RES-05) | `catalogo.asignarImagen` con otra tienda |
+| 7 | Autorización de subida = misma sesión de tienda que el PATCH de productos; el producto de otra tienda responde 404 uniforme (RES-05) | `catalogo.asignarImagen` con otra tienda |
 
 **Fuera de alcance declarado (S13 arranca con esta superficie lista para
 modelar):** no hay análisis antimalware del contenido (una imagen válida
 podría explotar un bug del decodificador del navegador — el riesgo es el
-mismo que con cualquier fuente de imágenes de internet); el uploading
-malicioso es el operador de su propia tienda y el impacto queda acotado a su
-propio menú. Se declara como la materia prima de la semana de modelado de
+mismo que con cualquier fuente de imágenes de internet); quien sube
+maliciosamente es el operador de su propia tienda y el impacto queda acotado
+a su propio menú. Se declara como la materia prima de la semana de modelado de
 amenazas: las amenazas ya entran minimizadas y sin rutas de escalación.
 
 ## Consecuencias
@@ -95,17 +95,18 @@ amenazas: las amenazas ya entran minimizadas y sin rutas de escalación.
   no está implementada).
 - **Costo de reversión** (criterio del curso, espejo de ADR-0024): migrar
   Garage → otro S3/R2 no toca el código del dominio (misma API, solo el
-  endpoint del secret); migrar Garage → `bytea` en PostgreSQL también es
+  endpoint y las credenciales); migrar Garage → `bytea` en PostgreSQL también es
   lineal (leer cada objeto e `INSERT`arlo: el esquema `imagen_id` no
   cambia). La reversión cara sería la contraria — habría que desacoplar el
-  módulo de catálogo. La decisión de reversible-baja queda declarada para
-  sustentación, en la misma línea del ADR-0024.
-- La topología suma **1 contenedor (Garage) en Dokploy y 4 secretos
-  `GARAGE_*`** (URL, región, access key, secret key). Es el costo
-  explícito del requisito del equipo del 25/10 frente al argumento de la
-  pieza única del ADR-0019: ahí la extracción descartada era de MÓDULOS de
-  dominio; acá la pieza nueva es el almacenamiento de ARCHIVOS, que nunca
-  fue parte del monolito.
+  módulo de catálogo. La reversión barata queda declarada para sustentación,
+  en la misma línea del criterio del ADR-0024.
+- La topología suma **1 contenedor más (Garage) en Dokploy y 5 variables
+  `GARAGE_*`** (URL, región, bucket, access key, secret key) — nunca
+  versionadas. Es el costo explícito del requisito del equipo del 25/10
+  frente al argumento de la pieza única del ADR-0019: la extracción que ese
+  ADR descarta es de MÓDULOS de dominio; acá la pieza nueva es el
+  almacenamiento de ARCHIVOS (con su contenedor), que nunca fue parte del
+  monolito.
 
 ## Referencias
 

@@ -21,7 +21,7 @@
 //   3. Límite duro de tamaño sobre el Buffer REAL (no sobre Content-Length,
 //      que también lo firma el cliente).
 //   4. La clave del objeto es un UUID v4 (crypto.randomUUID): no es
-//      enumerable y la vista pública ruta la sirve solo por su id.
+//      enumerable: la ruta pública solo sirve lo que su id coincida.
 
 import { createHmac, createHash, randomUUID } from 'node:crypto';
 import { estadoCompartido } from '../../estado-compartido.js';
@@ -32,8 +32,8 @@ const LIMITE_BYTES = 512 * 1024;
 
 /** Mapa id → fila { mime, bytes }. SOLO modo memoria (sin GARAGE_*): con
  * Garage los bytes viven fuera del proceso y NADA del proceso los cachea —
- * la ruta de lectura va al almacén en cada petición (una imagen pública
- * fria llega desde Cloudflare, no hasta aquí). */
+ * la ruta de lectura va al almacén en cada petición (lo ya cacheado lo
+ * sirve el borde de Cloudflare y ni llega a aquí). */
 const imagenes = estadoCompartido('imagenes', () => new Map());
 
 /* ── Configuración (env de Dokploy, nunca versionada) ─────────────────────── */
@@ -154,7 +154,7 @@ async function peticionS3(metodo, claveObjeto, cuerpo = null, mime = null) {
   });
 }
 
-/* ── Operaciones del aguante ──────────────────────────────────────────────── */
+/* ── Operaciones del almacén ──────────────────────────────────────────────── */
 
 function formatUuid(id) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id);

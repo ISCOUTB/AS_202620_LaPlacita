@@ -1,8 +1,7 @@
-// Bytes de prueba de `tests/almacen.test.js`: imágenes mínimas REALES
-// (cabeceras con formato válido) y un disfraz de HTML/JS. Con herramientas: el
-// objetivo del set es verificar por sniffing de bytes mágicos, así que no hace
-// falta un encoder completo; la carga mínima existe tal cual la generan un
-// navegador (webp de 1x1) y librerías de png/jpeg análogos.
+// Bytes de prueba de `tests/almacen.test.js`: imágenes webp/png/jpeg mínimas
+// con cabecera REAL (los bytes mágicos que el sniffing busca) y un HTML/JS
+// disfrazado. No hace falta un encoder completo: el objetivo del set es
+// validar el sniffing, y una cabecera mínima basta para ese criterio.
 
 import { Buffer } from 'node:buffer';
 
@@ -36,9 +35,10 @@ export function crearImagenJpeg() {
   return Buffer.concat([soi, Buffer.alloc(24, 0x11), eoi]);
 }
 
-/** HTML con <script> que PRETENDE ser imagen: el attaquente enlaza el Content-Type
- * image/webp y manda este contenido. La firma falsa webp a mitad está aciendola
- * trampa que suele intentarse al topar con la whitelist de extensiones. */
+/** HTML con <script> que PRETENDE ser imagen: el atacante declara el
+ * Content-Type image/webp y manda este contenido, con una firma webp falsa
+ * a mitad del archivo (la trampa típica contra un validador avaro de
+ * cabeceras). El sniffing la detecta: no hay RIFF+WEBP donde debe ser. */
 export function crearHtmlDisfrazado() {
   const html = Buffer.from('<html><body><script>fetch("/api/v1/imagenes/…")</script></body></html>');
   const encabezadoFalso = Buffer.from('RIFF1234WEBP');

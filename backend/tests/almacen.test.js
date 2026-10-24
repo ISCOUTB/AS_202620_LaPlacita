@@ -21,7 +21,7 @@ test('sniffing: webp, png y jpeg reales se detectan por sus bytes mágicos', () 
   assert.equal(almacen.detectarMime(crearImagenJpeg()), 'image/jpeg');
 });
 
-test('sniffing: HTML/JS disfrazado de imagen NO se acepta (riego del vector de ejecución)', async () => {
+test('sniffing: HTML/JS disfrazado de imagen NO se acepta (ventana cerrada: el ejecutable no cuenta aquí)', async () => {
   const disfrazado = crearHtmlDisfrazado(); // bytes de <script> con firma webp falsa a mitad
   assert.equal(almacen.detectarMime(disfrazado), null);
   await assert.rejects(
@@ -83,7 +83,7 @@ test('catalogo.asignarImagen: un producto de otra tienda responde 404 uniforme (
   );
 });
 
-test('obtenerImagen: claves mal formadas ni llegan al almacén (null, sin darting)', async () => {
+test('obtenerImagen: claves mal formadas ni llegan al almacén (responde null, sin tocar el almacén)', async () => {
   assert.equal(await almacen.obtenerImagen('../etc/passwd'), null);
   assert.equal(await almacen.obtenerImagen(''), null);
   assert.equal(await almacen.obtenerImagen('<script>alert(1)</script>'), null);

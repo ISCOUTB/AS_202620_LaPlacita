@@ -24,8 +24,8 @@ export function ProductCard({ product }: { product: Product }) {
       {product.imagenId ? (
         // ADR-0028: foto del catálogo servida por la API (uuid nuevo por
         // subida → cacheable immutable en el borde). <img> deliberado por el
-        // mismo motivo del panel (resize en el navegador, el remitente ya está
-        // reescalado a webp).
+        // mismo motivo del panel (resize en el navegador: el archivo ya llega
+        // reescalado a webp y pequeño).
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={`/api/v1/imagenes/${product.imagenId}`}
