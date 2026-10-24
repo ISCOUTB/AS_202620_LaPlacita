@@ -53,11 +53,6 @@ ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS creado_en TIMESTAMPTZ;
 ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS secuencia BIGINT;
 -- Token de seguimiento (ADR-0025): sin él, la vista pública responde 404.
 ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS seguimiento TEXT;
--- Identidad de la imagen del producto (ADR-0028): solo la REFERENCIA. Los
--- bytes viven en Garage (Dokploy, red interna); un uuid v4 no enumerable.
--- ADD COLUMN IF NOT EXISTS agrega a la tabla desplegada sin tocar filas: sin
--- imagen, el frontend muestra la inicial como hasta ahora.
-ALTER TABLE productos ADD COLUMN IF NOT EXISTS imagen_id UUID;
 -- Cuentas (ADR-0021). La contraseña se guarda solo como derivada scrypt.
 CREATE TABLE IF NOT EXISTS usuarios (
   usuario_id TEXT        PRIMARY KEY,
@@ -76,7 +71,13 @@ CREATE TABLE IF NOT EXISTS productos (
   precio         NUMERIC(10,2) NOT NULL,
   disponible     BOOLEAN       NOT NULL,
   actualizado_en TIMESTAMPTZ   NOT NULL DEFAULT now()
-)`;
+);
+-- Identidad de la imagen del producto (ADR-0028): solo la REFERENCIA. Los
+-- bytes viven en Garage (Dokploy, red interna); un uuid v4 no enumerable.
+-- ADD COLUMN IF NOT EXISTS agrega a la tabla desplegada sin tocar filas: sin
+-- imagen, el frontend muestra la inicial como hasta ahora.
+ALTER TABLE productos ADD COLUMN IF NOT EXISTS imagen_id UUID;
+`;
 
 const COLUMNAS = 'tienda_id, pedido_id, cliente_id, producto_id, cantidad, total, estado, pin, codigo, creado_en, seguimiento';
 // Llave de advisory lock para el DDL: node --test levanta un proceso por

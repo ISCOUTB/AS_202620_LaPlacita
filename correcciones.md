@@ -1106,3 +1106,14 @@ Verificación local (25/10): suite 115 + 28 de contrato en verde, lint y
 build del frontend limpios; integración Garage con Podman presentada en
 los logs de esta bitácora. Despliegue en Dokploy pendiente de la acción del
 equipo (crear el servicio Garage y las variables `GARAGE_*`).
+
+**Corrección posterior (mismo día)**: el empuje `8dd38c4` rompió la suite
+con base de datos (el job `test` del CI en rojo). Causa: el `ALTER TABLE
+productos ADD COLUMN IF NOT EXISTS imagen_id` quedó ANTES del `CREATE TABLE
+IF NOT EXISTS productos` en el DDL — en el primer arranque la tabla no
+existe aún y PostgreSQL responde `relation "productos" does not exist`
+(reproducción fiel con Podman: 112 pass / 2 fail, exactamente los dos neveros
+que el gate). El bloque se movió a su lugar correcto: después del
+`CREATE TABLE productos` y antes del cierre del template literal. Reparado y
+verificado: 120 pass / 0 fail con PostgreSQL real, 28/28 de contrato y 115
+sin base. `pg-test` de Podman retirado tras la verificación.
