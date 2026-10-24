@@ -1,6 +1,6 @@
 # 0025 — Token de seguimiento: la vista pública del pedido exige una llave
 
-- **Estado:** propuesto (pendiente de validación del equipo)
+- **Estado:** aceptado (validado por el equipo el 2026-10-24; la decisión se sustenta en la evidencia de la S12; el contenido del ADR no se edita, criterio de ADR-0015)
 - **Fecha:** 2026-10-22
 - **Decide:** Equipo LaPlacita
 - **Escenario relacionado:** ESC-02 (aislamiento), ESC-03 (entrega con PIN), A-06

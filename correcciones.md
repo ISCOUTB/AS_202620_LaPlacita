@@ -1042,3 +1042,41 @@ SonarCloud). Al unir, Dokploy redespliega el backend solo.
 | Las rutas con parámetro leen bien el id en Next 16 | `GET /api/v1/catalogo/productos/prod-001?tiendaId=tienda-01` responde el producto (con `params` sin `await` respondería 404) |
 | Las alertas del backend se cierran | Tras unir a `master`, GitHub → Security → Dependabot ya no lista alertas de `backend/package-lock.json` |
 
+
+---
+
+## Cierre de la validación S12 y verificación de despliegue (24/10/2026)
+
+Tres pendientes declarados el 22/10 quedaron cerrados el 24/10, además de la convención de
+registro de prompts en `docs/ia.md` (§2 Políticas).
+
+| # | Pendiente | Resultado | Verificación |
+|---|---|---|---|
+| 1 | Validación del equipo de la entrega S12 (ADR-0024/0025/0026 en propuesto; evidencias y taller «pendiente de revisión») | Los tres ADR pasan a **aceptado** (solo la línea de estado, criterio ADR-0015); `evidencias-s12.md` y `taller-s12-mensajes.md` validados por el equipo; tabla §9 del arc42 y bitácora alineadas | Lectura de cada fila de la evidencia contra el código antes de aceptar; las entradas de la bitácora del 22/10 quedan marcadas validadas con fecha |
+| 2 | Quality Gate de SonarCloud inaccesible (la revisión del 19/10 reporta HTTP 403) | **No se reproduce**: el proyecto responde en público sin sesión — `api/components/show` y `api/qualitygates/project_status` devuelven 200 anónimos con el gate en OK | `curl https://sonarcloud.io/api/qualitygates/project_status?projectKey=ISCOUTB_AS_202620_LaPlacita` (sin credenciales); si el revisor vuelve a ver 403, revisar su red/VPN antes de suponer projecto privado |
+| 3 | Dominios públicos caídos a través de Cloudflare (hallazgo del 23/10: 000 vía proxy, 200 directo al origen) | **Resuelto**: `laplacita-test` y `laplacita-app` responden 200 vía Cloudflare; el 307 de `/` del backend es el redirect esperado a `/docs` | `curl -w '%{http_code}' https://laplacita-test.iscoutb.dev/api/v1/health` → 200 `{"status":"ok"}`; PWA 200 y BFF sirviendo catálogo real |
+
+### Recorrido HTTP del flujo S12 sobre el despliegue (24/10)
+
+Prueba en Dokploy declarada como pendiente el 22/10, ejecutada el 24/10 contra
+`https://laplacita-test.iscoutb.dev` (rama `master`, despliegue del PR #15). Pedidos de prueba
+etiquetados con `clienteId: prueba-s12*` y una cuenta `prueba.s12.2410@utb.edu.co` creada
+única y exclusivamente para esta verificación (documentar que queda registrada).
+
+| Paso | Operación (evidencia) | Resultado |
+|---|---|---|
+| 1 | Creación confirmada por la base (O-01, ADR-0026) | `POST /pedidos` → **201**, `codigo: A02` (código corto asignado) |
+| 2 | Idempotencia de creación (S11, fila 18/10) | Replay con la misma `Idempotency-Key` → **mismo `pedidoId`** y cabecera `Idempotent-Replayed: true` |
+| 3 | Creación del dueño con sesión (ADR-0021) | Registro 201 (sesión incluida); pedido con `clienteId = usuario` y código `A03` |
+| 4 | Lectura pública solo con llave (ADR-0025) | Sin `seguimiento` → **404** (respuesta uniforme que no revela existencias); con `seguimiento` → 200 con código corto y sin `pin` |
+| 5 | Pago → Listo | `POST /pagos/{id}/confirmar` 200; `POST /entrega/{id}/listo` 200 |
+| 6 | PIN solo para su dueño (ADR-0022) | `GET /pedidos/{id}/pin` con sesión → **200, PIN entregado al dueño**; el mismo endpoint sobre un pedido ajeno → **404** (mismo código que inexistente) |
+| 7 | Entrega: PIN errado y correcto | Errado → 400 contado; correcto → **200, estado `Entregado`**; revalidar el PIN consumido → 400 |
+| 8 | Notificaciones con seguimiento (O-14) | `GET /notificaciones/{id}?seguimiento=…` → `[]`: la lista se alimenta de `POST /notificaciones` y del script de demo, no de la ruta v1 de flujo — comportamiento esperado, no defecto |
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Los tres ADR S12 pasaron a aceptados ⚠️ el mismo día — pero **requieren lectura formal de cada integrante** antes de medianoche del domingo | Reunión del equipo: revisar `docs/adr/0024/0025/0026` + `evidencias-s12.md`; la lectura consta en esta bitácora solo como verificación técnica del 24/10 |
+| El 403 de SonarCloud en la revisión del 19/10 no era del proyecto privado | `curl` anónimo a la API del gate (tabla superior); pedir al revisor repetir desde su red |
+| La caída de Cloudflare del 23/10 no fue del código | Los dominios responden hoy sin cambios en el repo: ping comparado vía proxy vs origin directo |
