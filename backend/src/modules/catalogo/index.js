@@ -10,7 +10,7 @@
 // (write-through: la caché se invalida en el mismo paso en que cambia el dato).
 
 import { estadoCompartido } from '../../estado-compartido.js';
-import { activa, alCargarProductos, guardarProducto } from '../../persistencia/index.js';
+import { activa, alCargarProductos, guardarProducto, asignarImagenProducto } from '../../persistencia/index.js';
 import { error as logError } from '../../logger.js';
 
 const productos = estadoCompartido('productos', () => new Map([
@@ -94,6 +94,25 @@ async function actualizarProducto(productoId, tiendaId, cambios = {}, rol = 'tra
   return nuevo;
 }
 
+/**
+ * Asigna la imagen de un producto de la tienda (panel, ADR-0028). Los bytes
+ * ya están en el almacén (`almacen.guardarImagen`); aquí SOLO la referencia:
+ * la base confirma y después se actualiza la caché, que es exactamente el
+ * orden del `actualizarProducto` (el menú que ven los clientes no cambia si
+ * la base falla) mientras el objeto del almacén queda subido — si el panel
+ * reintenta con el mismo archivo, sale otro uuid y no hay nada degenerado.
+ */
+async function asignarImagen(productoId, tiendaId, imagenId) {
+  const actual = productos.get(productoId);
+  if (!actual || actual.tiendaId !== tiendaId) {
+    throw errorCon(`Producto ${productoId} no encontrado en la tienda ${tiendaId}`, 404);
+  }
+  await asignarImagenProducto(productoId, tiendaId, imagenId);
+  const nuevo = { ...actual, imagenId };
+  productos.set(productoId, nuevo);
+  return nuevo;
+}
+
 // Rehidratación: las filas de la base reemplazan a la semilla; los productos
 // de la semilla que aún no están en la base se insertan (primer arranque).
 function restaurarProductosDesde(filas) {
@@ -115,4 +134,4 @@ if (activa()) {
   alCargarProductos(restaurarProductosDesde);
 }
 
-export { obtenerProducto, listarProductosPorTienda, actualizarProducto, restaurarProductosDesde };
+export { obtenerProducto, listarProductosPorTienda, actualizarProducto, asignarImagen, restaurarProductosDesde };

@@ -5,6 +5,8 @@
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? ""
 
+import { reescalarImagen } from "./imagen"
+
 // ── Tipos del contrato (espejo de los schemas de openapi.yaml) ──────────────
 
 /** Producto del catálogo del backend (prod-001, …). */
@@ -18,6 +20,8 @@ export interface Product {
   category?: string
   imageUrl?: string
   disponible?: boolean
+  /** uuid v4 en el almacén de imágenes (ADR-0028): la URL se compone en la vista. */
+  imagenId?: string | null
 }
 
 export type EstadoPedido = "Recibido" | "En preparación" | "Listo" | "Entregado"
@@ -92,6 +96,7 @@ export async function obtenerProductos(tiendaId: string): Promise<Product[]> {
     name: p.nombre,
     price: p.precio,
     disponible: p.disponible,
+    imagenId: (p as { imagenId?: string | null }).imagenId ?? null,
   }))
 }
 
@@ -182,6 +187,8 @@ export interface ProductoTienda {
   nombre: string
   precio: number
   disponible: boolean
+  /** uuid v4 del objeto en el almacén (ADR-0028); null si aún no tiene foto. */
+  imagenId?: string | null
 }
 
 export interface ResumenTienda {
@@ -223,6 +230,22 @@ export function actualizarProductoTienda(
     headers: { "content-type": "application/json" },
     body: JSON.stringify(cambios),
   })
+}
+
+/** ADR-0028: sube la foto del producto (multipart, cookie de sesión vía BFF).
+ * El reescalado/compresión del navegador vive en lib/imagen.ts — aquí solo la
+ * llamada al contrato. */
+export async function subirImagenProducto(
+  productoId: string,
+  archivo: File
+): Promise<ProductoTienda> {
+  const blob = await reescalarImagen(archivo)
+  const cuerpo = new FormData()
+  cuerpo.append("imagen", new File([blob], "imagen.webp", { type: "image/webp" }))
+  return request<ProductoTienda>(
+    `/tienda/productos/${encodeURIComponent(productoId)}/imagen`,
+    { method: "POST", body: cuerpo }
+  )
 }
 
 export function resumenTienda(): Promise<ResumenTienda> {

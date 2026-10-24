@@ -1080,3 +1080,29 @@ etiquetados con `clienteId: prueba-s12*` y una cuenta `prueba.s12.2410@utb.edu.c
 | Los tres ADR S12 pasaron a aceptados ⚠️ el mismo día — pero **requieren lectura formal de cada integrante** antes de medianoche del domingo | Reunión del equipo: revisar `docs/adr/0024/0025/0026` + `evidencias-s12.md`; la lectura consta en esta bitácora solo como verificación técnica del 24/10 |
 | El 403 de SonarCloud en la revisión del 19/10 no era del proyecto privado | `curl` anónimo a la API del gate (tabla superior); pedir al revisor repetir desde su red |
 | La caída de Cloudflare del 23/10 no fue del código | Los dominios responden hoy sin cambios en el repo: ping comparado vía proxy vs origin directo |
+
+---
+
+## Imágenes del catálogo con Garage S3 (25/10/2026 · material de S13)
+
+El equipo pidió foto para los productos y decidió que los bytes de imagen
+NO viven en PostgreSQL (no bytea): se adopta **Garage S3** auto-hospedado en
+Dokploy, **sin exposición pública** — el plan se describe en [ADR-0028](docs/adr/0028-almacen-imagenes-garage-dokploy.md)
+creado para este requisito. La lección práctica del intento de MinIO: el
+dolor de SSL aparece al expone el almacén; con el backend como única puerta
+pública vía /api/v1, el almacén vive en la red interna por HTTP plano.
+
+| Pieza | Detalle |
+|---|---|
+| Módulo `almacen` | Dueño único de los bytes (regla de propiedad de datos). Cliente S3 SigV4 con `node:crypto` (sin dependencias — criterio ADR-0021). Modo memoria declarado sin `GARAGE_*` |
+| Sniffing del MIME | El Content-Type de la subida JAMÁS se confía: se detecta por bytes mágicos (webp/png/jpeg); `X-Content-Type-Options: nosniff` en el borde |
+| Referencia | `productos.imagen_id UUID` en PostgreSQL (write-through del catálogo); uuid nuevo por subida → lectura cacheable `immutable` sin invalidación |
+| Rutas | `POST /api/v1/tienda/productos/{id}/imagen` (sesión de tienda) y `GET /api/v1/imagenes/{id}` (pública, 404 uniforme por uuid) |
+| Frontend | Resize en el navegador (canvas → webp 800px), botón «Subir/Cambiar foto» en el panel y foto en la tarjeta de producto de la tienda |
+| Pruebas | `tests/almacen.test.js` (sniffing, contenido disfrazado rechazado, límite real, uuid, claves raras); integración REAL contra Garage (Podman): PUT firmado, GET idéntico, 404 y disfrazado rechazado |
+| S13 | La superficie de amenaza queda lista en ADR-0028: antimalware y comportamiento del uploader malicioso para modelar la próxima semana |
+
+Verificación local (25/10): suite 115 + 28 de contrato en verde, lint y
+build del frontend limpios; integración Garage con Podman presentada en
+los logs de esta bitácora. Despliegue en Dokploy pendiente de la acción del
+equipo (crear el servicio Garage y las variables `GARAGE_*`).

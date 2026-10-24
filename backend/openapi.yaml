@@ -665,6 +665,105 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /tienda/productos/{productoId}/imagen:
+    post:
+      tags: [tienda]
+      summary: Subir/actualizar la imagen de un producto (panel)
+      operationId: subirImagenProducto
+      security:
+        - sesion: []
+      description: >-
+        ADR-0028. multipart con el campo `imagen`. El cliente reescala en el
+        navegador (webp ~800px); el backend decide el MIME por sniffing de los
+        bytes (jamás por lo que declara la subida) y aplica un límite de
+        512 KB sobre el buffer real. Los bytes viven en Garage (red interna de
+        Dokploy); la base guarda solo la referencia `imagen_id` (uuid v4) y el
+        catálogo se invalida con la misma convención write-through del panel.
+      parameters:
+        - name: productoId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                imagen:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Producto con la imagen asignada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Producto'
+        '400':
+          description: Falta el archivo, no es webp/png/jpeg real o no es multipart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sin sesión
+        '404':
+          description: El producto no es de la tienda de la sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: La imagen supera el límite
+        '502':
+          description: El almacén de imágenes (Garage) no aceptó la subida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /imagenes/{id}:
+    get:
+      tags: [catalogo]
+      summary: Imagen pública del catálogo por su identidad uuid
+      operationId: obtenerImagen
+      security: []
+      description: >-
+        ADR-0028. Contenido público del menú (como el nombre y el precio): la
+        protección es no-conocimiento del id (uuid v4) y no la sesión. El
+        Content-Type saliente lo determina el sniffing del contenido y la
+        respuesta declara el umbral de cacheo en el borde (Cloudflare) con
+        `Cache-Control: public, max-age=86400, immutable` — una misma url
+        nunca cambia de contenido porque cada subida genera un uuid nuevo.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: uuid v4 de la imagen (productos.imagenId)
+      responses:
+        '200':
+          description: Bytes de la imagen (webp/png/jpeg)
+          content:
+            image/webp:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Imagen no encontrada o identidad sin formato válido
+
   /tienda/productos:
     get:
       tags: [tienda]
@@ -907,6 +1006,11 @@ components:
 
     Producto:
       type: object
+      description: >-
+        Producto del menú. `imagenId` (ADR-0028) es la referencia uuid del
+        objeto en el almacén de imágenes: el nombre y el precio sí son
+        obligatorios; el campo es NULL para productos sin imagen y la PWA
+        muestra la inicial del producto en ese caso (igual que hasta ahora).
       properties:
         id:
           type: string
@@ -919,6 +1023,10 @@ components:
           minimum: 0
         disponible:
           type: boolean
+        imagenId:
+          type: string
+          nullable: true
+          description: uuid v4 del objeto en Garage (ADR-0028); null si no hay imagen
       required:
         - id
         - tiendaId

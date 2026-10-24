@@ -53,6 +53,11 @@ ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS creado_en TIMESTAMPTZ;
 ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS secuencia BIGINT;
 -- Token de seguimiento (ADR-0025): sin él, la vista pública responde 404.
 ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS seguimiento TEXT;
+-- Identidad de la imagen del producto (ADR-0028): solo la REFERENCIA. Los
+-- bytes viven en Garage (Dokploy, red interna); un uuid v4 no enumerable.
+-- ADD COLUMN IF NOT EXISTS agrega a la tabla desplegada sin tocar filas: sin
+-- imagen, el frontend muestra la inicial como hasta ahora.
+ALTER TABLE productos ADD COLUMN IF NOT EXISTS imagen_id UUID;
 -- Cuentas (ADR-0021). La contraseña se guarda solo como derivada scrypt.
 CREATE TABLE IF NOT EXISTS usuarios (
   usuario_id TEXT        PRIMARY KEY,
@@ -132,6 +137,7 @@ function filaAProducto(fila) {
     nombre: fila.nombre,
     precio: Number(fila.precio),
     disponible: Boolean(fila.disponible),
+    imagenId: fila.imagen_id ?? null,
   };
 }
 
@@ -175,7 +181,7 @@ async function arrancar() {
     'SELECT usuario_id, correo, nombre, hash, rol, tienda_id, creado_en FROM usuarios ORDER BY creado_en',
   );
   usuariosCargados = cuentas.rows.map(filaAUsuario);
-  const menu = await pool.query('SELECT producto_id, tienda_id, nombre, precio, disponible FROM productos');
+  const menu = await pool.query('SELECT producto_id, tienda_id, nombre, precio, disponible, imagen_id FROM productos');
   productosCargados = menu.rows.map(filaAProducto);
   for (const [oyentes, filas] of [
     [oyentesDeCarga, registrosCargados],
@@ -257,6 +263,19 @@ export async function guardarProducto(producto) {
      ON CONFLICT (producto_id) DO UPDATE
      SET nombre = EXCLUDED.nombre, precio = EXCLUDED.precio, disponible = EXCLUDED.disponible, actualizado_en = now()`,
     [producto.id, producto.tiendaId, producto.nombre, producto.precio, producto.disponible],
+  );
+}
+
+// Referencia de la imagen del producto (ADR-0028): la misma convención del
+// catálogo editable — la base confirma ANTES de tocar la caché del panel.
+export async function asignarImagenProducto(productoId, tiendaId, imagenId) {
+  if (!activa()) {
+    return;
+  }
+  await iniciar();
+  await pool.query(
+    'UPDATE productos SET imagen_id = $1, actualizado_en = now() WHERE producto_id = $2 AND tienda_id = $3',
+    [imagenId, productoId, tiendaId],
   );
 }
 
@@ -420,7 +439,7 @@ export async function cargarProductos() {
     return [];
   }
   await iniciar();
-  const { rows } = await pool.query('SELECT producto_id, tienda_id, nombre, precio, disponible FROM productos');
+  const { rows } = await pool.query('SELECT producto_id, tienda_id, nombre, precio, disponible, imagen_id FROM productos');
   return rows.map(filaAProducto);
 }
 

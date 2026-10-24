@@ -486,6 +486,7 @@ Esta sección registra el historial de decisiones arquitectónicas significativa
 | ADR-0024 | Identidad del pedido `pedido-N` por tienda: la decisión de datos más costosa de revertir | Aceptado | 2026-10-22 | ESC-02, ESC-01, ESC-05 | [0024-identidad-del-pedido.md](../adr/0024-identidad-del-pedido.md) |
 | ADR-0025 | Token de seguimiento: la vista pública del pedido exige una llave | Aceptado | 2026-10-22 | ESC-02, ESC-03, A-06 | [0025-token-de-seguimiento-del-pedido.md](../adr/0025-token-de-seguimiento-del-pedido.md) |
 | ADR-0026 | Escrituras de pedidos como mensajes at-least-once y creación confirmada por la base (precisa ADR-0014) | Aceptado | 2026-10-22 | ESC-01, ESC-05 | [0026-escrituras-at-least-once-y-creacion-confirmada.md](../adr/0026-escrituras-at-least-once-y-creacion-confirmada.md) |
+| ADR-0028 | Almacén de imágenes separado: Garage S3 en Dokploy, sin exposición pública (bytes; PostgreSQL solo la referencia `imagen_id`) | Aceptado | 2026-10-25 | ESC-02, ESC-05, S13 | [0028-almacen-imagenes-garage-dokploy.md](../adr/0028-almacen-imagenes-garage-dokploy.md) |
  
 **Relación con los bloques de construcción:**
 - ADR-0001 y ADR-0002 determinan la estructura: un único proceso con módulos de dominio separados.
