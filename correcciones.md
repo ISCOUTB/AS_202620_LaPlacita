@@ -1151,3 +1151,12 @@ backend que desbloquean los cambios de producto que pidió el equipo.
 Verificación: suite 121/0 (sin DB) y 34/34 de contrato en verde; lint y
 build del frontend limpios; audit de ambos paquetes en verde. El flujo de
 la PWA no cambia: el BFF ya adjuntaba el token desde la cookie (ADR-0021).
+
+---
+
+## Transcripción del plan de ejecución a markdown (25/10/2026)
+
+`docs/plan_ejecucion/LaPlacita-plan-S12-S15.pdf` quedó también en
+`LaPlacita-plan-S12-S15.md` (misma carpeta), para poder referenciarlo por
+secciones y ver su evolución con diff. El PDF sigue siendo la fuente
+oficial; el md lo declara en su encabezado. Sin cambios de código.
