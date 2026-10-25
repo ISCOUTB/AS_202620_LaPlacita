@@ -147,21 +147,9 @@ export function confirmarPago(pedidoId: string, tiendaId: string): Promise<Pedid
   )
 }
 
-/** POST /entrega/{pedidoId}/validar?tiendaId=… — consume el PIN en ventanilla. */
-export function validarEntrega(
-  pedidoId: string,
-  tiendaId: string,
-  pinIngresado: string
-): Promise<Pedido> {
-  return request<Pedido>(
-    `/entrega/${encodeURIComponent(pedidoId)}/validar?tiendaId=${encodeURIComponent(tiendaId)}`,
-    {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ pinIngresado }),
-    }
-  )
-}
+// S13 (ADR-0029): la ruta v1 /entrega/{pedidoId}/validar se RETIRÓ del
+// backend — la entrega la valida la TIENDA con sesión (POST
+// /tienda/pedidos/{id}/entrega, ADR-0023). El cliente nunca valida el PIN.
 
 /** GET /notificaciones/{pedidoId}?tiendaId=… — historial de cambios de estado. */
 export function obtenerNotificaciones(

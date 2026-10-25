@@ -61,7 +61,7 @@ test('la cola del panel solo trae pedidos de su tienda, en orden de llegada y si
   const a = pedidos.crearPedido({ productoId: 'prod-001', cantidad: 1, clienteId: 'c-a', tiendaId: 'tienda-01' });
   const b = pedidos.crearPedido({ productoId: 'prod-004', cantidad: 2, clienteId: 'c-b', tiendaId: 'tienda-01' });
   pedidos.crearPedido({ productoId: 'prod-003', cantidad: 1, clienteId: 'c-c', tiendaId: 'tienda-02' });
-  pagos.confirmarPago(b.id, 'tienda-01');
+  pagos.confirmarPago(b.id, 'tienda-01', b.clienteId);
   entrega.marcarListo(b.id, 'tienda-01');
 
   const cola = pedidos.pedidosDeTienda('tienda-01');
@@ -73,7 +73,7 @@ test('la cola del panel solo trae pedidos de su tienda, en orden de llegada y si
 
 test('los entregados de días anteriores no aparecen en la cola', () => {
   const p = pedidos.crearPedido({ productoId: 'prod-001', cantidad: 1, clienteId: 'c-d', tiendaId: 'tienda-01' });
-  pagos.confirmarPago(p.id, 'tienda-01');
+  pagos.confirmarPago(p.id, 'tienda-01', p.clienteId);
   const { pin } = entrega.marcarListo(p.id, 'tienda-01');
   entrega.validarPin(p.id, 'tienda-01', pin);
   assert.ok(pedidos.pedidosDeTienda('tienda-01').some((x) => x.id === p.id), 'entregado hoy: visible');

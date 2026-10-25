@@ -456,6 +456,26 @@ Diseño completo en [evidencias-s12 §3](../evidencias/evidencias-s12.md).
 - **Decisión de datos más costosa de revertir:** la identidad del pedido (`tiendaId`,
   `pedido-N`), [ADR-0024](../adr/0024-identidad-del-pedido.md).
 
+### 8.6 Seguridad (S13)
+Arquitectura de seguridad resumida; análisis completo con la tabla STRIDE
+priorizada en [evidencias-s13](../evidencias/evidencias-s13.md).
+- **Sesión:** token propio firmado HMAC (sin dependencias, ADR-0021) viajando
+  solo entre BFF y backend vía cookie httpOnly/SameSite=Lax/Secure; el
+  `tiendaId` y el rol salen SIEMPRE del token (ESC-02, RES-05).
+- **Superficie pública mínima (ADR-0029):** rutas v1 de entrega retiradas;
+  el pago lo confirma su dueño con sesión; `GET /metricas` pública queda
+  como amenaza aceptada (contadores, sin datos personales).
+- **PIN:** vista pública sin PIN (ADR-0013); lectura solo para el dueño y
+  con pedido en Listo (ADR-0022); 5 intentos; logs enmascarados (RES-01).
+- **Contraseñas:** scrypt con sal (`node:crypto`, sin dependencias).
+- **Subida de archivos (ADR-0028):** MIME por sniffing, whitelist
+  webp/png/jpeg, límite real de 512 KB, `nosniff` y uuid no enumerable.
+- **Cadena de suministro:** job `npm audit --audit-level=high` bloqueante en
+  CI (backend y frontend) + Dependabot semanal.
+- **Amenazas aceptadas (declaradas, no ocultas):** `GET /metricas` pública
+  (A-10), contadores de intentos en memoria (A-13), decodificadores del
+  navegador sin antimalware (A-14) y enumerabilidad residual de ids
+  (`pedido-N`, ADR-0024) mitigada por dueño en lecturas sensibles.
 ---
 
 ## 9. Decisiones Arquitectónicas
@@ -487,6 +507,7 @@ Esta sección registra el historial de decisiones arquitectónicas significativa
 | ADR-0025 | Token de seguimiento: la vista pública del pedido exige una llave | Aceptado | 2026-10-22 | ESC-02, ESC-03, A-06 | [0025-token-de-seguimiento-del-pedido.md](../adr/0025-token-de-seguimiento-del-pedido.md) |
 | ADR-0026 | Escrituras de pedidos como mensajes at-least-once y creación confirmada por la base (precisa ADR-0014) | Aceptado | 2026-10-22 | ESC-01, ESC-05 | [0026-escrituras-at-least-once-y-creacion-confirmada.md](../adr/0026-escrituras-at-least-once-y-creacion-confirmada.md) |
 | ADR-0028 | Almacén de imágenes separado: Garage S3 en Dokploy, sin exposición pública (bytes; PostgreSQL solo la referencia `imagen_id`) | Aceptado | 2026-10-25 | ESC-02, ESC-05, S13 | [0028-almacen-imagenes-garage-dokploy.md](../adr/0028-almacen-imagenes-garage-dokploy.md) |
+| ADR-0029 | Superficie pública mínima: retiro de rutas v1 de entrega y pago solo del dueño | Aceptado | 2026-10-25 | ESC-02, S13 | [0029-superficie-publica-minima.md](../adr/0029-superficie-publica-minima.md) |
  
 **Relación con los bloques de construcción:**
 - ADR-0001 y ADR-0002 determinan la estructura: un único proceso con módulos de dominio separados.

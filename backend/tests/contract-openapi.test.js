@@ -142,7 +142,7 @@ test('Pagos: confirmarPago mueve el pedido a En preparación', () => {
     clienteId: 'cliente-01',
     tiendaId: 'tienda-01',
   });
-  const actualizado = pagos.confirmarPago(pedido.id, 'tienda-01');
+  const actualizado = pagos.confirmarPago(pedido.id, 'tienda-01', pedido.clienteId);
   assert.strictEqual(actualizado.estado, 'En preparación');
 });
 
@@ -155,9 +155,92 @@ test('Pagos: confirmarPago lanza error si el pedido no está en Recibido', () =>
   });
   pedidos.cambiarEstado(pedido.id, 'tienda-01', 'En preparación');
   assert.throws(
-    () => pagos.confirmarPago(pedido.id, 'tienda-01'),
+    () => pagos.confirmarPago(pedido.id, 'tienda-01', pedido.clienteId),
     /No se puede pagar/
   );
+});
+
+test('S13 · ADR-0029: confirmarPago exige al DUEÑO del pedido', () => {
+  const pedido = pedidos.crearPedido({
+    productoId: 'prod-001',
+    cantidad: 1,
+    clienteId: 'cliente-01',
+    tiendaId: 'tienda-01',
+  });
+  // Un cliente distinto (o sin dueño) no puede pagar un pedido ajeno: el id
+  // es enumerable (ADR-0024) y sin este chequeo era superficie abierta.
+  assert.throws(
+    () => pagos.confirmarPago(pedido.id, 'tienda-01', 'otro-cliente'),
+    /dueño/
+  );
+  assert.throws(
+    () => pagos.confirmarPago(pedido.id, 'tienda-01', undefined),
+    /dueño/
+  );
+  const actualizado = pagos.confirmarPago(pedido.id, 'tienda-01', pedido.clienteId);
+  assert.strictEqual(actualizado.estado, 'En preparación');
+});
+
+test('S13 · ADR-0029: las rutas v1 de entrega ya no existen en app/api/v1', () => {
+  for (const ruta of [
+    'app/api/v1/entrega/[pedidoId]/listo/route.js',
+    'app/api/v1/entrega/[pedidoId]/validar/route.js',
+  ]) {
+    assert.ok(
+      !existsSync(new URL('../' + ruta, import.meta.url)),
+      'La ruta deprecated sigue desplegada: ' + ruta
+    );
+  }
+});
+
+test('S13 · ADR-0029: /pagos exige sesión en el contrato (security: sesion)', () => {
+  const content = readFileSync(new URL('../openapi.yaml', import.meta.url), 'utf-8');
+  const ini = content.indexOf('  /pagos/{pedidoId}/confirmar:');
+  const fin = content.indexOf('\n  /', ini + 10);
+  const bloque = content.slice(ini, fin);
+  assert.ok(bloque.includes('security:'), 'pagos sin security en el contrato');
+  assert.ok(bloque.includes('sesion: []'), 'pagos no exige sesión de cliente');
+  assert.ok(!bloque.includes('deprecated: true'), 'pagos sigue marcado deprecated tras asegurarla');
+});
+
+test('S14: actualizarProducto guarda y valida la descripción del producto', async () => {
+  const editado = await catalogo.actualizarProducto('prod-002', 'tienda-01', {
+    descripcion: '  Jugo natural recién licuado.  ',
+  });
+  assert.strictEqual(editado.descripcion, 'Jugo natural recién licuado.');
+  // Cadena vacía borra la descripción (vuelve a null).
+  const borrada = await catalogo.actualizarProducto('prod-002', 'tienda-01', { descripcion: '' });
+  assert.strictEqual(borrada.descripcion, null);
+  // Más de 500 caracteres: rechazo 400.
+  await assert.rejects(
+    () => catalogo.actualizarProducto('prod-002', 'tienda-01', { descripcion: 'x'.repeat(501) }),
+    /500/
+  );
+  // No texto: rechazo 400.
+  await assert.rejects(
+    () => catalogo.actualizarProducto('prod-002', 'tienda-01', { descripcion: 42 }),
+    /texto/
+  );
+});
+
+test('S14: imagen del encabezado de la tienda — write-through y lista pública', async () => {
+  const tienda = await catalogo.asignarImagenTienda('tienda-03', 'f4dfd953-8e07-4e07-8e07-000000000003');
+  assert.strictEqual(tienda.imagenId, 'f4dfd953-8e07-4e07-8e07-000000000003');
+  const listado = catalogo.listarTiendas();
+  assert.strictEqual(listado.length, 5, 'la lista pública debe traer los 5 establecimientos');
+  assert.ok(listado.find((t) => t.id === 'tienda-03').imagenId === 'f4dfd953-8e07-4e07-8e07-000000000003');
+  // Una tienda no reconocida: 404 uniforme.
+  await assert.rejects(
+    () => catalogo.asignarImagenTienda('tienda-09', 'f4dfd953-8e07-4e07-8e07-000000000009'),
+    /no reconocida/
+  );
+});
+
+test('S14: el contrato declara /catalogo/tiendas y /tienda/imagen', () => {
+  const content = readFileSync(new URL('../openapi.yaml', import.meta.url), 'utf-8');
+  assert.ok(content.includes('  /catalogo/tiendas:'), 'falta /catalogo/tiendas en el contrato');
+  assert.ok(content.includes('  /tienda/imagen:'), 'falta /tienda/imagen en el contrato');
+  assert.ok(content.includes('    Tienda:'), 'falta el esquema Tienda');
 });
 
 test('Entrega: marcarListo genera PIN y cambia estado a Listo', () => {
@@ -167,7 +250,7 @@ test('Entrega: marcarListo genera PIN y cambia estado a Listo', () => {
     clienteId: 'cliente-01',
     tiendaId: 'tienda-01',
   });
-  pagos.confirmarPago(pedido.id, 'tienda-01');
+  pagos.confirmarPago(pedido.id, 'tienda-01', pedido.clienteId);
   const actualizado = entrega.marcarListo(pedido.id, 'tienda-01');
   assert.strictEqual(actualizado.estado, 'Listo');
   assert.ok(actualizado.pin);
@@ -181,7 +264,7 @@ test('Entrega: validarPin cambia estado a Entregado si el PIN es correcto', () =
     clienteId: 'cliente-01',
     tiendaId: 'tienda-01',
   });
-  pagos.confirmarPago(pedido.id, 'tienda-01');
+  pagos.confirmarPago(pedido.id, 'tienda-01', pedido.clienteId);
   entrega.marcarListo(pedido.id, 'tienda-01');
   const pin = pedidos.obtenerPedido(pedido.id, 'tienda-01').pin;
   const entregado = entrega.validarPin(pedido.id, 'tienda-01', pin);
@@ -195,7 +278,7 @@ test('Entrega: validarPin lanza error si el PIN es incorrecto', () => {
     clienteId: 'cliente-01',
     tiendaId: 'tienda-01',
   });
-  pagos.confirmarPago(pedido.id, 'tienda-01');
+  pagos.confirmarPago(pedido.id, 'tienda-01', pedido.clienteId);
   entrega.marcarListo(pedido.id, 'tienda-01');
   assert.throws(
     () => entrega.validarPin(pedido.id, 'tienda-01', '0000'),
@@ -261,7 +344,7 @@ test('Notificaciones: obtenerNotificaciones retorna array de notificaciones del 
 //     pedidos.cambiarEstado(pedido.id, 'tienda-01', 'En preparación');
 //     // Si confirmarPago ya no lanza error cuando el pedido no está Recibido:
 //     assert.throws(
-//       () => pagos.confirmarPago(pedido.id, 'tienda-01'),
+//       () => pagos.confirmarPago(pedido.id, 'tienda-01', pedido.clienteId),
 //       /No se puede pagar/
 //     );
 //   });
@@ -293,8 +376,9 @@ test('openapi.yaml define todos los endpoints del contrato', () => {
   assert.ok(content.includes('/catalogo/tiendas/{tiendaId}/productos'), 'Falta endpoint /catalogo/tiendas/{tiendaId}/productos');
   assert.ok(content.includes('/pedidos'), 'Falta endpoint /pedidos');
   assert.ok(content.includes('/pagos/{pedidoId}/confirmar'), 'Falta endpoint /pagos/{pedidoId}/confirmar');
-  assert.ok(content.includes('/entrega/{pedidoId}/listo'), 'Falta endpoint /entrega/{pedidoId}/listo');
-  assert.ok(content.includes('/entrega/{pedidoId}/validar'), 'Falta endpoint /entrega/{pedidoId}/validar');
+  // S13 (ADR-0029): las rutas v1 de entrega se RETIRARON de la superficie.
+  assert.ok(!content.includes('/entrega/{pedidoId}/listo'), 'La ruta deprecated /entrega/{pedidoId}/listo sigue en el contrato');
+  assert.ok(!content.includes('/entrega/{pedidoId}/validar'), 'La ruta deprecated /entrega/{pedidoId}/validar sigue en el contrato');
   assert.ok(content.includes('/notificaciones'), 'Falta endpoint /notificaciones');
 });
 
@@ -372,7 +456,7 @@ test('S9: pedidos.vistaPublica existe y no expone el pin (A-06 / ESC-03)', () =>
     clienteId: 'cliente-s9',
     tiendaId: 'tienda-01',
   });
-  pagos.confirmarPago(pedido.id, 'tienda-01');
+  pagos.confirmarPago(pedido.id, 'tienda-01', pedido.clienteId);
   entrega.marcarListo(pedido.id, 'tienda-01');
 
   const publica = pedidos.vistaPublica(pedido.id, 'tienda-01');
@@ -401,9 +485,11 @@ test('S9: el contrato no declara pin en el esquema de lectura del pedido', () =>
     !/^\s{8}pin:/m.test(bloque),
     'El esquema Pedido declara `pin`: GET /pedidos/{pedidoId} lo devolvería en claro'
   );
+  // S13 (ADR-0029): sin la ruta, el esquema también se retiró. El único
+  // PIN que sale es el del dueño (GET /pedidos/{id}/pin, ADR-0022).
   assert.ok(
-    content.includes('PedidoConPin:'),
-    'Falta el esquema PedidoConPin para POST /entrega/{pedidoId}/listo, que sí debe entregar el pin'
+    !content.includes('PedidoConPin:'),
+    'El esquema PedidoConPin sigue en el contrato: sugeriría una ruta que entrega el pin sin dueño'
   );
 });
 

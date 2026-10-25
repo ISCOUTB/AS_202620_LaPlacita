@@ -1129,3 +1129,25 @@ como `../files/garage.toml`) y la configuración del clúster desde la terminal
 web del servicio — verificado contra la documentación oficial de Mounts de
 Compose de Dokploy. Suite completa re-verificada (120/0 con BD
 PM, 28/28 contrato, lint/build limpios).
+
+---
+
+## S13 · Superficie pública mínima y soporte para la PWA (25/10/2026)
+
+Cierre del bloque de seguridad del plan S13 (ADR-0029) y las piezas de
+backend que desbloquean los cambios de producto que pidió el equipo.
+
+| Pieza | Detalle |
+|---|---|
+| Rutas v1 de entrega RETIRADAS | `POST /entrega/{id}/listo` y `/entrega/{id}/validar` (sin sesión): el módulo `entrega` permanece y lo usan las rutas `/tienda/*` con sesión (ADR-0023). El cliente nunca valida el PIN |
+| Pago solo del dueño | `POST /pagos/{id}/confirmar` exige sesión: el `clienteId` sale del TOKEN (no del cuerpo) y se compara con el del pedido (403). Cerrado el vector de pago ajeno por enumeración de `pedido-N` |
+| Análisis de dependencias | Job `audit` en el CI (`npm audit --audit-level=high`, backend y frontend, bloqueante) + Dependabot semanal (`.github/dependabot.yml`). Hallazgo corregido: zod 3.25.76 → 4.6.7 (era del toolchain de eslint del frontend) |
+| Evidencia S13 | `docs/evidencias/evidencias-s13.md`: inventario de superficie (§2), tabla STRIDE priorizada de 14 amenazas con mitigación/estado/responsable (§3), resultado de dependencias (§4) y privacidad Ley 1581 (§5). arc42 §8.6 (seguridad) + fila del ADR-0029 en §9 |
+| C4 al día | Garage agregado como contenedor propio (quedó fuera desde el ADR-0028) |
+| Producto · descripción | Columna `descripcion TEXT` en `productos` (migración suave), semilla con 18 descripciones reales, edición por `PATCH` con validación (≤500 caracteres, '' borra), contrato actualizado. La vista de detalle en la PWA la maqueta Miguel |
+| Producto · imagen de tienda | Tabla `tiendas` (referencia `imagen_id`), `POST /tienda/imagen` con sesión (el `tiendaId` sale del token, ESC-02), `GET /catalogo/tiendas` pública (nombre + imagenId), write-through como en productos. El banner en la PWA lo maqueta Miguel |
+| Frontend mínimo | `validarEntrega` retirada de `lib/api.ts` (su ruta ya no existe; la entrega es del panel) — el resto de la PWA queda para Miguel |
+
+Verificación: suite 121/0 (sin DB) y 34/34 de contrato en verde; lint y
+build del frontend limpios; audit de ambos paquetes en verde. El flujo de
+la PWA no cambia: el BFF ya adjuntaba el token desde la cookie (ADR-0021).

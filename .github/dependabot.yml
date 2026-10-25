@@ -1,0 +1,27 @@
+# S13 (plan de ejecución): análisis semanal de dependencias y del propio CI.
+# Los hallazgos high+ bloquean además el CI vía el job `audit` de ci.yml;
+# esto es la alerta temprana (las 4 alertas críticas del plan se atienden aquí).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /backend
+    schedule:
+      interval: weekly
+    groups:
+      parches-menores:
+        update-types:
+          - patch
+          - minor
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    groups:
+      parches-menores:
+        update-types:
+          - patch
+          - minor
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

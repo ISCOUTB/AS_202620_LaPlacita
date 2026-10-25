@@ -56,7 +56,7 @@ test('dos tiendas conviven sin interferencia', () => {
   assert.equal(a.tiendaId, 'tienda-01');
   assert.equal(b.tiendaId, 'tienda-02');
 
-  pagos.confirmarPago(b.id, 'tienda-02');
+  pagos.confirmarPago(b.id, 'tienda-02', b.clienteId);
   entrega.marcarListo(b.id, 'tienda-02');
 
   assert.equal(pedidos.obtenerPedido(a.id, 'tienda-01').estado, 'Recibido');
@@ -72,7 +72,7 @@ test('el flujo completo de una tienda no es visible desde otra', () => {
     tiendaId: 'tienda-01',
   });
 
-  pagos.confirmarPago(pedido.id, 'tienda-01');
+  pagos.confirmarPago(pedido.id, 'tienda-01', pedido.clienteId);
   entrega.marcarListo(pedido.id, 'tienda-01');
   const listo = pedidos.obtenerPedido(pedido.id, 'tienda-01');
   const entregado = entrega.validarPin(pedido.id, 'tienda-01', listo.pin);

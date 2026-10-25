@@ -23,20 +23,20 @@ test('pedidos.cambiarEstado rechaza transiciones no secuenciales', () => {
 
 test('pagos.confirmarPago mueve el pedido a En preparación', () => {
   const pedido = pedidos.crearPedido({ productoId: 'prod-002', cantidad: 1, clienteId: 'cliente-04', tiendaId: 'tienda-01' });
-  const actualizado = pagos.confirmarPago(pedido.id, 'tienda-01');
+  const actualizado = pagos.confirmarPago(pedido.id, 'tienda-01', pedido.clienteId);
   assert.equal(actualizado.estado, 'En preparación');
 });
 
 test('entrega.validarPin rechaza un PIN incorrecto', () => {
   const pedido = pedidos.crearPedido({ productoId: 'prod-002', cantidad: 1, clienteId: 'cliente-05', tiendaId: 'tienda-01' });
-  pagos.confirmarPago(pedido.id, 'tienda-01');
+  pagos.confirmarPago(pedido.id, 'tienda-01', pedido.clienteId);
   entrega.marcarListo(pedido.id, 'tienda-01');
   assert.throws(() => entrega.validarPin(pedido.id, 'tienda-01', '0000'));
 });
 
 test('entrega.validarPin bloquea tras MAX_INTENTOS_PIN fallos (A-06)', () => {
   const pedido = pedidos.crearPedido({ productoId: 'prod-002', cantidad: 1, clienteId: 'cliente-07', tiendaId: 'tienda-01' });
-  pagos.confirmarPago(pedido.id, 'tienda-01');
+  pagos.confirmarPago(pedido.id, 'tienda-01', pedido.clienteId);
   entrega.marcarListo(pedido.id, 'tienda-01');
   const pinReal = pedidos.obtenerPedido(pedido.id, 'tienda-01').pin;
 
@@ -55,7 +55,7 @@ test('pin inmutable desde fuera: mutar la copia de obtenerPedido no afecta al pe
     copia.pin = '9999';
   }, TypeError);
 
-  pagos.confirmarPago(pedido.id, 'tienda-01');
+  pagos.confirmarPago(pedido.id, 'tienda-01', pedido.clienteId);
   entrega.marcarListo(pedido.id, 'tienda-01');
   const actualizado = pedidos.obtenerPedido(pedido.id, 'tienda-01');
   assert.notEqual(actualizado.pin, '9999');

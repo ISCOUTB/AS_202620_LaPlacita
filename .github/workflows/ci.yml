@@ -79,6 +79,32 @@ jobs:
           run: node --test tests/contract-openapi.test.js
           working-directory: backend
 
+    # S13 (plan de ejecución): análisis de dependencias en el CI. Se corre en
+    # los dos paquetes y bloquea el merge si hay vulnerabilidades high+. Los
+    # hallazgos nuevos los reporta también Dependabot (ver dependabot.yml).
+    audit:
+        runs-on: ubuntu-latest
+        needs: test
+
+        steps:
+        - name: Descargar código
+          uses: actions/checkout@v4
+
+        - name: Configurar Node.js
+          uses: actions/setup-node@v4
+          with:
+            node-version: '22'
+            cache: 'npm'
+            cache-dependency-path: backend/package-lock.json
+
+        - name: Audit del backend
+          run: npm audit --audit-level=high
+          working-directory: backend
+
+        - name: Audit del frontend
+          run: npm audit --audit-level=high
+          working-directory: frontend
+
     # El frontend de usuario (PWA) se valida también en CI: build de producción.
     frontend:
         runs-on: ubuntu-latest

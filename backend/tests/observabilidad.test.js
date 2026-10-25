@@ -35,7 +35,7 @@ test('métricas resumen expone los seis contadores del contrato', () => {
 test('métricas crecen con el flujo completo y con un rechazo de PIN', () => {
   const antes = resumen();
   const pedido = pedidos.crearPedido({ productoId: 'prod-001', cantidad: 1, clienteId: 'cliente-obs', tiendaId: 'tienda-01' });
-  pagos.confirmarPago(pedido.id, 'tienda-01');
+  pagos.confirmarPago(pedido.id, 'tienda-01', pedido.clienteId);
   entrega.marcarListo(pedido.id, 'tienda-01');
   assert.throws(() => entrega.validarPin(pedido.id, 'tienda-01', '0000'), /PIN incorrecto/);
   const pin = pedidos.obtenerPedido(pedido.id, 'tienda-01').pin;

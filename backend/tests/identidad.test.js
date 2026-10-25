@@ -113,7 +113,7 @@ test('el PIN solo lo ve su dueño y solo cuando el pedido está Listo', async ()
 
   assert.throws(() => pedidos.pinParaDueno(pedido.id, 'tienda-01', dueno.id), (e) => e.estado === 409, 'aún no está Listo');
 
-  pagos.confirmarPago(pedido.id, 'tienda-01');
+  pagos.confirmarPago(pedido.id, 'tienda-01', pedido.clienteId);
   entrega.marcarListo(pedido.id, 'tienda-01');
 
   const { pin } = pedidos.pinParaDueno(pedido.id, 'tienda-01', dueno.id);

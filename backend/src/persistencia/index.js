@@ -77,6 +77,16 @@ CREATE TABLE IF NOT EXISTS productos (
 -- ADD COLUMN IF NOT EXISTS agrega a la tabla desplegada sin tocar filas: sin
 -- imagen, el frontend muestra la inicial como hasta ahora.
 ALTER TABLE productos ADD COLUMN IF NOT EXISTS imagen_id UUID;
+-- Descripción larga del producto (S14, detalle en la PWA): opcional, texto
+-- corto editado por la tienda desde el panel. NULL para la semilla vieja.
+ALTER TABLE productos ADD COLUMN IF NOT EXISTS descripcion TEXT;
+-- Datos propios de cada establecimiento (S14): hoy solo la imagen del
+-- encabezado de la tienda (ADR-0028: la referencia uuid; bytes en Garage).
+CREATE TABLE IF NOT EXISTS tiendas (
+  tienda_id      TEXT        PRIMARY KEY,
+  imagen_id      UUID,
+  actualizado_en TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 `;
 
 const COLUMNAS = 'tienda_id, pedido_id, cliente_id, producto_id, cantidad, total, estado, pin, codigo, creado_en, seguimiento';
@@ -93,6 +103,8 @@ let usuariosCargados = null;
 const oyentesDeUsuarios = [];
 let productosCargados = null;
 const oyentesDeProductos = [];
+let tiendasCargadas = null;
+const oyentesDeTiendas = [];
 // Tope de cada consulta de escritura: con la base caída, cada intento falla
 // rápido en vez de colgar la petición que espera la creación (el BFF corta a
 // los 10 s; 4 intentos × 2 s + esperas < 10 s).
@@ -139,6 +151,7 @@ function filaAProducto(fila) {
     precio: Number(fila.precio),
     disponible: Boolean(fila.disponible),
     imagenId: fila.imagen_id ?? null,
+    descripcion: fila.descripcion ?? null,
   };
 }
 
@@ -182,12 +195,15 @@ async function arrancar() {
     'SELECT usuario_id, correo, nombre, hash, rol, tienda_id, creado_en FROM usuarios ORDER BY creado_en',
   );
   usuariosCargados = cuentas.rows.map(filaAUsuario);
-  const menu = await pool.query('SELECT producto_id, tienda_id, nombre, precio, disponible, imagen_id FROM productos');
+  const menu = await pool.query('SELECT producto_id, tienda_id, nombre, precio, disponible, imagen_id, descripcion FROM productos');
   productosCargados = menu.rows.map(filaAProducto);
+  const tiendas = await pool.query('SELECT tienda_id, imagen_id FROM tiendas');
+  tiendasCargadas = tiendas.rows.map((fila) => ({ id: fila.tienda_id, imagenId: fila.imagen_id ?? null }));
   for (const [oyentes, filas] of [
     [oyentesDeCarga, registrosCargados],
     [oyentesDeUsuarios, usuariosCargados],
     [oyentesDeProductos, productosCargados],
+    [oyentesDeTiendas, tiendasCargadas],
   ]) {
     for (const oyente of oyentes.splice(0)) {
       try {
@@ -251,6 +267,29 @@ export function alCargarProductos(oyente) {
   oyentesDeProductos.push(oyente);
 }
 
+// Igual que `alCargar`, para las imágenes de las tiendas (módulo catalogo).
+export function alCargarTiendas(oyente) {
+  if (tiendasCargadas) {
+    oyente(tiendasCargadas);
+    return;
+  }
+  oyentesDeTiendas.push(oyente);
+}
+
+// Referencia de la imagen del encabezado de una tienda (ADR-0028): la misma
+// convención del catálogo — la base confirma ANTES de tocar la caché.
+export async function guardarImagenTienda(tiendaId, imagenId) {
+  if (!activa()) {
+    return;
+  }
+  await iniciar();
+  await pool.query(
+    `INSERT INTO tiendas (tienda_id, imagen_id) VALUES ($1, $2)
+     ON CONFLICT (tienda_id) DO UPDATE SET imagen_id = EXCLUDED.imagen_id, actualizado_en = now()`,
+    [tiendaId, imagenId],
+  );
+}
+
 // Guarda un producto y espera la confirmación (ADR-0023): el catálogo en
 // memoria es caché de esta tabla y solo cambia si la base aceptó el cambio.
 export async function guardarProducto(producto) {
@@ -259,11 +298,11 @@ export async function guardarProducto(producto) {
   }
   await iniciar();
   await pool.query(
-    `INSERT INTO productos (producto_id, tienda_id, nombre, precio, disponible)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO productos (producto_id, tienda_id, nombre, precio, disponible, descripcion)
+     VALUES ($1, $2, $3, $4, $5, $6)
      ON CONFLICT (producto_id) DO UPDATE
-     SET nombre = EXCLUDED.nombre, precio = EXCLUDED.precio, disponible = EXCLUDED.disponible, actualizado_en = now()`,
-    [producto.id, producto.tiendaId, producto.nombre, producto.precio, producto.disponible],
+     SET nombre = EXCLUDED.nombre, precio = EXCLUDED.precio, disponible = EXCLUDED.disponible, descripcion = EXCLUDED.descripcion, actualizado_en = now()`,
+    [producto.id, producto.tiendaId, producto.nombre, producto.precio, producto.disponible, producto.descripcion ?? null],
   );
 }
 
@@ -440,7 +479,7 @@ export async function cargarProductos() {
     return [];
   }
   await iniciar();
-  const { rows } = await pool.query('SELECT producto_id, tienda_id, nombre, precio, disponible, imagen_id FROM productos');
+  const { rows } = await pool.query('SELECT producto_id, tienda_id, nombre, precio, disponible, imagen_id, descripcion FROM productos');
   return rows.map(filaAProducto);
 }
 
