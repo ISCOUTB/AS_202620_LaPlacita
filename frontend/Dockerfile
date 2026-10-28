@@ -1,5 +1,5 @@
 # ---------- Stage 1: build ----------
-FROM node:22-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -8,7 +8,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 # ---------- Stage 2: run ----------
-FROM node:22-alpine
+FROM node:26-alpine
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 # El server standalone escucha en localhost dentro del contenedor (igual que
