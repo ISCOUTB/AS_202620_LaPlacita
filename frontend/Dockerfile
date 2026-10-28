@@ -15,11 +15,14 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # le pasó al backend en su primer despliegue): 0.0.0.0 lo expone al proxy.
 ENV HOSTNAME=0.0.0.0
 WORKDIR /app
-COPY --from=build /app/.next/standalone ./
-COPY --from=build /app/.next/static ./.next/static
+COPY --from=build --chown=node:node /app/.next/standalone ./
+COPY --from=build --chown=node:node /app/.next/static ./.next/static
 # El manifest, el service worker y los íconos viven en public/: el build
 # standalone NO los copia — hay que hacerlo explícitamente.
-COPY --from=build /app/public ./public
+COPY --from=build --chown=node:node /app/public ./public
 EXPOSE 3000
 ENV PORT=3000
+# S13: el servidor corre con el usuario sin privilegios `node` de la imagen,
+# no como root; si alguien lograra ejecutar código, no controla el contenedor.
+USER node
 CMD ["node", "server.js"]

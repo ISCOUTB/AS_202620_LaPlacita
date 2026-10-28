@@ -1,0 +1,23 @@
+# S13 · cadena de suministro: Dependabot abre PR semanales con las versiones
+# nuevas de las dependencias npm, de las imágenes base de Docker y de las
+# acciones del CI. Cada PR pasa por el mismo CI (pruebas, audit, Sonar).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /backend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: docker
+    directories: [/backend, /frontend]
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

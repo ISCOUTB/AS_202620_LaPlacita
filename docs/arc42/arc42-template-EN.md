@@ -456,6 +456,36 @@ Diseño completo en [evidencias-s12 §3](../evidencias/evidencias-s12.md).
 - **Decisión de datos más costosa de revertir:** la identidad del pedido (`tiendaId`,
   `pedido-N`), [ADR-0024](../adr/0024-identidad-del-pedido.md).
 
+### 8.6 Seguridad (S13)
+Modelado STRIDE completo, análisis de dependencias y privacidad en
+[evidencias-s13](../evidencias/evidencias-s13.md). Las amenazas aceptadas están en §14.
+- **Identidad y sesión:** cuentas con correo institucional, contraseñas con scrypt y JWT HS256
+  sin dependencias externas ([ADR-0021](../adr/0021-identidad-cuentas-y-sesion-jwt.md)). En la
+  web el token vive en una cookie `httpOnly`, `SameSite=Lax`, `Secure`; el BFF lo convierte en
+  `Authorization: Bearer`. Tras 5 fallos en 15 minutos el correo queda bloqueado.
+- **Autorización por tienda:** toda ruta que opera una tienda toma la tienda del token
+  ([ADR-0023](../adr/0023-panel-de-tienda.md)) o exige que el `tiendaId` recibido sea el del
+  token ([ADR-0027](../adr/0027-rutas-v1-de-tienda-con-sesion.md)). Roles `trabajador` y
+  `admin`. Una prueba de inventario (`tests/seguridad-s13.test.js`) falla si aparece una ruta
+  de escritura sin sesión fuera de las declaradas: registro, ingreso y pedido sin cuenta.
+- **Datos del pedido:** la vista pública no lleva PIN
+  ([ADR-0013](../adr/0013-proyeccion-publica-pedido-sin-pin.md)), el PIN solo lo ve su dueño
+  ([ADR-0022](../adr/0022-pin-visible-para-su-dueno.md)) y leer un pedido sin cuenta exige el
+  token de seguimiento ([ADR-0025](../adr/0025-token-de-seguimiento-del-pedido.md)).
+- **Navegador:** `Referrer-Policy: same-origin` (el token de seguimiento va en la URL),
+  `X-Frame-Options: DENY` y `frame-ancestors 'none'`, `nosniff` y `Permissions-Policy`
+  (`frontend/next.config.mjs`).
+- **Cadena de suministro:** `npm ci` con lockfile; job `dependencias` del CI con
+  `npm audit --audit-level=high`, que bloquea, y SBOM CycloneDX como artefacto; Dependabot
+  semanal para npm, Docker y GitHub Actions; contenedores con `USER node`; SonarCloud con gate
+  bloqueante ([ADR-0016](../adr/0016-quality-gate-sonarcloud-bloqueante.md)).
+- **Secretos:** solo en *Environment* de Dokploy (`DATABASE_URL`, `JWT_SECRET`,
+  `CUENTAS_TIENDA`) y en los secretos de GitHub Actions; `.env` ignorado por git.
+- **Bitácora:** JSON a stdout con `tiendaId`, `pedidoId` y, en las acciones del panel,
+  `usuarioId` seudónimo (no repudio). Nunca el PIN, el token, el correo ni el nombre.
+- **Privacidad:** aviso en `/privacidad` y autorización obligatoria al crear la cuenta
+  (Ley 1581 de 2012). La tienda solo ve el primer nombre del cliente.
+
 ---
 
 ## 9. Decisiones Arquitectónicas
@@ -486,6 +516,7 @@ Esta sección registra el historial de decisiones arquitectónicas significativa
 | ADR-0024 | Identidad del pedido `pedido-N` por tienda: la decisión de datos más costosa de revertir | Propuesto | 2026-10-22 | ESC-02, ESC-01, ESC-05 | [0024-identidad-del-pedido.md](../adr/0024-identidad-del-pedido.md) |
 | ADR-0025 | Token de seguimiento: la vista pública del pedido exige una llave | Propuesto | 2026-10-22 | ESC-02, ESC-03, A-06 | [0025-token-de-seguimiento-del-pedido.md](../adr/0025-token-de-seguimiento-del-pedido.md) |
 | ADR-0026 | Escrituras de pedidos como mensajes at-least-once y creación confirmada por la base (precisa ADR-0014) | Propuesto | 2026-10-22 | ESC-01, ESC-05 | [0026-escrituras-at-least-once-y-creacion-confirmada.md](../adr/0026-escrituras-at-least-once-y-creacion-confirmada.md) |
+| ADR-0027 | Las rutas v1 de pago, entrega y notificaciones exigen la sesión de la tienda (completa ADR-0023) | Propuesto | 2026-10-28 | ESC-02, ESC-03, A-06 | [0027-rutas-v1-de-tienda-con-sesion.md](../adr/0027-rutas-v1-de-tienda-con-sesion.md) |
  
 **Relación con los bloques de construcción:**
 - ADR-0001 y ADR-0002 determinan la estructura: un único proceso con módulos de dominio separados.
@@ -880,6 +911,35 @@ supera 6–8 personas o se necesita despliegue independiente. Ver
 > no se reedita tras su aceptación (criterio de [ADR-0015](../adr/0015-ratificacion-ediciones-post-aceptacion.md));
 > esta nota es la aclaración vigente. Sus menciones a «cliente → Azure» se leen como el host
 > de su fecha (desde [ADR-0018](../adr/0018-retiro-de-azure-despliegue-en-dokploy.md), Dokploy).
+
+---
+
+## 14. Riesgos y deuda técnica (S13)
+
+> En la plantilla arc42 esta es la sección 11. En este documento la §11 ya registra el reto
+> RES-05 del corte 1 y no se renumera; los riesgos van aquí. Los riesgos de S8 (R-1 a R-6)
+> siguen en [semana-08 §7](../semana-08.md).
+
+### 14.1 Amenazas aceptadas
+
+Amenazas del modelado de S13 que el equipo decide **no** mitigar ahora. Cada una dice por qué
+y qué la haría cambiar. Ids de [evidencias-s13 §3](../evidencias/evidencias-s13.md).
+
+| ID | Amenaza | Riesgo (P×I) | Por qué se acepta | Se revisa si… |
+|---|---|---|---|---|
+| R-S13-1 | T-05: registrar el correo UTB de otra persona (no se verifica el correo) | 2×2 = 4 | No hay servicio de correo para enviar un enlace de verificación. El daño se limita a pedir comida a nombre de otro, sin datos de pago | Se integra un servicio de correo, o aparece un caso real |
+| R-S13-2 | T-14: sin `Content-Security-Policy` completa (`script-src`) | 1×3 = 3 | Next.js necesita nonces por petición para sus scripts en línea; un CSP mal puesto deja la app en blanco. El token ya está fuera del alcance de JavaScript (cookie `httpOnly`) | Se agrega contenido de terceros o HTML del usuario |
+| R-S13-3 | T-15: PIN y token de seguimiento en claro en PostgreSQL | 1×3 = 3 | La base solo es accesible en la red interna de Dokploy; el PIN es de un solo uso y deja de servir al entregar | La base sale de la red interna o se replica fuera |
+| R-S13-4 | T-19: `/metricas` y `/docs` públicos | 2×1 = 2 | No exponen datos personales; `/metricas` es el instrumento de medición de S14 | Las métricas incluyen datos de clientes o de ventas por tienda |
+
+### 14.2 Riesgos con mitigación pendiente
+
+| ID | Riesgo | Plan | Resp. |
+|---|---|---|---|
+| T-04, T-07 | Sin límite de peticiones por IP: *credential stuffing* y pedidos basura | Middleware `rateLimit` de Traefik en Dokploy (P-1) | Mateo |
+| T-10, T-11 | Imagen base y acciones del CI con etiquetas móviles | Fijar por digest y por SHA; Dependabot las actualiza (P-3) | Miguel |
+| T-12 | Sin procedimiento de rotación de `JWT_SECRET` | Documentarlo (P-4) | Mateo |
+| T-13 | *Secret scanning* de GitHub sin activar | Activarlo con *push protection* (P-2) | Miguel |
 
 ---
 

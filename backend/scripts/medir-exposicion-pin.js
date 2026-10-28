@@ -9,13 +9,16 @@
 //      `cambiarEstado`.
 //   2. HTTP real — se ejecuta si se indica una URL base (`--url` o BASE_URL).
 //      Requiere `npm run build` previo. Cuenta cuántos GET devuelven `pin` y
-//      cuántos PUT logran avanzar el estado sin pago.
+//      cuántos PUT logran avanzar el estado sin pago. Desde S13 (ADR-0027) las
+//      rutas v1 de pago y entrega piden la sesión de una cuenta de tienda-01:
+//      sus credenciales llegan por CORREO_TIENDA y CLAVE_TIENDA (las mismas de
+//      CUENTAS_TIENDA en el servidor), nunca escritas en este archivo.
 //
 // Procedimiento:
 //   1) npm install
 //   2) npm run build && npm start          (en otra terminal, si se va a medir HTTP)
 //   3) node scripts/medir-exposicion-pin.js
-//      node scripts/medir-exposicion-pin.js --url http://localhost:3000
+//      CORREO_TIENDA=… CLAVE_TIENDA=… node scripts/medir-exposicion-pin.js --url http://localhost:3000
 //
 // Carga: 100 pedidos; en el plano HTTP, 100 GET y 100 PUT por tienda.
 
@@ -113,14 +116,21 @@ function medirContrato() {
 // ── Plano 2: HTTP real (opcional) ───────────────────────────────
 
 async function medirHttp(baseUrl) {
-  const post = async (ruta, cuerpo) => {
-    const res = await fetch(`${baseUrl}${ruta}`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(cuerpo),
-    });
+  const post = async (ruta, cuerpo, token) => {
+    const headers = { 'content-type': 'application/json' };
+    if (token) headers.authorization = `Bearer ${token}`;
+    const res = await fetch(`${baseUrl}${ruta}`, { method: 'POST', headers, body: JSON.stringify(cuerpo) });
     return { status: res.status, body: await res.json().catch(() => ({})) };
   };
+
+  const sesion = await post('/api/v1/auth/sesion', {
+    correo: process.env.CORREO_TIENDA,
+    contrasena: process.env.CLAVE_TIENDA,
+  });
+  const token = sesion.body?.token;
+  if (!token) {
+    throw new Error(`sin sesión de tienda (${sesion.status}): define CORREO_TIENDA y CLAVE_TIENDA de una cuenta de ${TIENDA}`);
+  }
 
   let getConPin = 0;
   let putConEfecto = 0;
@@ -138,10 +148,10 @@ async function medirHttp(baseUrl) {
     const id = creado.body?.id;
     if (!id) continue;
 
-    await post(`/api/v1/pagos/${id}/confirmar?tiendaId=${TIENDA}`, {});
-    await post(`/api/v1/entrega/${id}/listo?tiendaId=${TIENDA}`, {});
+    await post(`/api/v1/pagos/${id}/confirmar?tiendaId=${TIENDA}`, {}, token);
+    await post(`/api/v1/entrega/${id}/listo?tiendaId=${TIENDA}`, {}, token);
 
-    const pinEsperado = await post(`/api/v1/entrega/${id}/validar?tiendaId=${TIENDA}`, { pinIngresado: '0000' })
+    const pinEsperado = await post(`/api/v1/entrega/${id}/validar?tiendaId=${TIENDA}`, { pinIngresado: '0000' }, token)
       .then(() => null)
       .catch(() => null);
 

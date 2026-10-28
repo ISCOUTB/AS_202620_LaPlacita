@@ -4,6 +4,7 @@
 
 import { NextResponse } from 'next/server';
 import { usuarioDesdeToken } from '../modules/identidad/index.js';
+import { motivoDeRechazo } from './acceso-tienda.js';
 
 /** Usuario autenticado de la petición, o null si no hay token válido. */
 export function usuarioDeLaPeticion(request) {
@@ -33,5 +34,15 @@ export function rechazoDeTienda(request) {
   const usuario = usuarioDeLaPeticion(request);
   if (!usuario) return noAutenticado();
   return NextResponse.json({ error: 'Esta sección es solo para el personal de las tiendas' }, { status: 403 });
+}
+
+/**
+ * Rutas v1 que reciben el `tiendaId` del cliente (ADR-0027): exigen una cuenta
+ * de tienda y que ese `tiendaId` sea el de su token. Devuelve la respuesta de
+ * rechazo (401, 403 o 400), o null si la petición puede seguir.
+ */
+export function rechazoFueraDeTienda(request, tiendaId) {
+  const motivo = motivoDeRechazo(usuarioDeLaPeticion(request), tiendaId);
+  return motivo ? NextResponse.json({ error: motivo.error }, { status: motivo.estado }) : null;
 }
 

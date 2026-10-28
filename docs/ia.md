@@ -3,11 +3,11 @@
 
 ## Resumen: qué se aceptó y qué se rechazó
 
-- Entradas registradas: 61 (06/08/2026 al 22/10/2026).
-- Aceptadas y verificadas por el equipo: 36 (columna Validación con ejecución o confirmación).
+- Entradas registradas: 62 (06/08/2026 al 28/10/2026).
+- Aceptadas y verificadas por el equipo: 37 (columna Validación con ejecución o confirmación).
 - Aceptadas con ajustes del equipo: 4 entradas.
-- Entradas con propuestas rechazadas y justificadas: 34 (94 propuestas en total).
-- Con validación pendiente declarada: 11 entradas (5 de ago–sep, cubiertas de facto por
+- Entradas con propuestas rechazadas y justificadas: 35 (100 propuestas en total).
+- Con validación pendiente declarada: 12 entradas (5 de ago–sep, cubiertas de facto por
   evidencia posterior —suites en verde, cortes y semanas siguientes—; más la presente,
   pendiente de revisión del equipo).
 - Propuestas rechazadas: ampliar C4 a más detalle; restaurar Árbol de Utilidad en aspectos.md;
@@ -53,7 +53,12 @@
   corregir la enumeración y la reutilización de ids dentro de la evidencia S12; broker externo
   para el taller; exigir sesión para leer un pedido; esperar la base en todas las mutaciones;
   DLQ persistente; subir el backend a Next 16 directo en master; `npm audit fix --force` (bajaba
-  eslint-config-next a la 14); ignorar los avisos de Sonar con el gate en verde.
+  eslint-config-next a la 14); ignorar los avisos de Sonar con el gate en verde; borrar las
+  rutas v1 de pago y entrega (rompía el contrato y la medición de ESC-03); exigirles sesión sin
+  comparar el tiendaId (una tienda operaría otra); `npm audit fix --force` para zod (la dejaba
+  como dependencia directa sin uso); CSP completa con `script-src` (Next necesita nonces);
+  gitleaks-action (pide licencia en organizaciones); verificar el correo por enlace (no hay
+  servicio de correo).
 - Detalle completo por fecha y herramienta en la bitácora (§1).
 
 ---
@@ -123,6 +128,7 @@
 | **22/10/2026** | Claude Opus 5.5 (Claude Code) | Taller S12 de mensajes sobre la escritura de pedidos y corrección de los dos hallazgos de la evidencia (reutilización de ids y enumeración de pedidos). | *"Haz las tres cosas, de la forma que mejor resultado tenga y que evite menos errores al implementar"* | Despachador en el proceso (contrato `pedido.instantanea` v1, at-least-once, backoff exponencial, DLQ con reproceso, trazas con `mensajeId`/`correlacion`, métricas) y consumidor idempotente por secuencia; creación que espera la confirmación de la base (503 si no llega); token de seguimiento de 128 bits exigido por la vista pública y el historial de notificaciones; frontend, contrato y scripts de medición ajustados; ADR-0025, ADR-0026 y documento del taller con la traza de ejecución. | 1) Broker externo (RabbitMQ/Kafka): un contenedor más para una tabla y un proceso; el curso no lo exige. 2) Exigir sesión para leer un pedido: rompe el seguimiento sin cuenta del contrato v1. 3) Esperar la base en todas las mutaciones: con la base caída el mostrador no podría operar; solo la creación espera. 4) DLQ persistente: tendría que vivir fuera de la base que falló; se declara como límite. | Verificado: `npm test` con PostgreSQL 18 local (111 en verde, 1 omitida) y sin base (106 en verde, 6 omitidas); contrato 28/28; build del backend; lint y build del frontend; recorrido HTTP local con la base detenida y reencendida; `medir-exposicion-pin.js --url` 0/100. Pendiente: revisión del equipo y prueba en Dokploy. |
 | **22/10/2026** | Claude Opus 5.5 (Claude Code) | Revisar y corregir las alertas de seguridad de GitHub (73) y los avisos de SonarCloud. | *"quiero corregir errores que hayan por ahi, veo que github en el apartado de security and cuality, hay 73 errores y en sonarcloud tambien hay errores"* / *"hagamos tu propuesta"* | Diagnóstico: las 73 son alertas de Dependabot en los dos lockfiles (code scanning en 0) y Sonar tiene 7 avisos con el gate en verde. Producción revisada antes de tocar nada. Aplicado: frontend `next` 16.4.2 y los 7 avisos de Sonar (regex del correo, `await` en ciclos, *top-level await*, *optional chaining*). | 1) Subir el backend a Next 16 directo en `master`: es un salto mayor; se hará en una rama con pruebas. 2) `npm audit fix --force`: bajaba `eslint-config-next` a la 14. 3) Dejar los avisos de Sonar porque el gate pasa: son pocos y uno afecta la confiabilidad. | Verificado: `npm test` con y sin PostgreSQL, contrato 28/28, build del backend, lint y build del frontend, y el frontend construido contra la API de producción (8 rutas en 200). Pendiente: alertas del backend (rama Next 16) y descartar la cadena de `braces` en GitHub. |
 | **22/10/2026** | Claude Opus 5.5 (Claude Code) | Subir el backend de Next 14 a Next 16 en una rama aparte (alertas de Dependabot del backend, riesgo R-5 de S8). | *"Sí, empieza la rama para subir el backend a Next 16."* | Rama `chore/next-16-backend`: `next` 16.4.2 y React 19.2.0; `await params` en las 7 rutas que faltaban; `serverExternalPackages` en `next.config.mjs`. `npm audit` del backend en 0. | — | Verificado: `npm test` con y sin PostgreSQL, contrato 28/28, build con Turbopack, recorrido de 37 rutas sobre el build de producción y reinicio con rehidratación. No verificado: la imagen Docker (sin Docker local) ni el CI de la rama. |
+| **28/10/2026** | Claude Opus 5.5 (Claude Code) | Completar la Evidencia S13 (seguridad y riesgos): modelado de amenazas STRIDE, mitigaciones, análisis de dependencias en el pipeline y privacidad. | *"Completa la semana 13, deja todo listo y yo subo los commits"* (con el texto de la semana 13 de SAVIO pegado en el chat) | `evidencias-s13.md` con C4 nivel 2 y fronteras de confianza, 19 amenazas STRIDE priorizadas por P×I con responsable, plan de pendientes, análisis de dependencias y privacidad (Ley 1581). ADR-0027: las rutas v1 de pago, entrega y notificaciones exigen la sesión de la misma tienda, más una prueba de inventario que falla ante nuevas rutas de escritura sin sesión. Job `dependencias` del CI (`npm audit --audit-level=high` y SBOM CycloneDX), `dependabot.yml`, `USER node` en los Dockerfile, cabeceras de seguridad, `usuarioId` en la bitácora del panel, `zod` vulnerable y dos dependencias sin uso retiradas, página `/privacidad` y casilla de autorización. arc42 §8.6 y §14. | 1) Borrar las rutas v1: rompe el contrato y la medición de ESC-03. 2) Sesión sin comparar el `tiendaId`: contra ESC-02. 3) `npm audit fix --force`: dejaba `zod` como dependencia directa sin uso. 4) CSP completa: Next exige nonces. 5) gitleaks-action: licencia en organizaciones. 6) Verificar el correo por enlace: no hay servicio de correo (riesgo aceptado R-S13-1). | Verificado: `npm test` con PostgreSQL 18 local (119 en verde, 1 omitida) y sin base (114 en verde, 6 omitidas), contrato 28/28, `npm audit` en 0 en los dos paquetes, `npm sbom` en los dos, build del backend, lint y build del frontend, recorrido HTTP 14/14 sobre el build de producción, `medir-exposicion-pin.js --url` 0/100 con sesión, cabeceras comprobadas y revisión visual en móvil. No verificado: imagen Docker con `USER node` (sin Docker local) ni el job nuevo del CI. Pendiente: revisión del equipo. |
 
 ---
 

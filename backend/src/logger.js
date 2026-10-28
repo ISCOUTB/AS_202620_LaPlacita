@@ -5,7 +5,9 @@
 
 // Campos de traza opcionales (Taller S12): solo aparecen si vienen. Con
 // `correlacion` se sigue un pedido de productor a consumidor en la bitácora.
-const CAMPOS_DE_TRAZA = ['correlacion', 'mensajeId', 'intento'];
+// S13 (repudio): `usuarioId` dice qué cuenta de tienda hizo cada acción del
+// panel. Es el id seudónimo (usr-…), nunca el correo ni el nombre.
+const CAMPOS_DE_TRAZA = ['correlacion', 'mensajeId', 'intento', 'usuarioId'];
 
 function linea({ level = 'info', service = 'laplacita', route = '', tiendaId = '', pedidoId = '', mensaje = '', ...resto }) {
   const traza = {};

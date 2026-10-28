@@ -374,9 +374,11 @@ paths:
       operationId: confirmarPago
       deprecated: true
       description: >-
-        Ruta v1 sin sesión, conservada por compatibilidad (mediciones S9 y
-        /docs). El panel usa las rutas /tienda/* con sesión de tienda
-        (ADR-0023); retirarla es una mitigación planeada para S13.
+        Ruta v1 conservada por compatibilidad (mediciones S9 y /docs). Desde
+        S13 (ADR-0027) exige la sesión de una cuenta de tienda y el tiendaId
+        debe ser el del token. El panel usa las rutas /tienda/* (ADR-0023).
+      security:
+        - sesion: []
       parameters:
         - name: pedidoId
           in: path
@@ -401,6 +403,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de una cuenta de esa tienda (ADR-0027)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           description: Pedido no encontrado en la tienda
           content:
@@ -415,9 +429,11 @@ paths:
       operationId: marcarListo
       deprecated: true
       description: >-
-        Ruta v1 sin sesión, conservada por compatibilidad (mediciones S9 y
-        /docs). El panel usa las rutas /tienda/* con sesión de tienda
-        (ADR-0023); retirarla es una mitigación planeada para S13.
+        Ruta v1 conservada por compatibilidad (mediciones S9 y /docs). Desde
+        S13 (ADR-0027) exige la sesión de una cuenta de tienda y el tiendaId
+        debe ser el del token. El panel usa las rutas /tienda/* (ADR-0023).
+      security:
+        - sesion: []
       parameters:
         - name: pedidoId
           in: path
@@ -436,6 +452,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PedidoConPin'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de una cuenta de esa tienda (ADR-0027)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           description: Pedido no encontrado en la tienda
           content:
@@ -450,9 +478,11 @@ paths:
       operationId: validarPin
       deprecated: true
       description: >-
-        Ruta v1 sin sesión, conservada por compatibilidad (mediciones S9 y
-        /docs). El panel usa las rutas /tienda/* con sesión de tienda
-        (ADR-0023); retirarla es una mitigación planeada para S13.
+        Ruta v1 conservada por compatibilidad (mediciones S9 y /docs). Desde
+        S13 (ADR-0027) exige la sesión de una cuenta de tienda y el tiendaId
+        debe ser el del token. El panel usa las rutas /tienda/* (ADR-0023).
+      security:
+        - sesion: []
       parameters:
         - name: pedidoId
           in: path
@@ -479,6 +509,18 @@ paths:
                 $ref: '#/components/schemas/Pedido'
         '400':
           description: PIN incorrecto, pedido bloqueado por exceso de intentos (A-06) o pedido no está Listo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de una cuenta de esa tienda (ADR-0027)
           content:
             application/json:
               schema:
@@ -777,6 +819,11 @@ paths:
       tags: [notificaciones]
       summary: Notificar cambio de estado de un pedido
       operationId: notificarCambioEstado
+      description: >-
+        Desde S13 (ADR-0027) exige la sesión de una cuenta de la tienda del
+        pedido: el aviso aparece en el historial que ve el cliente.
+      security:
+        - sesion: []
       requestBody:
         required: true
         content:
@@ -790,6 +837,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Notificacion'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de una cuenta de esa tienda (ADR-0027)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /notificaciones/{pedidoId}:
     get:

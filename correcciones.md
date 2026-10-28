@@ -1042,3 +1042,54 @@ SonarCloud). Al unir, Dokploy redespliega el backend solo.
 | Las rutas con parámetro leen bien el id en Next 16 | `GET /api/v1/catalogo/productos/prod-001?tiendaId=tienda-01` responde el producto (con `params` sin `await` respondería 404) |
 | Las alertas del backend se cierran | Tras unir a `master`, GitHub → Security → Dependabot ya no lista alertas de `backend/package-lock.json` |
 
+
+---
+
+## Evidencia S13: seguridad y riesgos (28/10/2026)
+
+Modelado de amenazas STRIDE sobre el C4 nivel 2, mitigaciones, análisis de dependencias en el
+pipeline y privacidad. Documento: `docs/evidencias/evidencias-s13.md`. Decisión estructural:
+ADR-0027.
+
+| Cambio | Detalle |
+|---|---|
+| ADR-0027 (amenazas T-01 y T-02) | `POST /pagos/{id}/confirmar`, `/entrega/{id}/listo`, `/entrega/{id}/validar` y `POST /notificaciones` exigen la sesión de una cuenta de la **misma** tienda: 401, 403 o 400. Antes cualquiera en internet podía pagar, marcar listo y **recibir el PIN** de un pedido ajeno. Regla pura en `backend/src/http/acceso-tienda.js` |
+| Prueba de inventario | `tests/seguridad-s13.test.js` falla si aparece una ruta de escritura sin sesión fuera de registro, ingreso y pedido sin cuenta |
+| Contrato | `openapi.yaml`: `security: sesion` y respuestas 401 y 403 en las cuatro rutas |
+| Medición ESC-03 | `medir-exposicion-pin.js --url` inicia sesión con `CORREO_TIENDA` y `CLAVE_TIENDA` |
+| Repudio (T-08) | La bitácora de las acciones del panel registra `usuarioId` (seudónimo), nunca el correo |
+| Dependencias | Frontend: 1 vulnerabilidad alta (`zod <4.6.6`) → 0. Se quitan `zod`, `@hookform/resolvers` y `react-hook-form`, que nadie importa, y `overrides.zod = ^4.6.7` para la copia del linter. Backend: 0 |
+| CI | Job `dependencias` (backend y frontend): `npm audit --audit-level=high`, que bloquea, y SBOM CycloneDX como artefacto |
+| Dependabot | `.github/dependabot.yml`: PR semanales para npm, Docker y GitHub Actions |
+| Contenedores | `USER node` y `COPY --chown=node:node` en los dos Dockerfile |
+| Navegador | `frontend/next.config.mjs`: `Referrer-Policy: same-origin` (el token de seguimiento va en la URL), `X-Frame-Options: DENY`, `frame-ancestors 'none'`, `nosniff` y `Permissions-Policy` |
+| Privacidad | Página `/privacidad` (Ley 1581 de 2012) y casilla obligatoria de autorización en «Crear cuenta» |
+| Frontend | Se borran `confirmarPago` y `validarEntrega` de `lib/api.ts`: no tenían llamadas |
+| Documentación | ADR-0027, arc42 §8.6 (seguridad), fila de ADR-0027 en §9 y §14 (riesgos aceptados y pendientes) |
+
+Verificado en local:
+- `npm test` con PostgreSQL 18: 119 en verde y 1 omitida. Sin base: 114 en verde y 6 omitidas.
+  Contrato: 28/28. `seguridad-s13.test.js`: 8/8.
+- `npm audit --audit-level=high` y `npm sbom` en los dos paquetes (68 y 466 componentes).
+- Build del backend; lint y build del frontend.
+- Recorrido HTTP sobre el build de producción del backend: 14/14 respuestas como se esperaba.
+- `medir-exposicion-pin.js --url` con sesión de tienda: 0/100 lecturas con PIN.
+- Cabeceras del frontend construido y revisión visual en móvil de `/privacidad` y «Crear cuenta».
+- No se construyó la imagen Docker (no hay Docker local) ni se ejecutó el job nuevo del CI.
+
+**Antes de desplegar:**
+- El backend se redespliega solo al unir a `master`. Revisar en Dokploy que el contenedor
+  arranque con `USER node`.
+- El frontend necesita el botón Deploy en Dokploy.
+- Quien use las rutas v1 de pago o entrega desde `/docs` necesita ahora el botón *Authorize*
+  con el token de una cuenta de tienda.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Las rutas v1 de tienda ya no responden sin sesión en producción | `curl -i -X POST "https://laplacita-test.iscoutb.dev/api/v1/entrega/pedido-1/listo?tiendaId=tienda-01"` responde **401** y no trae PIN |
+| El contenedor no corre como root | En Dokploy → backend → Terminal: `whoami` responde `node` |
+| Las cabeceras de seguridad llegan al navegador | DevTools → Network → documento de `laplacita-app.iscoutb.dev`: aparecen `Referrer-Policy` y `X-Frame-Options` |
+| El registro pide la autorización | En `/cuenta` → Crear cuenta, el formulario no se envía sin marcar la casilla |
+| Dependabot y el job `dependencias` funcionan | GitHub → Actions: el job `dependencias` aparece en verde con los artefactos `sbom-*`; GitHub → Insights → Dependency graph → Dependabot lista los tres ecosistemas |
+| Ajustes de GitHub pendientes (P-2) | GitHub → Settings → Code security: *secret scanning* y *push protection* activados |

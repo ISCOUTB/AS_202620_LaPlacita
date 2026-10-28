@@ -14,7 +14,7 @@ export async function POST(request, { params }) {
   const { pedidoId } = await params;
   try {
     pagos.confirmarPago(pedidoId, cuenta.tiendaId);
-    info({ route: 'POST /api/v1/tienda/pedidos/{pedidoId}/pago', tiendaId: cuenta.tiendaId, pedidoId, mensaje: 'pago confirmado desde el panel' });
+    info({ route: 'POST /api/v1/tienda/pedidos/{pedidoId}/pago', tiendaId: cuenta.tiendaId, usuarioId: cuenta.id, pedidoId, mensaje: 'pago confirmado desde el panel' });
     return NextResponse.json(pedidoParaTienda(pedidoId, cuenta.tiendaId), { status: 200 });
   } catch (error) {
     return respuestaDeError(error);

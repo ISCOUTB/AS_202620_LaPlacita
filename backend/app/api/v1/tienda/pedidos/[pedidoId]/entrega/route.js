@@ -16,7 +16,7 @@ export async function POST(request, { params }) {
   try {
     const { pin } = await request.json().catch(() => ({}));
     entrega.validarPin(pedidoId, cuenta.tiendaId, String(pin ?? ''));
-    info({ route: 'POST /api/v1/tienda/pedidos/{pedidoId}/entrega', tiendaId: cuenta.tiendaId, pedidoId, mensaje: 'entregado con PIN válido' });
+    info({ route: 'POST /api/v1/tienda/pedidos/{pedidoId}/entrega', tiendaId: cuenta.tiendaId, usuarioId: cuenta.id, pedidoId, mensaje: 'entregado con PIN válido' });
     return NextResponse.json(pedidoParaTienda(pedidoId, cuenta.tiendaId), { status: 200 });
   } catch (error) {
     return respuestaDeError(error);

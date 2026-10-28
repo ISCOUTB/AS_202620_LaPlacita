@@ -134,30 +134,6 @@ export function obtenerPedido(pedidoId: string, tiendaId: string, seguimiento?: 
   )
 }
 
-/** POST /pagos/{pedidoId}/confirmar?tiendaId=… — acción del establecimiento. */
-export function confirmarPago(pedidoId: string, tiendaId: string): Promise<Pedido> {
-  return request<Pedido>(
-    `/pagos/${encodeURIComponent(pedidoId)}/confirmar?tiendaId=${encodeURIComponent(tiendaId)}`,
-    { method: "POST" }
-  )
-}
-
-/** POST /entrega/{pedidoId}/validar?tiendaId=… — consume el PIN en ventanilla. */
-export function validarEntrega(
-  pedidoId: string,
-  tiendaId: string,
-  pinIngresado: string
-): Promise<Pedido> {
-  return request<Pedido>(
-    `/entrega/${encodeURIComponent(pedidoId)}/validar?tiendaId=${encodeURIComponent(tiendaId)}`,
-    {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ pinIngresado }),
-    }
-  )
-}
-
 /** GET /notificaciones/{pedidoId}?tiendaId=… — historial de cambios de estado. */
 export function obtenerNotificaciones(
   pedidoId: string,
