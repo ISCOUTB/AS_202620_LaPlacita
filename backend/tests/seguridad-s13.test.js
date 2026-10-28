@@ -1,6 +1,7 @@
-// S13 · ADR-0027: las rutas v1 que reciben el `tiendaId` del cliente exigen la
-// sesión de una cuenta de esa tienda, y ninguna ruta de escritura queda sin
-// sesión salvo las declaradas (crear pedido sin cuenta, registro e ingreso).
+// S13 · ADR-0030: `POST /notificaciones` (recibe el `tiendaId` del cliente)
+// exige la sesión de una cuenta de esa tienda, y ninguna ruta de escritura
+// queda sin sesión salvo las declaradas (crear pedido sin cuenta, registro e
+// ingreso). Completa la superficie mínima de ADR-0029.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -24,27 +25,27 @@ const { token: tokenCliente } = await identidad.registrar({
 // Lo mismo que hace rechazoFueraDeTienda con la cabecera Authorization.
 const rechazo = (token, tiendaId) => motivoDeRechazo(token ? identidad.usuarioDesdeToken(token) : null, tiendaId);
 
-test('ADR-0027: sin sesión la ruta v1 responde 401', () => {
+test('ADR-0030: sin sesión la ruta v1 responde 401', () => {
   assert.equal(rechazo(null, 'tienda-01')?.estado, 401);
 });
 
-test('ADR-0027: la sesión de un cliente no opera una tienda (403)', () => {
+test('ADR-0030: la sesión de un cliente no opera una tienda (403)', () => {
   assert.equal(rechazo(tokenCliente, 'tienda-01')?.estado, 403);
 });
 
-test('ADR-0027: una cuenta de tienda-01 no opera tienda-02 (403, ESC-02)', () => {
+test('ADR-0030: una cuenta de tienda-01 no opera tienda-02 (403, ESC-02)', () => {
   assert.equal(rechazo(tokenTienda, 'tienda-02')?.estado, 403);
 });
 
-test('ADR-0027: con sesión de la tienda, el tiendaId sigue siendo obligatorio (400)', () => {
+test('ADR-0030: con sesión de la tienda, el tiendaId sigue siendo obligatorio (400)', () => {
   assert.equal(rechazo(tokenTienda, null)?.estado, 400);
 });
 
-test('ADR-0027: la cuenta de la misma tienda pasa', () => {
+test('ADR-0030: la cuenta de la misma tienda pasa', () => {
   assert.equal(rechazo(tokenTienda, 'tienda-01'), null);
 });
 
-test('ADR-0027: un token alterado no pasa', () => {
+test('ADR-0030: un token alterado no pasa', () => {
   const alterado = tokenTienda.slice(0, -2) + (tokenTienda.endsWith('A') ? 'BB' : 'AA');
   assert.equal(rechazo(alterado, 'tienda-01')?.estado, 401);
 });

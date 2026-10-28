@@ -79,6 +79,53 @@ jobs:
           run: node --test tests/contract-openapi.test.js
           working-directory: backend
 
+    # S13 (plan de ejecución): análisis de dependencias en el CI. Se corre en
+    # los dos paquetes y bloquea el merge si hay vulnerabilidades high+. Los
+    # hallazgos nuevos los reporta también Dependabot (ver dependabot.yml).
+    audit:
+        runs-on: ubuntu-latest
+        needs: test
+
+        steps:
+        - name: Descargar código
+          uses: actions/checkout@v4
+
+        - name: Configurar Node.js
+          uses: actions/setup-node@v4
+          with:
+            node-version: '22'
+            cache: 'npm'
+            cache-dependency-path: backend/package-lock.json
+
+        - name: Audit del backend
+          run: npm audit --audit-level=high
+          working-directory: backend
+
+        - name: Audit del frontend
+          run: npm audit --audit-level=high
+          working-directory: frontend
+
+        # S13 (28/10): SBOM CycloneDX de cada lockfile, publicado como artefacto
+        # del run. En el frontend se omiten las opcionales: el binario wasm de
+        # Tailwind (@tailwindcss/oxide-wasm32-wasi) declara versiones de @emnapi
+        # que su lockfile no cumple y `npm sbom` se niega a generar. Ese binario
+        # no se instala en Linux ni en Windows.
+        - name: SBOM del backend
+          run: npm sbom --package-lock-only --sbom-format cyclonedx > sbom-backend.cdx.json
+          working-directory: backend
+
+        - name: SBOM del frontend
+          run: npm sbom --package-lock-only --omit=optional --sbom-format cyclonedx > sbom-frontend.cdx.json
+          working-directory: frontend
+
+        - name: Publicar SBOM
+          uses: actions/upload-artifact@v4
+          with:
+            name: sbom
+            path: |
+              backend/sbom-backend.cdx.json
+              frontend/sbom-frontend.cdx.json
+
     # El frontend de usuario (PWA) se valida también en CI: build de producción.
     frontend:
         runs-on: ubuntu-latest
@@ -105,44 +152,6 @@ jobs:
         - name: Build de producción
           run: npm run build
           working-directory: frontend
-
-    # S13 · cadena de suministro: el pipeline falla si una dependencia tiene una
-    # vulnerabilidad alta o crítica conocida, y publica el SBOM (CycloneDX) de
-    # cada lockfile como artefacto del run.
-    dependencias:
-        runs-on: ubuntu-latest
-        strategy:
-            fail-fast: false
-            matrix:
-                paquete: [backend, frontend]
-        defaults:
-            run:
-                working-directory: ${{ matrix.paquete }}
-
-        steps:
-        - name: Descargar código
-          uses: actions/checkout@v4
-
-        - name: Configurar Node.js
-          uses: actions/setup-node@v4
-          with:
-            node-version: '22'
-
-        - name: Análisis de dependencias (npm audit, falla en alta o crítica)
-          run: npm audit --audit-level=high
-
-        # En el frontend se omiten las opcionales: el binario wasm de Tailwind
-        # (@tailwindcss/oxide-wasm32-wasi) declara versiones de @emnapi que su
-        # propio lockfile no cumple y `npm sbom` se niega a generar. Ese binario
-        # no se instala en Linux ni en Windows.
-        - name: Generar SBOM
-          run: npm sbom --package-lock-only ${{ matrix.paquete == 'frontend' && '--omit=optional' || '' }} --sbom-format cyclonedx > sbom-${{ matrix.paquete }}.cdx.json
-
-        - name: Publicar SBOM
-          uses: actions/upload-artifact@v4
-          with:
-            name: sbom-${{ matrix.paquete }}
-            path: ${{ matrix.paquete }}/sbom-${{ matrix.paquete }}.cdx.json
 
     sonar:
         runs-on: ubuntu-latest

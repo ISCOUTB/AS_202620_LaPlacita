@@ -1,18 +1,27 @@
-# S13 · cadena de suministro: Dependabot abre PR semanales con las versiones
-# nuevas de las dependencias npm, de las imágenes base de Docker y de las
-# acciones del CI. Cada PR pasa por el mismo CI (pruebas, audit, Sonar).
+# S13 (plan de ejecución): análisis semanal de dependencias y del propio CI.
+# Los hallazgos high+ bloquean además el CI vía el job `audit` de ci.yml;
+# esto es la alerta temprana (las 4 alertas críticas del plan se atienden aquí).
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /backend
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    groups:
+      parches-menores:
+        update-types:
+          - patch
+          - minor
   - package-ecosystem: npm
     directory: /frontend
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    groups:
+      parches-menores:
+        update-types:
+          - patch
+          - minor
+  # S13 (28/10): también la imagen base node:22-alpine de los Dockerfile.
   - package-ecosystem: docker
     directories: [/backend, /frontend]
     schedule:

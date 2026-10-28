@@ -143,6 +143,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/Metricas'
 
+  /catalogo/tiendas:
+    get:
+      tags: [catalogo]
+      summary: Establecimientos del catálogo (nombre e imagen del encabezado)
+      operationId: listarTiendas
+      security: []
+      description: >-
+        S14. Contenido público (como el nombre de un producto). imagenId es
+        la referencia uuid del banner en el almacén (ADR-0028); los bytes
+        los sirve /api/v1/imagenes/{id}.
+      responses:
+        '200':
+          description: Establecimientos con su imagen si la tienen
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Tienda'
+
   /catalogo/productos/{productoId}:
     get:
       tags: [catalogo]
@@ -370,15 +390,16 @@ paths:
   /pagos/{pedidoId}/confirmar:
     post:
       tags: [pagos]
-      summary: Confirmar pago de un pedido
+      summary: Confirmar el pago de un pedido propio
       operationId: confirmarPago
-      deprecated: true
-      description: >-
-        Ruta v1 conservada por compatibilidad (mediciones S9 y /docs). Desde
-        S13 (ADR-0027) exige la sesión de una cuenta de tienda y el tiendaId
-        debe ser el del token. El panel usa las rutas /tienda/* (ADR-0023).
       security:
         - sesion: []
+      description: >-
+        ADR-0029 (S13): el pago lo confirma SU DUEÑO con sesión — antes era
+        la ruta v1 sin sesión conservada por las mediciones S9. El
+        pedidoId es enumerable (ADR-0024): sin dueño era superficie
+        abierta. El backend compara el clienteId del TOKEN (no del cuerpo)
+        con el del pedido y responde 403 en caso contrario.
       parameters:
         - name: pedidoId
           in: path
@@ -403,112 +424,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '401':
-          description: Sin sesión
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: La sesión no es de una cuenta de esa tienda (ADR-0027)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '404':
           description: Pedido no encontrado en la tienda
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /entrega/{pedidoId}/listo:
-    post:
-      tags: [entrega]
-      summary: Marcar pedido como listo y generar PIN
-      operationId: marcarListo
-      deprecated: true
-      description: >-
-        Ruta v1 conservada por compatibilidad (mediciones S9 y /docs). Desde
-        S13 (ADR-0027) exige la sesión de una cuenta de tienda y el tiendaId
-        debe ser el del token. El panel usa las rutas /tienda/* (ADR-0023).
-      security:
-        - sesion: []
-      parameters:
-        - name: pedidoId
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: tiendaId
-          in: query
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Pedido listo con PIN generado
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PedidoConPin'
-        '401':
-          description: Sin sesión
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: La sesión no es de una cuenta de esa tienda (ADR-0027)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Pedido no encontrado en la tienda
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /entrega/{pedidoId}/validar:
-    post:
-      tags: [entrega]
-      summary: Validar PIN de entrega
-      operationId: validarPin
-      deprecated: true
-      description: >-
-        Ruta v1 conservada por compatibilidad (mediciones S9 y /docs). Desde
-        S13 (ADR-0027) exige la sesión de una cuenta de tienda y el tiendaId
-        debe ser el del token. El panel usa las rutas /tienda/* (ADR-0023).
-      security:
-        - sesion: []
-      parameters:
-        - name: pedidoId
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: tiendaId
-          in: query
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ValidarPinRequest'
-      responses:
-        '200':
-          description: PIN válido, pedido entregado
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Pedido'
-        '400':
-          description: PIN incorrecto, pedido bloqueado por exceso de intentos (A-06) o pedido no está Listo
           content:
             application/json:
               schema:
@@ -520,13 +437,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: La sesión no es de una cuenta de esa tienda (ADR-0027)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Pedido no encontrado en la tienda
+          description: El pedido no es del usuario de la sesión
           content:
             application/json:
               schema:
@@ -707,6 +618,147 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /tienda/productos/{productoId}/imagen:
+    post:
+      tags: [tienda]
+      summary: Subir/actualizar la imagen de un producto (panel)
+      operationId: subirImagenProducto
+      security:
+        - sesion: []
+      description: >-
+        ADR-0028. multipart con el campo `imagen`. El cliente reescala en el
+        navegador (webp ~800px); el backend decide el MIME por sniffing de los
+        bytes (jamás por lo que declara la subida) y aplica un límite de
+        512 KB sobre el buffer real. Los bytes viven en Garage (red interna de
+        Dokploy); la base guarda solo la referencia `imagen_id` (uuid v4) y el
+        catálogo se invalida con la misma convención write-through del panel.
+      parameters:
+        - name: productoId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                imagen:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Producto con la imagen asignada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Producto'
+        '400':
+          description: Falta el archivo, no es webp/png/jpeg real o no es multipart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sin sesión
+        '404':
+          description: El producto no es de la tienda de la sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: La imagen supera el límite
+        '502':
+          description: El almacén de imágenes (Garage) no aceptó la subida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /imagenes/{id}:
+    get:
+      tags: [catalogo]
+      summary: Imagen pública del catálogo por su identidad uuid
+      operationId: obtenerImagen
+      security: []
+      description: >-
+        ADR-0028. Contenido público del menú (como el nombre y el precio): la
+        protección es no-conocimiento del id (uuid v4) y no la sesión. El
+        Content-Type saliente lo determina el sniffing del contenido y la
+        respuesta declara el umbral de cacheo en el borde (Cloudflare) con
+        `Cache-Control: public, max-age=86400, immutable` — una misma url
+        nunca cambia de contenido porque cada subida genera un uuid nuevo.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: uuid v4 de la imagen (productos.imagenId)
+      responses:
+        '200':
+          description: Bytes de la imagen (webp/png/jpeg)
+          content:
+            image/webp:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Imagen no encontrada o identidad sin formato válido
+
+  /tienda/imagen:
+    post:
+      tags: [tienda]
+      summary: Subir/actualizar la imagen del encabezado de la TIENDA (panel)
+      operationId: subirImagenTienda
+      security:
+        - sesion: []
+      description: >-
+        S14 · ADR-0028. multipart con el campo imagen; mismas defensas que
+        la imagen de producto (sniffing del MIME, límite real). La tienda
+        solo puede subir para sí misma: el tiendaId sale del token, la
+        ruta no lo recibe (ESC-02).
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                imagen:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Referencia de la imagen asignada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tienda'
+        '400':
+          description: Falta el archivo o no es webp/png/jpeg real
+        '401':
+          description: Sin sesión
+        '413':
+          description: La imagen supera el límite
+        '502':
+          description: El almacén de imágenes (Garage) no aceptó la subida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /tienda/productos:
     get:
       tags: [tienda]
@@ -820,7 +872,7 @@ paths:
       summary: Notificar cambio de estado de un pedido
       operationId: notificarCambioEstado
       description: >-
-        Desde S13 (ADR-0027) exige la sesión de una cuenta de la tienda del
+        Desde S13 (ADR-0030) exige la sesión de una cuenta de la tienda del
         pedido: el aviso aparece en el historial que ve el cliente.
       security:
         - sesion: []
@@ -844,7 +896,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: La sesión no es de una cuenta de esa tienda (ADR-0027)
+          description: La sesión no es de una cuenta de esa tienda (ADR-0030)
           content:
             application/json:
               schema:
@@ -964,8 +1016,31 @@ components:
         - pinesRechazados
         - pinesBloqueados
 
+    Tienda:
+      type: object
+      description: >-
+        Establecimiento del catálogo (S14). imagenId es la referencia uuid
+        del banner en el almacén de imágenes (ADR-0028); null si aún no
+        tiene.
+      properties:
+        id:
+          type: string
+        nombre:
+          type: string
+        imagenId:
+          type: string
+          nullable: true
+      required:
+        - id
+        - nombre
+
     Producto:
       type: object
+      description: >-
+        Producto del menú. `imagenId` (ADR-0028) es la referencia uuid del
+        objeto en el almacén de imágenes: el nombre y el precio sí son
+        obligatorios; el campo es NULL para productos sin imagen y la PWA
+        muestra la inicial del producto en ese caso (igual que hasta ahora).
       properties:
         id:
           type: string
@@ -978,6 +1053,17 @@ components:
           minimum: 0
         disponible:
           type: boolean
+        imagenId:
+          type: string
+          nullable: true
+          description: uuid v4 del objeto en Garage (ADR-0028); null si no hay imagen
+        descripcion:
+          type: string
+          nullable: true
+          maxLength: 500
+          description: >-
+            Texto corto del producto (S14, detalle en la PWA); null si la
+            tienda no lo definió
       required:
         - id
         - tiendaId
@@ -1031,25 +1117,6 @@ components:
         - cantidad
         - total
         - estado
-
-    PedidoConPin:
-      type: object
-      description: >-
-        Pedido con su PIN de validación. Solo lo devuelve
-        `POST /entrega/{pedidoId}/listo`, porque el mostrador necesita el PIN
-        para entregar. Cualquier otro endpoint que exponga el PIN por lectura
-        anula A-06. S9 / ADR-0013.
-      allOf:
-        - $ref: '#/components/schemas/Pedido'
-        - type: object
-          properties:
-            pin:
-              type: string
-              nullable: true
-              minLength: 4
-              maxLength: 4
-          required:
-            - pin
 
     PedidoCreado:
       type: object
@@ -1221,6 +1288,10 @@ components:
           minimum: 100
           maximum: 1000000
           description: Solo el admin de la tienda
+        descripcion:
+          type: string
+          maxLength: 500
+          description: Texto corto del producto; cadena vacía lo borra
 
     ResumenTienda:
       type: object

@@ -1,6 +1,6 @@
 # Taller aplicado S12 — Mensajes y consistencia
 
-Documento del 2026-10-22, **pendiente de validación del equipo**. Decisión en
+Documento del 2026-10-22, **validado por el equipo el 2026-10-24**; recorrido HTTP del flujo sobre el despliegue ejecutado el mismo día (ver `correcciones.md` del 24/10). Decisión en
 [ADR-0026](../adr/0026-escrituras-at-least-once-y-creacion-confirmada.md).
 
 ## 1. Operación elegida

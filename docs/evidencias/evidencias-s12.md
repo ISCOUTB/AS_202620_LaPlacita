@@ -1,6 +1,6 @@
 # Evidencia S12 — Estrategia de datos y eventos
 
-Documento del 2026-10-22, **pendiente de validación del equipo**.
+Documento del 2026-10-22, **validado por el equipo el 2026-10-24** (revisión de cada fila contra el código; las observaciones de la revisión S12 con plazo al cierre del domingo 26/10 quedan en `correcciones.md`).
 Responde a la Evidencia S12 de SAVIO: tabla operación → garantía de consistencia, diseño de
 caché con su política de invalidación y ADR de la decisión de datos más costosa de revertir
 ([ADR-0024](../adr/0024-identidad-del-pedido.md)). Material de referencia: presentación de la

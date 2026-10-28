@@ -26,7 +26,7 @@ function ejecutarCorteVertical() {
   notificaciones.notificarCambioEstado(pedido.id, pedido.estado, tiendaId);
   console.log(`[pedidos] pedido creado: ${pedido.id} — estado: ${pedido.estado} tienda: ${pedido.tiendaId}`);
 
-  pedido = pagos.confirmarPago(pedido.id, tiendaId);
+  pedido = pagos.confirmarPago(pedido.id, tiendaId, pedido.clienteId);
   notificaciones.notificarCambioEstado(pedido.id, pedido.estado, tiendaId);
   console.log(`[pagos] pago confirmado — estado: ${pedido.estado}`);
 

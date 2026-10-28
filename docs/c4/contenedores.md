@@ -22,6 +22,7 @@ flowchart TD
         app_local["<b>Portal Establecimiento</b><br/>[Next.js, ruta /panel]<br/><i>Pedidos en vivo, estados, entrega con PIN, menú y resumen</i> <br/>IMPLEMENTADO — misma app web (ADR-0023)"]:::container
         api["<b>API Backend Central</b><br/>[Next.js / Node.js]<br/><i>API Routes, reglas de negocio, pedidos y PIN; estado en memoria y caché del catálogo (write-through)</i> <br/>IMPLEMENTADO — corte vertical (tiendaId)"]:::container
         db[("<b>Base de Datos Principal</b><br/>[PostgreSQL]<br/><i>Tablas pedidos, usuarios y productos (ADR-0014, ADR-0021, ADR-0023)</i> <br/>IMPLEMENTADO — Dokploy, condicional a DATABASE_URL")]:::container
+        garage[("<b>Almacén de Imágenes</b><br/>[Garage S3]<br/><i>Bytes de las fotos del catálogo y tiendas; solo la referencia uuid en PostgreSQL (ADR-0028)</i> <br/>IMPLEMENTADO — Dokploy, red interna, sin exposición pública")]:::container
     end
 
     pago["<b>Pasarela de Pagos</b><br/>[Software System]<br/><i>Procesamiento PCI-DSS</i>"]:::extSystem

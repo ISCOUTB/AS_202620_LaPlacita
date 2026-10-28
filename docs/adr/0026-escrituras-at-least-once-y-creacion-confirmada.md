@@ -1,6 +1,6 @@
 # 0026 — Escrituras de pedidos como mensajes at-least-once y creación confirmada por la base
 
-- **Estado:** propuesto (pendiente de validación del equipo)
+- **Estado:** aceptado (validado por el equipo el 2026-10-24; la decisión se sustenta en la evidencia de la S12; el contenido del ADR no se edita, criterio de ADR-0015)
 - **Fecha:** 2026-10-22
 - **Decide:** Equipo LaPlacita
 - **Escenario relacionado:** ESC-01 (disponibilidad y persistencia), ESC-05 (compra rápida)

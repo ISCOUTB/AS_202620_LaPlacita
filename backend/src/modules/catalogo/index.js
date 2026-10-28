@@ -10,34 +10,46 @@
 // (write-through: la caché se invalida en el mismo paso en que cambia el dato).
 
 import { estadoCompartido } from '../../estado-compartido.js';
-import { activa, alCargarProductos, guardarProducto } from '../../persistencia/index.js';
+import { activa, alCargarProductos, alCargarTiendas, guardarProducto, guardarImagenTienda, asignarImagenProducto } from '../../persistencia/index.js';
 import { error as logError } from '../../logger.js';
 
 const productos = estadoCompartido('productos', () => new Map([
   // El Mesón (tienda-01) — desayunos
-  ['prod-001', { id: 'prod-001', tiendaId: 'tienda-01', nombre: 'Arepa de huevo', precio: 4500, disponible: true }],
-  ['prod-002', { id: 'prod-002', tiendaId: 'tienda-01', nombre: 'Jugo de mango', precio: 3000, disponible: true }],
-  ['prod-004', { id: 'prod-004', tiendaId: 'tienda-01', nombre: 'Calentado paisa', precio: 12500, disponible: true }],
-  ['prod-005', { id: 'prod-005', tiendaId: 'tienda-01', nombre: 'Huevos pericos', precio: 8500, disponible: true }],
-  ['prod-006', { id: 'prod-006', tiendaId: 'tienda-01', nombre: 'Chocolate con queso', precio: 5500, disponible: true }],
+  ['prod-001', { id: 'prod-001', tiendaId: 'tienda-01', nombre: 'Arepa de huevo', precio: 4500, disponible: true, descripcion: 'Arepa frita con huevo revuelto, queso y hogao. El clásico del desayuno costeño.' }],
+  ['prod-002', { id: 'prod-002', tiendaId: 'tienda-01', nombre: 'Jugo de mango', precio: 3000, disponible: true, descripcion: 'Jugo natural de mango, en agua o leche, sin azúcar añadida.' }],
+  ['prod-004', { id: 'prod-004', tiendaId: 'tienda-01', nombre: 'Calentado paisa', precio: 12500, disponible: true, descripcion: 'Arroz, fríjol, huevo, carne desmechada y arepa: el calentado completo.' }],
+  ['prod-005', { id: 'prod-005', tiendaId: 'tienda-01', nombre: 'Huevos pericos', precio: 8500, disponible: true, descripcion: 'Huevos revueltos al gusto, con pan tostado y mantequilla.' }],
+  ['prod-006', { id: 'prod-006', tiendaId: 'tienda-01', nombre: 'Chocolate con queso', precio: 5500, disponible: true, descripcion: 'Chocolate caliente con queso PAITA y pan de la casa.' }],
   // El Asa'o (tienda-02) — asados
-  ['prod-003', { id: 'prod-003', tiendaId: 'tienda-02', nombre: 'Sandwich de pollo', precio: 8000, disponible: true }],
-  ['prod-007', { id: 'prod-007', tiendaId: 'tienda-02', nombre: 'Hamburguesa sencilla', precio: 14000, disponible: true }],
-  ['prod-008', { id: 'prod-008', tiendaId: 'tienda-02', nombre: 'Chuzo desgranado', precio: 12000, disponible: true }],
-  ['prod-009', { id: 'prod-009', tiendaId: 'tienda-02', nombre: 'Limonada natural', precio: 4000, disponible: true }],
+  ['prod-003', { id: 'prod-003', tiendaId: 'tienda-02', nombre: 'Sandwich de pollo', precio: 8000, disponible: true, descripcion: 'Pollo desmechado con queso, lechuga, tomate y salsa de la casa.' }],
+  ['prod-007', { id: 'prod-007', tiendaId: 'tienda-02', nombre: 'Hamburguesa sencilla', precio: 14000, disponible: true, descripcion: 'Carne de res a la parrilla, queso, huevo frito, lechuga y papas.' }],
+  ['prod-008', { id: 'prod-008', tiendaId: 'tienda-02', nombre: 'Chuzo desgranado', precio: 12000, disponible: true, descripcion: 'Chuzo de pollo desmechado con butifarra, queso y salsas.' }],
+  ['prod-009', { id: 'prod-009', tiendaId: 'tienda-02', nombre: 'Limonada natural', precio: 4000, disponible: true, descripcion: 'Limonada de la casa, natural y bien fría.' }],
   // Punto Fit (tienda-03) — saludable
-  ['prod-010', { id: 'prod-010', tiendaId: 'tienda-03', nombre: 'Ensalada verde', precio: 9500, disponible: true }],
-  ['prod-011', { id: 'prod-011', tiendaId: 'tienda-03', nombre: 'Batido de frutas', precio: 6500, disponible: true }],
-  ['prod-012', { id: 'prod-012', tiendaId: 'tienda-03', nombre: 'Wrap de pollo', precio: 11000, disponible: true }],
+  ['prod-010', { id: 'prod-010', tiendaId: 'tienda-03', nombre: 'Ensalada verde', precio: 9500, disponible: true, descripcion: 'Ensalada verde con vegetales frescos del día y aderezo a elección.' }],
+  ['prod-011', { id: 'prod-011', tiendaId: 'tienda-03', nombre: 'Batido de frutas', precio: 6500, disponible: true, descripcion: 'Batido de frutas naturales, sin azúcar, con leche o agua.' }],
+  ['prod-012', { id: 'prod-012', tiendaId: 'tienda-03', nombre: 'Wrap de pollo', precio: 11000, disponible: true, descripcion: 'Tortilla integral con pollo, vegetales y aderezo ligero.' }],
   // Alegría (tienda-04) — dulce y salado
-  ['prod-013', { id: 'prod-013', tiendaId: 'tienda-04', nombre: 'Sandwich de jamon y queso', precio: 7000, disponible: true }],
-  ['prod-014', { id: 'prod-014', tiendaId: 'tienda-04', nombre: 'Crispetas saladas', precio: 5000, disponible: true }],
-  ['prod-015', { id: 'prod-015', tiendaId: 'tienda-04', nombre: 'Helado artesanal', precio: 4500, disponible: true }],
+  ['prod-013', { id: 'prod-013', tiendaId: 'tienda-04', nombre: 'Sandwich de jamon y queso', precio: 7000, disponible: true, descripcion: 'Jamón y queso fundido en pan suave de la casa.' }],
+  ['prod-014', { id: 'prod-014', tiendaId: 'tienda-04', nombre: 'Crispetas saladas', precio: 5000, disponible: true, descripcion: 'Crispetas saladas recién hechas, tamaño personal.' }],
+  ['prod-015', { id: 'prod-015', tiendaId: 'tienda-04', nombre: 'Helado artesanal', precio: 4500, disponible: true, descripcion: 'Helado artesanal de la semana, cono o vaso.' }],
   // Antojos (tienda-05) — snacks
-  ['prod-016', { id: 'prod-016', tiendaId: 'tienda-05', nombre: 'Empanada de carne', precio: 3500, disponible: true }],
-  ['prod-017', { id: 'prod-017', tiendaId: 'tienda-05', nombre: 'Papa rellena', precio: 4500, disponible: true }],
-  ['prod-018', { id: 'prod-018', tiendaId: 'tienda-05', nombre: 'Gaseosa 400 ml', precio: 2500, disponible: true }],
+  ['prod-016', { id: 'prod-016', tiendaId: 'tienda-05', nombre: 'Empanada de carne', precio: 3500, disponible: true, descripcion: 'Empanada de carne desmechada con ají y limón.' }],
+  ['prod-017', { id: 'prod-017', tiendaId: 'tienda-05', nombre: 'Papa rellena', precio: 4500, disponible: true, descripcion: 'Papa rellena de carne y arroz, con hogao.' }],
+  ['prod-018', { id: 'prod-018', tiendaId: 'tienda-05', nombre: 'Gaseosa 400 ml', precio: 2500, disponible: true, descripcion: 'Gaseosa personal bien fría.' }],
 ]));
+
+// Establecimientos (S14): lista canónica espejada del frontend (lib/stores.ts).
+// La imagen del encabezado vive en Garage (ADR-0028) y su REFERENCIA en la
+// tabla `tiendas`; este Map es su caché write-through.
+const TIENDAS = [
+  { id: 'tienda-01', nombre: 'El Mesón' },
+  { id: 'tienda-02', nombre: "El Asa'o" },
+  { id: 'tienda-03', nombre: 'Punto Fit' },
+  { id: 'tienda-04', nombre: 'Alegría' },
+  { id: 'tienda-05', nombre: 'Antojos' },
+];
+const imagenesPorTienda = estadoCompartido('imagenesTiendas', () => new Map());
 
 function obtenerProducto(productoId, tiendaId) {
   if (!tiendaId) {
@@ -89,9 +101,71 @@ async function actualizarProducto(productoId, tiendaId, cambios = {}, rol = 'tra
     }
     nuevo.precio = cambios.precio;
   }
+  if (cambios.descripcion !== undefined) {
+    // S14 (detalle de producto en la PWA): texto corto opcional. '' lo borra.
+    if (typeof cambios.descripcion !== 'string') {
+      throw errorCon('La descripción debe ser texto', 400);
+    }
+    const texto = cambios.descripcion.trim();
+    if (texto.length > 500) {
+      throw errorCon('La descripción no puede superar los 500 caracteres', 400);
+    }
+    nuevo.descripcion = texto === '' ? null : texto;
+  }
   await guardarProducto(nuevo);
   productos.set(productoId, nuevo);
   return nuevo;
+}
+
+/**
+ * Asigna la imagen de un producto de la tienda (panel, ADR-0028). Los bytes
+ * ya están en el almacén (`almacen.guardarImagen`); aquí SOLO la referencia:
+ * la base confirma y después se actualiza la caché, que es exactamente el
+ * orden del `actualizarProducto` (el menú que ven los clientes no cambia si
+ * la base falla) mientras el objeto del almacén queda subido — si el panel
+ * reintenta con el mismo archivo, sale otro uuid y el estado queda limpio.
+ */
+async function asignarImagen(productoId, tiendaId, imagenId) {
+  const actual = productos.get(productoId);
+  if (!actual || actual.tiendaId !== tiendaId) {
+    throw errorCon(`Producto ${productoId} no encontrado en la tienda ${tiendaId}`, 404);
+  }
+  await asignarImagenProducto(productoId, tiendaId, imagenId);
+  const nuevo = { ...actual, imagenId };
+  productos.set(productoId, nuevo);
+  return nuevo;
+}
+
+/**
+ * Asigna la imagen del ENCABEZADO de la tienda (panel, ADR-0028): la tienda
+ * solo puede subir para sí misma (el `tiendaId` llega del token en la ruta).
+ * Write-through como en el producto: la base confirma y después la caché.
+ */
+async function asignarImagenTienda(tiendaId, imagenId) {
+  const tienda = TIENDAS.find((t) => t.id === tiendaId);
+  if (!tienda) {
+    throw errorCon(`Tienda ${tiendaId} no reconocida`, 404);
+  }
+  await guardarImagenTienda(tiendaId, imagenId);
+  imagenesPorTienda.set(tiendaId, imagenId);
+  return { id: tiendaId, imagenId };
+}
+
+/** Catálogo público de establecimientos (S14): el encabezado de la tienda en
+ * la PWA necesita nombre + imagenId. Sin imagen, imagenId es null. */
+function listarTiendas() {
+  return TIENDAS.map((t) => ({ id: t.id, nombre: t.nombre, imagenId: imagenesPorTienda.get(t.id) ?? null }));
+}
+
+// Rehidratación de las imágenes de tiendas (tabla `tiendas`).
+function restaurarTiendasDesde(filas) {
+  for (const fila of filas) {
+    if (fila.imagenId) imagenesPorTienda.set(fila.id, fila.imagenId);
+  }
+}
+
+if (activa()) {
+  alCargarTiendas(restaurarTiendasDesde);
 }
 
 // Rehidratación: las filas de la base reemplazan a la semilla; los productos
@@ -115,4 +189,4 @@ if (activa()) {
   alCargarProductos(restaurarProductosDesde);
 }
 
-export { obtenerProducto, listarProductosPorTienda, actualizarProducto, restaurarProductosDesde };
+export { obtenerProducto, listarProductosPorTienda, listarTiendas, actualizarProducto, asignarImagen, asignarImagenTienda, restaurarProductosDesde };

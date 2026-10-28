@@ -37,7 +37,7 @@ export function rechazoDeTienda(request) {
 }
 
 /**
- * Rutas v1 que reciben el `tiendaId` del cliente (ADR-0027): exigen una cuenta
+ * Rutas v1 que reciben el `tiendaId` del cliente (ADR-0030): exigen una cuenta
  * de tienda y que ese `tiendaId` sea el de su token. Devuelve la respuesta de
  * rechazo (401, 403 o 400), o null si la petición puede seguir.
  */

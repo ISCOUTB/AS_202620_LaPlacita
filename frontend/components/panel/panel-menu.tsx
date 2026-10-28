@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, type FormEvent } from "react"
-import { actualizarProductoTienda, type ProductoTienda } from "@/lib/api"
+import { useRef, useState, type FormEvent } from "react"
+import { actualizarProductoTienda, subirImagenProducto, type ProductoTienda } from "@/lib/api"
 import { formatCOP } from "@/lib/format"
+import { ImageIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 function FilaProducto({
@@ -16,6 +17,7 @@ function FilaProducto({
 }) {
   const [ocupado, setOcupado] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const inputFoto = useRef<HTMLInputElement>(null)
 
   async function cambiar(cambios: { disponible?: boolean; precio?: number }) {
     setOcupado(true)
@@ -29,6 +31,20 @@ function FilaProducto({
     }
   }
 
+  async function subirFoto(archivo: File | undefined) {
+    if (!archivo) return
+    setOcupado(true)
+    setError(null)
+    try {
+      alGuardar(await subirImagenProducto(producto.id, archivo))
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setOcupado(false)
+      if (inputFoto.current) inputFoto.current.value = ""
+    }
+  }
+
   function guardarPrecio(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
     const precio = Number(new FormData(evento.currentTarget).get("precio"))
@@ -37,9 +53,41 @@ function FilaProducto({
 
   return (
     <li className="flex flex-col gap-3 py-4 md:flex-row md:items-center">
+      {producto.imagenId ? (
+        // ADR-0028: el uuid es nuevo por cada subida → cacheable immutable en
+        // el borde. <img> deliberado: el resize vive en el navegador; usar
+        // next/image duplicaría optimización sobre un archivo ya pequeño.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={`/api/v1/imagenes/${producto.imagenId}`}
+          alt={`Foto de ${producto.nombre}`}
+          loading="lazy"
+          className="size-14 shrink-0 rounded-xl object-cover"
+        />
+      ) : (
+        <span
+          aria-hidden="true"
+          className="grid size-14 shrink-0 place-items-center rounded-xl bg-celeste/20 font-display text-2xl font-extrabold text-azul"
+        >
+          {producto.nombre.charAt(0).toUpperCase()}
+        </span>
+      )}
       <div className="min-w-0 flex-1">
         <p className={cn("font-medium", producto.disponible ? "text-tinta" : "text-tenue line-through")}>{producto.nombre}</p>
         {!esAdmin && <p className="font-display font-bold text-azul">{formatCOP(producto.precio)}</p>}
+        <label className="mt-1 inline-flex cursor-pointer items-center gap-1 text-xs text-suave hover:text-azul">
+          <ImageIcon aria-hidden="true" className="size-4" />
+          {producto.imagenId ? "Cambiar foto" : "Subir foto"}
+          <input
+            ref={inputFoto}
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            disabled={ocupado}
+            onChange={(e) => void subirFoto(e.target.files?.[0])}
+          />
+        </label>
+        {error && <p className="text-xs text-entregado-texto">{error}</p>}
       </div>
 
       {esAdmin && (

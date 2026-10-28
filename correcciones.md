@@ -1045,51 +1045,163 @@ SonarCloud). Al unir, Dokploy redespliega el backend solo.
 
 ---
 
-## Evidencia S13: seguridad y riesgos (28/10/2026)
+## Cierre de la validación S12 y verificación de despliegue (24/10/2026)
 
-Modelado de amenazas STRIDE sobre el C4 nivel 2, mitigaciones, análisis de dependencias en el
-pipeline y privacidad. Documento: `docs/evidencias/evidencias-s13.md`. Decisión estructural:
-ADR-0027.
+Tres pendientes declarados el 22/10 quedaron cerrados el 24/10, además de la convención de
+registro de prompts en `docs/ia.md` (§2 Políticas).
+
+| # | Pendiente | Resultado | Verificación |
+|---|---|---|---|
+| 1 | Validación del equipo de la entrega S12 (ADR-0024/0025/0026 en propuesto; evidencias y taller «pendiente de revisión») | Los tres ADR pasan a **aceptado** (solo la línea de estado, criterio ADR-0015); `evidencias-s12.md` y `taller-s12-mensajes.md` validados por el equipo; tabla §9 del arc42 y bitácora alineadas | Lectura de cada fila de la evidencia contra el código antes de aceptar; las entradas de la bitácora del 22/10 quedan marcadas validadas con fecha |
+| 2 | Quality Gate de SonarCloud inaccesible (la revisión del 19/10 reporta HTTP 403) | **No se reproduce**: el proyecto responde en público sin sesión — `api/components/show` y `api/qualitygates/project_status` devuelven 200 anónimos con el gate en OK | `curl https://sonarcloud.io/api/qualitygates/project_status?projectKey=ISCOUTB_AS_202620_LaPlacita` (sin credenciales); si el revisor vuelve a ver 403, revisar su red/VPN antes de suponer projecto privado |
+| 3 | Dominios públicos caídos a través de Cloudflare (hallazgo del 23/10: 000 vía proxy, 200 directo al origen) | **Resuelto**: `laplacita-test` y `laplacita-app` responden 200 vía Cloudflare; el 307 de `/` del backend es el redirect esperado a `/docs` | `curl -w '%{http_code}' https://laplacita-test.iscoutb.dev/api/v1/health` → 200 `{"status":"ok"}`; PWA 200 y BFF sirviendo catálogo real |
+
+### Recorrido HTTP del flujo S12 sobre el despliegue (24/10)
+
+Prueba en Dokploy declarada como pendiente el 22/10, ejecutada el 24/10 contra
+`https://laplacita-test.iscoutb.dev` (rama `master`, despliegue del PR #15). Pedidos de prueba
+etiquetados con `clienteId: prueba-s12*` y una cuenta `prueba.s12.2410@utb.edu.co` creada
+única y exclusivamente para esta verificación (documentar que queda registrada).
+
+| Paso | Operación (evidencia) | Resultado |
+|---|---|---|
+| 1 | Creación confirmada por la base (O-01, ADR-0026) | `POST /pedidos` → **201**, `codigo: A02` (código corto asignado) |
+| 2 | Idempotencia de creación (S11, fila 18/10) | Replay con la misma `Idempotency-Key` → **mismo `pedidoId`** y cabecera `Idempotent-Replayed: true` |
+| 3 | Creación del dueño con sesión (ADR-0021) | Registro 201 (sesión incluida); pedido con `clienteId = usuario` y código `A03` |
+| 4 | Lectura pública solo con llave (ADR-0025) | Sin `seguimiento` → **404** (respuesta uniforme que no revela existencias); con `seguimiento` → 200 con código corto y sin `pin` |
+| 5 | Pago → Listo | `POST /pagos/{id}/confirmar` 200; `POST /entrega/{id}/listo` 200 |
+| 6 | PIN solo para su dueño (ADR-0022) | `GET /pedidos/{id}/pin` con sesión → **200, PIN entregado al dueño**; el mismo endpoint sobre un pedido ajeno → **404** (mismo código que inexistente) |
+| 7 | Entrega: PIN errado y correcto | Errado → 400 contado; correcto → **200, estado `Entregado`**; revalidar el PIN consumido → 400 |
+| 8 | Notificaciones con seguimiento (O-14) | `GET /notificaciones/{id}?seguimiento=…` → `[]`: la lista se alimenta de `POST /notificaciones` y del script de demo, no de la ruta v1 de flujo — comportamiento esperado, no defecto |
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Los tres ADR S12 pasaron a aceptados ⚠️ el mismo día — pero **requieren lectura formal de cada integrante** antes de medianoche del domingo | Reunión del equipo: revisar `docs/adr/0024/0025/0026` + `evidencias-s12.md`; la lectura consta en esta bitácora solo como verificación técnica del 24/10 |
+| El 403 de SonarCloud en la revisión del 19/10 no era del proyecto privado | `curl` anónimo a la API del gate (tabla superior); pedir al revisor repetir desde su red |
+| La caída de Cloudflare del 23/10 no fue del código | Los dominios responden hoy sin cambios en el repo: ping comparado vía proxy vs origin directo |
+
+---
+
+## Imágenes del catálogo con Garage S3 (25/10/2026 · material de S13)
+
+El equipo pidió foto para los productos y decidió que los bytes de imagen
+NO viven en PostgreSQL (no bytea): se adopta **Garage S3** auto-hospedado en
+Dokploy, **sin exposición pública** — el plan se describe en [ADR-0028](docs/adr/0028-almacen-imagenes-garage-dokploy.md)
+creado para este requisito. La lección práctica del intento de MinIO: el
+dolor de SSL aparece al expone el almacén; con el backend como única puerta
+pública vía /api/v1, el almacén vive en la red interna por HTTP plano.
+
+| Pieza | Detalle |
+|---|---|
+| Módulo `almacen` | Dueño único de los bytes (regla de propiedad de datos). Cliente S3 SigV4 con `node:crypto` (sin dependencias — criterio ADR-0021). Modo memoria declarado sin `GARAGE_*` |
+| Sniffing del MIME | El Content-Type de la subida JAMÁS se confía: se detecta por bytes mágicos (webp/png/jpeg); `X-Content-Type-Options: nosniff` en el borde |
+| Referencia | `productos.imagen_id UUID` en PostgreSQL (write-through del catálogo); uuid nuevo por subida → lectura cacheable `immutable` sin invalidación |
+| Rutas | `POST /api/v1/tienda/productos/{id}/imagen` (sesión de tienda) y `GET /api/v1/imagenes/{id}` (pública, 404 uniforme por uuid) |
+| Frontend | Resize en el navegador (canvas → webp 800px), botón «Subir/Cambiar foto» en el panel y foto en la tarjeta de producto de la tienda |
+| Pruebas | `tests/almacen.test.js` (sniffing, contenido disfrazado rechazado, límite real, uuid, claves raras); integración REAL contra Garage (Podman): PUT firmado, GET idéntico, 404 y disfrazado rechazado |
+| S13 | La superficie de amenaza queda lista en ADR-0028: antimalware y comportamiento del uploader malicioso para modelar la próxima semana |
+
+Verificación local (25/10): suite 115 + 28 de contrato en verde, lint y
+build del frontend limpios; integración Garage con Podman presentada en
+los logs de esta bitácora. Despliegue en Dokploy pendiente de la acción del
+equipo (crear el servicio Garage y las variables `GARAGE_*`).
+
+**Corrección posterior (mismo día)**: el empuje `8dd38c4` rompió la suite
+con base de datos (el job `test` del CI en rojo). Causa: el `ALTER TABLE
+productos ADD COLUMN IF NOT EXISTS imagen_id` quedó ANTES del `CREATE TABLE
+IF NOT EXISTS productos` en el DDL — en el primer arranque la tabla no
+existe aún y PostgreSQL responde `relation "productos" does not exist`
+(reproducción fiel con Podman: 112 pass / 2 fail, exactamente los dos neveros
+que el gate). El bloque se movió a su lugar correcto: después del
+`CREATE TABLE productos` y antes del cierre del template literal. Reparado y
+verificado: 120 pass / 0 fail con PostgreSQL real, 28/28 de contrato y 115
+sin base. `pg-test` de Podman retirado tras la verificación.
+
+**Limpieza de textos (25/10/2026)**: ronda de revisión lingüística sobre los
+archivos de la feature (comentarios de `almacen`, `imagenes-fijas`,
+`catalogo` y la tarjeta del panel, más el ADR-0028 y `ia.md`): palabras
+distorsionadas y algún anglicismo torpe.
+ La guía `docs/despliegue-garage-dokploy.md` se
+reescribió para la **versión web de Dokploy**: servicio Compose con el
+compose en Raw, `garage.toml` como File Mount (Advanced → Mounts, referenciado
+como `../files/garage.toml`) y la configuración del clúster desde la terminal
+web del servicio — verificado contra la documentación oficial de Mounts de
+Compose de Dokploy. Suite completa re-verificada (120/0 con BD
+PM, 28/28 contrato, lint/build limpios).
+
+---
+
+## S13 · Superficie pública mínima y soporte para la PWA (25/10/2026)
+
+Cierre del bloque de seguridad del plan S13 (ADR-0029) y las piezas de
+backend que desbloquean los cambios de producto que pidió el equipo.
+
+| Pieza | Detalle |
+|---|---|
+| Rutas v1 de entrega RETIRADAS | `POST /entrega/{id}/listo` y `/entrega/{id}/validar` (sin sesión): el módulo `entrega` permanece y lo usan las rutas `/tienda/*` con sesión (ADR-0023). El cliente nunca valida el PIN |
+| Pago solo del dueño | `POST /pagos/{id}/confirmar` exige sesión: el `clienteId` sale del TOKEN (no del cuerpo) y se compara con el del pedido (403). Cerrado el vector de pago ajeno por enumeración de `pedido-N` |
+| Análisis de dependencias | Job `audit` en el CI (`npm audit --audit-level=high`, backend y frontend, bloqueante) + Dependabot semanal (`.github/dependabot.yml`). Hallazgo corregido: zod 3.25.76 → 4.6.7 (era del toolchain de eslint del frontend) |
+| Evidencia S13 | `docs/evidencias/evidencias-s13.md`: inventario de superficie (§2), tabla STRIDE priorizada de 14 amenazas con mitigación/estado/responsable (§3), resultado de dependencias (§4) y privacidad Ley 1581 (§5). arc42 §8.6 (seguridad) + fila del ADR-0029 en §9 |
+| C4 al día | Garage agregado como contenedor propio (quedó fuera desde el ADR-0028) |
+| Producto · descripción | Columna `descripcion TEXT` en `productos` (migración suave), semilla con 18 descripciones reales, edición por `PATCH` con validación (≤500 caracteres, '' borra), contrato actualizado. La vista de detalle en la PWA la maqueta Miguel |
+| Producto · imagen de tienda | Tabla `tiendas` (referencia `imagen_id`), `POST /tienda/imagen` con sesión (el `tiendaId` sale del token, ESC-02), `GET /catalogo/tiendas` pública (nombre + imagenId), write-through como en productos. El banner en la PWA lo maqueta Miguel |
+| Frontend mínimo | `validarEntrega` retirada de `lib/api.ts` (su ruta ya no existe; la entrega es del panel) — el resto de la PWA queda para Miguel |
+
+Verificación: suite 121/0 (sin DB) y 34/34 de contrato en verde; lint y
+build del frontend limpios; audit de ambos paquetes en verde. El flujo de
+la PWA no cambia: el BFF ya adjuntaba el token desde la cookie (ADR-0021).
+
+---
+
+## Transcripción del plan de ejecución a markdown (25/10/2026)
+
+`docs/plan_ejecucion/LaPlacita-plan-S12-S15.pdf` quedó también en
+`LaPlacita-plan-S12-S15.md` (misma carpeta), para poder referenciarlo por
+secciones y ver su evolución con diff. El PDF sigue siendo la fuente
+oficial; el md lo declara en su encabezado. Sin cambios de código.
+
+---
+
+## Complemento de la Evidencia S13 (28/10/2026)
+
+Segunda pasada del modelado de amenazas sobre lo unido el 25/10 (ADR-0029). Se respeta
+ADR-0029 tal cual y se agrega lo que la tabla STRIDE no cubría. Documento:
+`docs/evidencias/evidencias-s13.md` §7. Decisión estructural: ADR-0030.
 
 | Cambio | Detalle |
 |---|---|
-| ADR-0027 (amenazas T-01 y T-02) | `POST /pagos/{id}/confirmar`, `/entrega/{id}/listo`, `/entrega/{id}/validar` y `POST /notificaciones` exigen la sesión de una cuenta de la **misma** tienda: 401, 403 o 400. Antes cualquiera en internet podía pagar, marcar listo y **recibir el PIN** de un pedido ajeno. Regla pura en `backend/src/http/acceso-tienda.js` |
+| ADR-0030 (A-15) | `POST /notificaciones` exige la sesión de una cuenta de la tienda del pedido (401, 403, 400). Antes cualquiera podía escribir «tu pedido está listo» en el historial de un pedido ajeno. Regla pura en `backend/src/http/acceso-tienda.js` |
 | Prueba de inventario | `tests/seguridad-s13.test.js` falla si aparece una ruta de escritura sin sesión fuera de registro, ingreso y pedido sin cuenta |
-| Contrato | `openapi.yaml`: `security: sesion` y respuestas 401 y 403 en las cuatro rutas |
-| Medición ESC-03 | `medir-exposicion-pin.js --url` inicia sesión con `CORREO_TIENDA` y `CLAVE_TIENDA` |
-| Repudio (T-08) | La bitácora de las acciones del panel registra `usuarioId` (seudónimo), nunca el correo |
-| Dependencias | Frontend: 1 vulnerabilidad alta (`zod <4.6.6`) → 0. Se quitan `zod`, `@hookform/resolvers` y `react-hook-form`, que nadie importa, y `overrides.zod = ^4.6.7` para la copia del linter. Backend: 0 |
-| CI | Job `dependencias` (backend y frontend): `npm audit --audit-level=high`, que bloquea, y SBOM CycloneDX como artefacto |
-| Dependabot | `.github/dependabot.yml`: PR semanales para npm, Docker y GitHub Actions |
-| Contenedores | `USER node` y `COPY --chown=node:node` en los dos Dockerfile |
-| Navegador | `frontend/next.config.mjs`: `Referrer-Policy: same-origin` (el token de seguimiento va en la URL), `X-Frame-Options: DENY`, `frame-ancestors 'none'`, `nosniff` y `Permissions-Policy` |
+| Contrato | `openapi.yaml`: `security: sesion` y respuestas 401 y 403 en `POST /notificaciones` |
+| Repudio (A-12) | La bitácora de las acciones del panel registra `usuarioId` (seudónimo), nunca el correo |
+| CI | El job `audit` genera el SBOM CycloneDX de los dos lockfiles y lo publica como artefacto `sbom` |
+| Dependabot | Se agrega el ecosistema `docker` |
+| Contenedores (A-19) | `USER node` y `COPY --chown=node:node` en los dos Dockerfile |
+| Navegador (A-16, A-20) | `frontend/next.config.mjs`: `Referrer-Policy: same-origin`, `X-Frame-Options: DENY`, `frame-ancestors 'none'`, `nosniff` y `Permissions-Policy` |
+| Dependencias | Se quitan `@hookform/resolvers` y `react-hook-form`, que nadie importa; `overrides.zod = ^4.6.7` |
 | Privacidad | Página `/privacidad` (Ley 1581 de 2012) y casilla obligatoria de autorización en «Crear cuenta» |
-| Frontend | Se borran `confirmarPago` y `validarEntrega` de `lib/api.ts`: no tenían llamadas |
-| Documentación | ADR-0027, arc42 §8.6 (seguridad), fila de ADR-0027 en §9 y §14 (riesgos aceptados y pendientes) |
+| Documentación | ADR-0030, evidencias-s13 §7, complemento en arc42 §8.6, fila de ADR-0030 en §9 y §14 (riesgos aceptados y pendientes) |
 
-Verificado en local:
-- `npm test` con PostgreSQL 18: 119 en verde y 1 omitida. Sin base: 114 en verde y 6 omitidas.
-  Contrato: 28/28. `seguridad-s13.test.js`: 8/8.
-- `npm audit --audit-level=high` y `npm sbom` en los dos paquetes (68 y 466 componentes).
+Verificado en local sobre el código ya unido con `master`:
+- `npm test` sin base: 129 en verde y 6 omitidas. Contrato: 34/34.
+- `npm audit --audit-level=high` en 0 en los dos paquetes; `npm sbom` genera los dos SBOM.
 - Build del backend; lint y build del frontend.
-- Recorrido HTTP sobre el build de producción del backend: 14/14 respuestas como se esperaba.
-- `medir-exposicion-pin.js --url` con sesión de tienda: 0/100 lecturas con PIN.
-- Cabeceras del frontend construido y revisión visual en móvil de `/privacidad` y «Crear cuenta».
-- No se construyó la imagen Docker (no hay Docker local) ni se ejecutó el job nuevo del CI.
+- Recorrido HTTP sobre el build de producción del backend: 11/11 respuestas como se esperaba
+  (notificaciones con y sin sesión, pago del dueño de ADR-0029, ruta de entrega retirada, panel).
+- No se construyó la imagen Docker (no hay Docker local) ni se ejecutó el SBOM dentro del CI.
 
 **Antes de desplegar:**
 - El backend se redespliega solo al unir a `master`. Revisar en Dokploy que el contenedor
   arranque con `USER node`.
 - El frontend necesita el botón Deploy en Dokploy.
-- Quien use las rutas v1 de pago o entrega desde `/docs` necesita ahora el botón *Authorize*
-  con el token de una cuenta de tienda.
 
 ### Resumen de correcciones que el sistema automatizado no detecta automáticamente
 | Corrección invisible al sistema | Cómo verificarla manualmente |
 |---|---|
-| Las rutas v1 de tienda ya no responden sin sesión en producción | `curl -i -X POST "https://laplacita-test.iscoutb.dev/api/v1/entrega/pedido-1/listo?tiendaId=tienda-01"` responde **401** y no trae PIN |
+| Nadie fuera de la tienda publica avisos | `curl -i -X POST https://laplacita-test.iscoutb.dev/api/v1/notificaciones -H "content-type: application/json" -d '{"pedidoId":"pedido-1","estado":"Listo","tiendaId":"tienda-01"}'` responde **401** |
 | El contenedor no corre como root | En Dokploy → backend → Terminal: `whoami` responde `node` |
 | Las cabeceras de seguridad llegan al navegador | DevTools → Network → documento de `laplacita-app.iscoutb.dev`: aparecen `Referrer-Policy` y `X-Frame-Options` |
 | El registro pide la autorización | En `/cuenta` → Crear cuenta, el formulario no se envía sin marcar la casilla |
-| Dependabot y el job `dependencias` funcionan | GitHub → Actions: el job `dependencias` aparece en verde con los artefactos `sbom-*`; GitHub → Insights → Dependency graph → Dependabot lista los tres ecosistemas |
+| El SBOM queda en el run | GitHub → Actions → el run del PR → Artifacts: aparece `sbom` |
 | Ajustes de GitHub pendientes (P-2) | GitHub → Settings → Code security: *secret scanning* y *push protection* activados |

@@ -1,5 +1,5 @@
 // Regla de acceso de las rutas v1 que reciben el `tiendaId` del cliente
-// (ADR-0027). Vive aparte de autenticacion.js para probarla sin Next.
+// (ADR-0030). Vive aparte de autenticacion.js para probarla sin Next.
 
 const ROLES_TIENDA = new Set(['trabajador', 'admin']);
 

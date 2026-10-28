@@ -3,7 +3,7 @@ import * as notificaciones from '../../../../src/modules/notificaciones/index.js
 import { lista } from '../../../../src/persistencia/index.js';
 import { rechazoFueraDeTienda } from '../../../../src/http/autenticacion.js';
 
-// S13 · ADR-0027: solo una cuenta de la tienda del pedido publica avisos; sin
+// S13 · ADR-0030: solo una cuenta de la tienda del pedido publica avisos; sin
 // sesión, cualquiera podía escribir «tu pedido está listo» en el historial
 // que ve el cliente.
 export async function POST(request) {

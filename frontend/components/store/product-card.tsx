@@ -21,12 +21,26 @@ export function ProductCard({ product }: { product: Product }) {
         agotado && "opacity-55",
       )}
     >
-      <span
-        aria-hidden="true"
-        className="grid size-14 shrink-0 place-items-center rounded-xl bg-celeste/20 font-display text-2xl font-extrabold text-azul"
-      >
-        {(product.name ?? product.id).charAt(0).toUpperCase()}
-      </span>
+      {product.imagenId ? (
+        // ADR-0028: foto del catálogo servida por la API (uuid nuevo por
+        // subida → cacheable immutable en el borde). <img> deliberado por el
+        // mismo motivo del panel (resize en el navegador: el archivo ya llega
+        // reescalado a webp y pequeño).
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={`/api/v1/imagenes/${product.imagenId}`}
+          alt={product.name}
+          loading="lazy"
+          className="size-14 shrink-0 rounded-xl object-cover"
+        />
+      ) : (
+        <span
+          aria-hidden="true"
+          className="grid size-14 shrink-0 place-items-center rounded-xl bg-celeste/20 font-display text-2xl font-extrabold text-azul"
+        >
+          {(product.name ?? product.id).charAt(0).toUpperCase()}
+        </span>
+      )}
 
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <h3 className="font-medium text-tinta">{product.name}</h3>
