@@ -871,6 +871,11 @@ paths:
       tags: [notificaciones]
       summary: Notificar cambio de estado de un pedido
       operationId: notificarCambioEstado
+      description: >-
+        Desde S13 (ADR-0030) exige la sesión de una cuenta de la tienda del
+        pedido: el aviso aparece en el historial que ve el cliente.
+      security:
+        - sesion: []
       requestBody:
         required: true
         content:
@@ -884,6 +889,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Notificacion'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de una cuenta de esa tienda (ADR-0030)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /notificaciones/{pedidoId}:
     get:

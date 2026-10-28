@@ -105,6 +105,27 @@ jobs:
           run: npm audit --audit-level=high
           working-directory: frontend
 
+        # S13 (28/10): SBOM CycloneDX de cada lockfile, publicado como artefacto
+        # del run. En el frontend se omiten las opcionales: el binario wasm de
+        # Tailwind (@tailwindcss/oxide-wasm32-wasi) declara versiones de @emnapi
+        # que su lockfile no cumple y `npm sbom` se niega a generar. Ese binario
+        # no se instala en Linux ni en Windows.
+        - name: SBOM del backend
+          run: npm sbom --package-lock-only --sbom-format cyclonedx > sbom-backend.cdx.json
+          working-directory: backend
+
+        - name: SBOM del frontend
+          run: npm sbom --package-lock-only --omit=optional --sbom-format cyclonedx > sbom-frontend.cdx.json
+          working-directory: frontend
+
+        - name: Publicar SBOM
+          uses: actions/upload-artifact@v4
+          with:
+            name: sbom
+            path: |
+              backend/sbom-backend.cdx.json
+              frontend/sbom-frontend.cdx.json
+
     # El frontend de usuario (PWA) se valida también en CI: build de producción.
     frontend:
         runs-on: ubuntu-latest

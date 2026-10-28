@@ -15,7 +15,7 @@ export async function PATCH(request, { params }) {
   try {
     const cambios = await request.json().catch(() => ({}));
     const producto = await actualizarProducto(productoId, cuenta.tiendaId, cambios, cuenta.rol);
-    info({ route: 'PATCH /api/v1/tienda/productos/{productoId}', tiendaId: cuenta.tiendaId, mensaje: `producto ${productoId} actualizado` });
+    info({ route: 'PATCH /api/v1/tienda/productos/{productoId}', tiendaId: cuenta.tiendaId, usuarioId: cuenta.id, mensaje: `producto ${productoId} actualizado` });
     return NextResponse.json(producto, { status: 200 });
   } catch (error) {
     return respuestaDeError(error);

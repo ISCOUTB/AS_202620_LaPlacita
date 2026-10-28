@@ -1160,3 +1160,48 @@ la PWA no cambia: el BFF ya adjuntaba el token desde la cookie (ADR-0021).
 `LaPlacita-plan-S12-S15.md` (misma carpeta), para poder referenciarlo por
 secciones y ver su evolución con diff. El PDF sigue siendo la fuente
 oficial; el md lo declara en su encabezado. Sin cambios de código.
+
+---
+
+## Complemento de la Evidencia S13 (28/10/2026)
+
+Segunda pasada del modelado de amenazas sobre lo unido el 25/10 (ADR-0029). Se respeta
+ADR-0029 tal cual y se agrega lo que la tabla STRIDE no cubría. Documento:
+`docs/evidencias/evidencias-s13.md` §7. Decisión estructural: ADR-0030.
+
+| Cambio | Detalle |
+|---|---|
+| ADR-0030 (A-15) | `POST /notificaciones` exige la sesión de una cuenta de la tienda del pedido (401, 403, 400). Antes cualquiera podía escribir «tu pedido está listo» en el historial de un pedido ajeno. Regla pura en `backend/src/http/acceso-tienda.js` |
+| Prueba de inventario | `tests/seguridad-s13.test.js` falla si aparece una ruta de escritura sin sesión fuera de registro, ingreso y pedido sin cuenta |
+| Contrato | `openapi.yaml`: `security: sesion` y respuestas 401 y 403 en `POST /notificaciones` |
+| Repudio (A-12) | La bitácora de las acciones del panel registra `usuarioId` (seudónimo), nunca el correo |
+| CI | El job `audit` genera el SBOM CycloneDX de los dos lockfiles y lo publica como artefacto `sbom` |
+| Dependabot | Se agrega el ecosistema `docker` |
+| Contenedores (A-19) | `USER node` y `COPY --chown=node:node` en los dos Dockerfile |
+| Navegador (A-16, A-20) | `frontend/next.config.mjs`: `Referrer-Policy: same-origin`, `X-Frame-Options: DENY`, `frame-ancestors 'none'`, `nosniff` y `Permissions-Policy` |
+| Dependencias | Se quitan `@hookform/resolvers` y `react-hook-form`, que nadie importa; `overrides.zod = ^4.6.7` |
+| Privacidad | Página `/privacidad` (Ley 1581 de 2012) y casilla obligatoria de autorización en «Crear cuenta» |
+| Documentación | ADR-0030, evidencias-s13 §7, complemento en arc42 §8.6, fila de ADR-0030 en §9 y §14 (riesgos aceptados y pendientes) |
+
+Verificado en local sobre el código ya unido con `master`:
+- `npm test` sin base: 129 en verde y 6 omitidas. Contrato: 34/34.
+- `npm audit --audit-level=high` en 0 en los dos paquetes; `npm sbom` genera los dos SBOM.
+- Build del backend; lint y build del frontend.
+- Recorrido HTTP sobre el build de producción del backend: 11/11 respuestas como se esperaba
+  (notificaciones con y sin sesión, pago del dueño de ADR-0029, ruta de entrega retirada, panel).
+- No se construyó la imagen Docker (no hay Docker local) ni se ejecutó el SBOM dentro del CI.
+
+**Antes de desplegar:**
+- El backend se redespliega solo al unir a `master`. Revisar en Dokploy que el contenedor
+  arranque con `USER node`.
+- El frontend necesita el botón Deploy en Dokploy.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Nadie fuera de la tienda publica avisos | `curl -i -X POST https://laplacita-test.iscoutb.dev/api/v1/notificaciones -H "content-type: application/json" -d '{"pedidoId":"pedido-1","estado":"Listo","tiendaId":"tienda-01"}'` responde **401** |
+| El contenedor no corre como root | En Dokploy → backend → Terminal: `whoami` responde `node` |
+| Las cabeceras de seguridad llegan al navegador | DevTools → Network → documento de `laplacita-app.iscoutb.dev`: aparecen `Referrer-Policy` y `X-Frame-Options` |
+| El registro pide la autorización | En `/cuenta` → Crear cuenta, el formulario no se envía sin marcar la casilla |
+| El SBOM queda en el run | GitHub → Actions → el run del PR → Artifacts: aparece `sbom` |
+| Ajustes de GitHub pendientes (P-2) | GitHub → Settings → Code security: *secret scanning* y *push protection* activados |

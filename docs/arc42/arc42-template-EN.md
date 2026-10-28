@@ -476,6 +476,20 @@ priorizada en [evidencias-s13](../evidencias/evidencias-s13.md).
   (A-10), contadores de intentos en memoria (A-13), decodificadores del
   navegador sin antimalware (A-14) y enumerabilidad residual de ids
   (`pedido-N`, ADR-0024) mitigada por dueño en lecturas sensibles.
+- **Complemento del 28/10** ([evidencias-s13 §7](../evidencias/evidencias-s13.md)):
+  - `POST /notificaciones` exige la sesión de una cuenta de la tienda del pedido, y una prueba
+    de inventario (`tests/seguridad-s13.test.js`) falla si aparece otra ruta de escritura sin
+    sesión fuera de registro, ingreso y pedido sin cuenta
+    ([ADR-0030](../adr/0030-escrituras-con-sesion-y-notificaciones.md)).
+  - Cabeceras del frontend: `Referrer-Policy: same-origin` (el token de seguimiento va en la
+    URL), `X-Frame-Options: DENY`, `frame-ancestors 'none'`, `nosniff` y
+    `Permissions-Policy`.
+  - Contenedores con `USER node`; SBOM CycloneDX en el job `audit`; Dependabot también
+    para Docker.
+  - Bitácora del panel con `usuarioId` seudónimo (refuerza A-12).
+  - Aviso de privacidad en `/privacidad` y autorización obligatoria al crear la cuenta
+    (Ley 1581 de 2012).
+  - Riesgos aceptados y pendientes del complemento: §14.
 ---
 
 ## 9. Decisiones Arquitectónicas
@@ -508,6 +522,7 @@ Esta sección registra el historial de decisiones arquitectónicas significativa
 | ADR-0026 | Escrituras de pedidos como mensajes at-least-once y creación confirmada por la base (precisa ADR-0014) | Aceptado | 2026-10-22 | ESC-01, ESC-05 | [0026-escrituras-at-least-once-y-creacion-confirmada.md](../adr/0026-escrituras-at-least-once-y-creacion-confirmada.md) |
 | ADR-0028 | Almacén de imágenes separado: Garage S3 en Dokploy, sin exposición pública (bytes; PostgreSQL solo la referencia `imagen_id`) | Aceptado | 2026-10-25 | ESC-02, ESC-05, S13 | [0028-almacen-imagenes-garage-dokploy.md](../adr/0028-almacen-imagenes-garage-dokploy.md) |
 | ADR-0029 | Superficie pública mínima: retiro de rutas v1 de entrega y pago solo del dueño | Aceptado | 2026-10-25 | ESC-02, S13 | [0029-superficie-publica-minima.md](../adr/0029-superficie-publica-minima.md) |
+| ADR-0030 | `POST /notificaciones` exige la sesión de la tienda y ninguna ruta de escritura queda sin sesión (completa ADR-0029) | Propuesto | 2026-10-28 | ESC-02, ESC-03, S13 | [0030-escrituras-con-sesion-y-notificaciones.md](../adr/0030-escrituras-con-sesion-y-notificaciones.md) |
  
 **Relación con los bloques de construcción:**
 - ADR-0001 y ADR-0002 determinan la estructura: un único proceso con módulos de dominio separados.
@@ -902,6 +917,34 @@ supera 6–8 personas o se necesita despliegue independiente. Ver
 > no se reedita tras su aceptación (criterio de [ADR-0015](../adr/0015-ratificacion-ediciones-post-aceptacion.md));
 > esta nota es la aclaración vigente. Sus menciones a «cliente → Azure» se leen como el host
 > de su fecha (desde [ADR-0018](../adr/0018-retiro-de-azure-despliegue-en-dokploy.md), Dokploy).
+
+---
+
+## 14. Riesgos y deuda técnica (S13)
+
+> En la plantilla arc42 esta es la sección 11. En este documento la §11 ya registra el reto
+> RES-05 del corte 1 y no se renumera; los riesgos van aquí. Los riesgos de S8 (R-1 a R-6)
+> siguen en [semana-08 §7](../semana-08.md).
+
+### 14.1 Amenazas aceptadas
+
+Amenazas del modelado de S13 que el equipo decide **no** mitigar ahora. Cada una dice por qué
+y qué la haría cambiar. Ids de [evidencias-s13 §3 y §7](../evidencias/evidencias-s13.md). Las aceptadas de §3 (A-10, A-13, A-14) están en §8.6.
+
+| ID | Amenaza | Riesgo (P×I) | Por qué se acepta | Se revisa si… |
+|---|---|---|---|---|
+| R-S13-1 | A-18: registrar el correo UTB de otra persona (no se verifica el correo) | 2×2 = 4 | No hay servicio de correo para enviar un enlace de verificación. El daño se limita a pedir comida a nombre de otro, sin datos de pago | Se integra un servicio de correo, o aparece un caso real |
+| R-S13-2 | A-24: sin `Content-Security-Policy` completa (`script-src`) | 1×3 = 3 | Next.js necesita nonces por petición para sus scripts en línea; un CSP mal puesto deja la app en blanco. El token ya está fuera del alcance de JavaScript (cookie `httpOnly`) | Se agrega contenido de terceros o HTML del usuario |
+| R-S13-3 | A-25: PIN y token de seguimiento en claro en PostgreSQL | 1×3 = 3 | La base solo es accesible en la red interna de Dokploy; el PIN es de un solo uso y deja de servir al entregar | La base sale de la red interna o se replica fuera |
+
+### 14.2 Riesgos con mitigación pendiente
+
+| ID | Riesgo | Plan | Resp. |
+|---|---|---|---|
+| A-17 | Sin límite de peticiones por IP: *credential stuffing* y pedidos basura | Middleware `rateLimit` de Traefik en Dokploy (P-1) | Mateo |
+| A-19, A-21 | Imagen base y acciones del CI con etiquetas móviles | Fijar por digest y por SHA; Dependabot las actualiza (P-3) | Miguel |
+| A-22 | Sin procedimiento de rotación de `JWT_SECRET` | Documentarlo (P-4) | Mateo |
+| A-23 | *Secret scanning* de GitHub sin activar | Activarlo con *push protection* (P-2) | Miguel |
 
 ---
 

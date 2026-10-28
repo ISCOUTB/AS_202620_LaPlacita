@@ -98,3 +98,163 @@ solicitud — herramienta pendiente, se declara como deuda, no como capacidad ex
 - [x] arc42 §8 con la arquitectura de seguridad (§8.6) y amenazas aceptadas citadas.
 - [ ] Sesión STRIDE de 1 h en el laboratorio (relleno con Miguel): validación del equipo sobre esta tabla.
 - [ ] Demo del viernes 30: registrarse, pedir, pagar y ver el PIN en el celular — nadie más puede verlo.
+
+---
+
+## 7. Complemento del 28/10/2026 (Miguel)
+
+Segunda pasada del modelado sobre lo que ya estaba unido a `master`. **No reemplaza nada de
+§1–§6**: agrega las fronteras de confianza, las amenazas que la tabla de §3 no cubría (A-15 en
+adelante, misma escala de prioridad), refuerzos de la cadena de suministro y de la privacidad,
+y los riesgos de IA. Decisión estructural nueva:
+[ADR-0030](../adr/0030-escrituras-con-sesion-y-notificaciones.md).
+
+### 7.1 Fronteras de confianza sobre el C4 nivel 2
+
+```mermaid
+flowchart LR
+    classDef person fill:#08427b,stroke:#073b6f,color:#fff;
+    classDef container fill:#1168bd,stroke:#0e5296,color:#fff;
+    classDef ext fill:#999999,stroke:#666666,color:#fff;
+
+    subgraph internet ["FC-1 · Internet (no confiable)"]
+        cliente["Cliente"]:::person
+        cajero["Personal de la tienda"]:::person
+        atacante["Cualquiera"]:::person
+    end
+
+    subgraph dokploy ["FC-2 · Dokploy (HTTPS en Traefik)"]
+        web["Frontend PWA + panel<br/>BFF /api/v1, cookie httpOnly"]:::container
+        api["API backend<br/>publicada también en internet"]:::container
+        subgraph red ["FC-3 · Red interna de Dokploy"]
+            db[("PostgreSQL")]:::container
+            garage[("Garage S3<br/>imágenes")]:::container
+        end
+    end
+
+    subgraph cadena ["FC-4 · Cadena de suministro"]
+        npm["Registro npm"]:::ext
+        hub["Docker Hub (node:22-alpine)"]:::ext
+        gh["GitHub Actions<br/>secretos y webhook"]:::ext
+    end
+
+    cliente -->|HTTPS| web
+    cajero -->|HTTPS /panel| web
+    atacante -->|HTTPS| web
+    atacante -->|HTTPS directo, sin BFF| api
+    web -->|Bearer desde la cookie| api
+    api --> db
+    api --> garage
+    npm --> gh
+    hub --> gh
+    gh -->|webhook de despliegue| api
+```
+
+Lo que más pesa en el análisis: **el backend está publicado en internet**
+(`laplacita-test.iscoutb.dev`), no solo detrás del BFF. Cualquier ruta es alcanzable sin la
+app, y los ids `pedido-N` y `tienda-0X` no hay que adivinarlos.
+
+### 7.2 Amenazas adicionales
+
+| # | STRIDE | Amenaza | Vector | Prioridad | Mitigación (o decisión) | Estado | Resp. |
+|---|---|---|---|---|---|---|---|
+| A-15 | **S / T** | Escribir «tu pedido está listo» en el historial de un pedido ajeno | `POST /notificaciones` sin sesión + id enumerable (no estaba en el inventario de §2) | **Alta** | Sesión de una cuenta de la tienda del pedido: 401, 403, 400 (ADR-0030, `src/http/acceso-tienda.js`). Prueba de inventario: falla si aparece otra ruta de escritura sin sesión | ✅ Mitigada (28/10) | M |
+| A-16 | **I** | El token de seguimiento se filtra a otros sitios | Va en la URL de la página del pedido (ADR-0025) y viaja en la cabecera `Referer` | Media | `Referrer-Policy: same-origin` en todas las páginas (`frontend/next.config.mjs`) | ✅ Mitigada (28/10) | G |
+| A-17 | **S / D** | *Credential stuffing* contra muchos correos y pedidos basura | `POST /auth/sesion` (A-07 limita **por correo**, no por IP) y `POST /pedidos` sin cuenta | Media | Límite de peticiones por IP con el middleware `rateLimit` de Traefik en Dokploy | 🟡 Pendiente (P-1) | M |
+| A-18 | **S** | Registrar el correo UTB de otra persona | `POST /auth/registro`: no se verifica que el correo sea de quien se registra | Media | No hay servicio de correo para enviar un enlace de verificación; el daño se limita a pedir a nombre de otro, sin datos de pago | ✅ Aceptada (arc42 §14) | G |
+| A-19 | **E** | Quien logre ejecutar código en el servidor controla el contenedor | Los Dockerfile corrían como root | Media | `USER node` y `COPY --chown=node:node` en los dos Dockerfile. Falta fijar `node:22-alpine` por digest | ✅ Mitigada (28/10); digest pendiente (P-3) | M |
+| A-20 | **T** | *Clickjacking*: una página ajena incrusta el panel y engaña al cajero | iframe | Baja | `X-Frame-Options: DENY` y `frame-ancestors 'none'`; además `nosniff` y `Permissions-Policy` | ✅ Mitigada (28/10) | G |
+| A-21 | **T / E** | Una acción de GitHub comprometida roba el webhook o el token de Sonar | `actions/checkout@v4` y demás son etiquetas móviles | Baja | Dependabot vigila `github-actions`. Falta fijarlas por SHA | 🟡 Pendiente (P-3) | G |
+| A-22 | **S / E** | Con `JWT_SECRET` filtrado se firma un token de admin de cualquier tienda | Secreto de Dokploy | Baja | ≥32 caracteres obligatorio en producción y `alg: none` rechazado (prueba). Falta el procedimiento de rotación | 🟡 Pendiente (P-4) | M |
+| A-23 | **I** | Un secreto termina en un commit | `.env`, `CUENTAS_TIENDA`, credenciales de Garage | Baja | `.env` ignorado y `.env.example` sin valores. Falta activar *secret scanning* y *push protection* en GitHub | 🟡 Pendiente (P-2) | G |
+| A-24 | **I** | Un XSS ejecuta código en la app | Contenido mostrado en la PWA | Baja | El token ya está fuera del alcance de JavaScript (cookie `httpOnly`) y React escapa el contenido. Sin CSP `script-src`: Next exige nonces por petición | ✅ Aceptada (arc42 §14) | G |
+| A-25 | **I** | Quien obtenga una copia de la base ve PIN y tokens de seguimiento en claro | Copia de PostgreSQL | Baja | La base solo vive en la red interna de Dokploy (ADR-0014); el PIN es de un solo uso | ✅ Aceptada (arc42 §14) | M |
+
+**Refuerzo de A-12 (repudio):** desde el 28/10 la bitácora de cada acción del panel registra
+`usuarioId` (el id seudónimo `usr-…`, nunca el correo ni el nombre), además de `tiendaId` y
+`pedidoId` (`src/logger.js` y las rutas de `/tienda/*`). Sigue la deuda de retención formal de
+logs.
+
+### 7.3 Cadena de suministro: lo que se agrega
+
+| Cambio | Detalle |
+|---|---|
+| SBOM | El job `audit` genera un SBOM CycloneDX de cada lockfile y lo publica como artefacto `sbom` del run (`npm sbom`). En local: 68 componentes en el backend y 466 en el frontend (sin opcionales) |
+| Dependabot | Se agrega el ecosistema `docker` para la imagen base de los dos Dockerfile |
+| Menos dependencias | Se quitan `@hookform/resolvers` y `react-hook-form`, que ningún archivo importa. `overrides.zod = ^4.6.7` impide que vuelva la versión vulnerable por el linter |
+| Resultado | `npm audit --audit-level=high`: 0 en backend y 0 en frontend (28/10) |
+
+### 7.4 Privacidad: lo que se agrega
+
+- **Aviso de privacidad** en `/privacidad` (`frontend/app/privacidad/page.tsx`): qué datos se
+  usan y para qué, qué no se hace y los derechos del titular, con los plazos de la Ley 1581:
+  10 días hábiles para consultas y 15 para reclamos.
+- **Autorización expresa:** casilla obligatoria con enlace al aviso en «Crear cuenta»
+  (`frontend/app/cuenta/page.tsx`). La base que cita §5, el consentimiento al registrarse,
+  ahora tiene un aviso que lo sustenta.
+- **Pendientes:**
+  - Guardar con la cuenta qué versión del aviso aceptó (P-5).
+  - Poner en el aviso un correo de contacto real del equipo.
+
+**Puntos para revisar juntos.** Encontré diferencias entre §2/§5 y el código; no las corregí
+para no reescribir el texto de otro:
+
+1. §2 dice que `POST /pedidos` exige sesión de cliente, pero la ruta sigue aceptando pedidos
+   **sin cuenta** (contrato v1, `app/api/v1/pedidos/route.js`).
+2. §5 dice que el correo sirve para «enviar el estado del pedido», pero no hay servicio de
+   correo.
+3. §5 dice que el nombre se muestra en la app. Además, la tienda ve el **primer nombre** del
+   cliente en el panel (`nombreCorto`, ADR-0023).
+
+### 7.5 Riesgos propios de las aplicaciones con IA generativa
+
+El sistema **no tiene un componente de IA generativa**
+([ADR-0012](../adr/0012-no-incorporar-componente-generativo.md)). Por eso los riesgos del OWASP
+Top 10 for LLM no aplican al producto: inyección de prompt, fuga de datos por el modelo,
+envenenamiento del contexto y agencia excesiva. Sí aplican al **desarrollo**, porque el equipo
+usa asistentes de código:
+
+| Riesgo | Mitigación vigente |
+|---|---|
+| Código generado con un fallo de seguridad | Revisión del equipo antes de cada commit, pruebas, SonarCloud con gate bloqueante y la prueba de inventario de rutas (ADR-0030) |
+| Dependencia inventada o con nombre parecido (*slopsquatting*) | Cada dependencia nueva se registra en `docs/ia.md` y pasa por `npm audit` en el CI |
+| Instrucciones escondidas en el contenido que lee el asistente | El asistente lo trata como datos y no hace commit ni push: lo hace el equipo |
+| Secretos pegados en el chat del asistente | Los secretos viven en Dokploy y GitHub, nunca en el repositorio ni en los prompts |
+
+### 7.6 Plan de lo pendiente
+
+| # | Acción | Amenaza | Dónde | Resp. | Fecha |
+|---|---|---|---|---|---|
+| P-1 | Middleware `rateLimit` de Traefik por IP, con tope de tamaño del cuerpo | A-17 | Dokploy → dominio → Middlewares | M | 04/11/2026 (antes de medir en S14) |
+| P-2 | Activar *secret scanning* y *push protection* | A-23 | GitHub → Settings → Code security | G | 31/10/2026 |
+| P-3 | Fijar las acciones por SHA y `node:22-alpine` por digest | A-19, A-21 | `.github/workflows/*.yml`, `*/Dockerfile` | G | 08/11/2026 |
+| P-4 | Procedimiento de rotación de `JWT_SECRET` | A-22 | `docs/` | M | 08/11/2026 |
+| P-5 | Guardar la versión del aviso aceptada con la cuenta | §7.4 | `usuarios` + `POST /auth/registro` | G | Entrega final |
+| P-6 | Validar ADR-0030 y este complemento en la sesión STRIDE del laboratorio | — | — | Ambos | 31/10/2026 |
+
+### 7.7 Verificación del complemento (28/10/2026, sobre el código ya unido con `master`)
+
+Recorrido HTTP sobre el build de producción del backend, sin base y con cuentas de prueba de
+`tienda-01` y `tienda-02`: **11/11** respuestas como se esperaba.
+
+| Caso | Esperado | Obtenido |
+|---|---|---|
+| Notificación falsa sin sesión (ADR-0030) | 401 | 401 |
+| Notificación con sesión de cliente | 403 | 403 |
+| Notificación con cuenta de `tienda-02` | 403 | 403 |
+| Notificación con cuenta de `tienda-01` | 201 | 201 |
+| Pago sin sesión (ADR-0029) | 401 | 401 |
+| Pago por otro cliente (ADR-0029) | 403 | 403 |
+| Pago por su dueña (ADR-0029) | 200 | 200 |
+| Ruta v1 `/entrega/listo` retirada (ADR-0029) | 404 | 404 |
+| Panel: listo con `tienda-01` | 200 | 200 |
+| Panel: listo con `tienda-02` (ESC-02) | 404 | 404 |
+| Pedido sin cuenta (sigue abierto) | 201 | 201 |
+
+Además:
+- `npm test` del backend sin base: 129 en verde y 6 omitidas; contrato 34/34;
+  `tests/seguridad-s13.test.js` en verde.
+- Frontend: lint y build sin errores. Las cabeceras se comprobaron en el build construido, y
+  `/privacidad` y «Crear cuenta» se revisaron en móvil (375 px).
+- No verificado: la imagen Docker con `USER node` (no hay Docker local) ni el SBOM dentro del
+  CI.

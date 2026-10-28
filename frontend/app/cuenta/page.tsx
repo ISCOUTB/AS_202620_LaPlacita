@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, type FormEvent } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { LogOut, ReceiptText } from "lucide-react"
 import { Boton, BotonEnlace } from "@/components/utb/boton"
@@ -150,6 +151,20 @@ export default function CuentaPage({ searchParams }: { searchParams: Promise<{ v
                 />
                 {modo === "registrar" && <span className="text-xs text-tenue">Mínimo 8 caracteres.</span>}
               </label>
+
+              {/* S13 · autorización previa e informada (Ley 1581 de 2012, art. 9). */}
+              {modo === "registrar" && (
+                <label className="flex items-start gap-3 text-sm text-suave">
+                  <input name="privacidad" type="checkbox" required className="mt-0.5 size-5 accent-azul" />
+                  <span>
+                    Autorizo el uso de mis datos como explica el{" "}
+                    <Link href="/privacidad" className="font-medium text-azul underline">
+                      aviso de privacidad
+                    </Link>
+                    .
+                  </span>
+                </label>
+              )}
 
               {error && (
                 <p role="alert" className="rounded-xl bg-error-fondo px-4 py-3 text-sm text-error-texto">

@@ -21,6 +21,11 @@ updates:
         update-types:
           - patch
           - minor
+  # S13 (28/10): también la imagen base node:22-alpine de los Dockerfile.
+  - package-ecosystem: docker
+    directories: [/backend, /frontend]
+    schedule:
+      interval: weekly
   - package-ecosystem: github-actions
     directory: /
     schedule:
