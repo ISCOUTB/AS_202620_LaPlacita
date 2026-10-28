@@ -165,7 +165,7 @@ app, y los ids `pedido-N` y `tienda-0X` no hay que adivinarlos.
 | A-19 | **E** | Quien logre ejecutar código en el servidor controla el contenedor | Los Dockerfile corrían como root | Media | `USER node` y `COPY --chown=node:node` en los dos Dockerfile. Falta fijar `node:22-alpine` por digest | ✅ Mitigada (28/10); digest pendiente (P-3) | M |
 | A-20 | **T** | *Clickjacking*: una página ajena incrusta el panel y engaña al cajero | iframe | Baja | `X-Frame-Options: DENY` y `frame-ancestors 'none'`; además `nosniff` y `Permissions-Policy` | ✅ Mitigada (28/10) | G |
 | A-21 | **T / E** | Una acción de GitHub comprometida roba el webhook o el token de Sonar | `actions/checkout@v4` y demás son etiquetas móviles | Baja | Dependabot vigila `github-actions`. Falta fijarlas por SHA | 🟡 Pendiente (P-3) | G |
-| A-22 | **S / E** | Con `JWT_SECRET` filtrado se firma un token de admin de cualquier tienda | Secreto de Dokploy | Baja | ≥32 caracteres obligatorio en producción y `alg: none` rechazado (prueba). Falta el procedimiento de rotación | 🟡 Pendiente (P-4) | M |
+| A-22 | **S / E** | Con `JWT_SECRET` filtrado se firma un token de admin de cualquier tienda | Secreto de Dokploy | Baja | ≥32 caracteres obligatorio en producción y `alg: none` rechazado (prueba). Procedimiento de rotación documentado: [§8](#8-procedimiento-de-rotación-de-jwt_secret-p4-28102026) | ✅ Mitigada (28/10) | M |
 | A-23 | **I** | Un secreto termina en un commit | `.env`, `CUENTAS_TIENDA`, credenciales de Garage | Baja | `.env` ignorado y `.env.example` sin valores. Falta activar *secret scanning* y *push protection* en GitHub | 🟡 Pendiente (P-2) | G |
 | A-24 | **I** | Un XSS ejecuta código en la app | Contenido mostrado en la PWA | Baja | El token ya está fuera del alcance de JavaScript (cookie `httpOnly`) y React escapa el contenido. Sin CSP `script-src`: Next exige nonces por petición | ✅ Aceptada (arc42 §14) | G |
 | A-25 | **I** | Quien obtenga una copia de la base ve PIN y tokens de seguimiento en claro | Copia de PostgreSQL | Baja | La base solo vive en la red interna de Dokploy (ADR-0014); el PIN es de un solo uso | ✅ Aceptada (arc42 §14) | M |
@@ -228,7 +228,7 @@ usa asistentes de código:
 | P-1 | Middleware `rateLimit` de Traefik por IP, con tope de tamaño del cuerpo | A-17 | Dokploy → dominio → Middlewares | M | 04/11/2026 (antes de medir en S14) |
 | P-2 | Activar *secret scanning* y *push protection* | A-23 | GitHub → Settings → Code security | G | 31/10/2026 |
 | P-3 | Fijar las acciones por SHA y `node:22-alpine` por digest | A-19, A-21 | `.github/workflows/*.yml`, `*/Dockerfile` | G | 08/11/2026 |
-| P-4 | Procedimiento de rotación de `JWT_SECRET` | A-22 | `docs/` | M | 08/11/2026 |
+| P-4 | Procedimiento de rotación de `JWT_SECRET` — **HECHO el 28/10, se adelantó**: queda en [§8](#8-procedimiento-de-rotación-de-jwt_secret-p4-28102026) de este documento | A-22 | `docs/evidencias/evidencias-s13.md` §8 | M | ✅ 28/10/2026 (comprometía 08/11) |
 | P-5 | Guardar la versión del aviso aceptada con la cuenta | §7.4 | `usuarios` + `POST /auth/registro` | G | Entrega final |
 | P-6 | Validar ADR-0030 y este complemento en la sesión STRIDE del laboratorio | — | — | Ambos | 31/10/2026 |
 
@@ -258,3 +258,64 @@ Además:
   `/privacidad` y «Crear cuenta» se revisaron en móvil (375 px).
 - No verificado: la imagen Docker con `USER node` (no hay Docker local) ni el SBOM dentro del
   CI.
+
+---
+
+## 8. Procedimiento de rotación de `JWT_SECRET` (P-4, 28/10/2026)
+
+Procedimiento operativo que cierra [A-22](#3-tabla-stride-priorizada): qué hacer si el secreto
+que firma los tokens de sesión (ADR-0021) se filtra, se escapa en un log o termina el corte.
+**Regla de entrada: el secreto NUNCA vive en el repositorio ni en los prompts** — vive en
+Dokploy → backend → Environment, como las demás variables `JWT_*`.
+
+### 8.1 Pasos (10–15 minutos, sin tocar código)
+
+1. **Generar el secreto nuevo, localmente en el equipo de quien lo rota** (no en servidores,
+   no en chats): `openssl rand -hex 32` — son los ≥32 caracteres que exige la prueba en
+   vigor. Si se genera en la terminal web de Dokploy, limpiar el historial del terminal
+   después.
+2. **Dokploy → backend → Environment**: editar la variable `JWT_SECRET` con el valor nuevo
+   y **Redeploy**. El reinicio limpia el estado en memoria (contadores de intentos: riesgo
+   declarado A-13 y evidencias-s12 O-04/O-12 — se acepta en la ventana de rotación).
+3. **Verificar la sesión nueva en dos minutos con**: 
+   - `POST /auth/sesion` (login) responde `200` con token nuevo;
+   - un token ANTERIOR responde `401` en `GET /auth/yo` (firma con el secreto viejo ya no
+     valida — es exactamente el efecto buscado si el secreto se filtró);
+   - el panel sigue operativo con el login nuevo (una cuenta de tienda en el panel da 200).
+4. **Registrar** la rotación (fecha y motivo, nunca el valor) en `correcciones.md` del día.
+   Si la fuga sucedió fuera de Dokploy (ej. un log de un run de CI), abrir issue para buscar
+   dónde quedó impreso y borrar el artefacto.
+
+### 8.2 Qué le pasa a los usuarios en la rotación
+
+- **Todas las sesiones activas se invalidan de golpe**: el siguiente click de cualquier
+  usuario cae en pantalla de login (el BFF traduce el 401 del backend, no hay error técnico
+  visible). Es un costo aceptado y documentado: el sistema no ofrece sesión simultánea con
+  dos secretos porque el secreto viejo se considera comprometido por definición del
+  procedimiento.
+- El carrito en construcción SIEMPRE se pierde (vive en la sesión). Comunicarlo es decisión
+  de producto: para la demo del curso, rotar antes de la demo o después, nunca en medio.
+- La idempotencia de pedidos y los pedidos existentes NO dependen del secreto (viven en la
+  base y en la memoria del proceso — ADR-0026): la rotación no toca datos.
+
+### 8.3 ¿Cuándo rotar?
+
+| Motivo | Acción |
+|---|---|
+| **Inmediato** | Sospecha o evidencia de fuga del valor (log, chat, commit, artifact) |
+| **Programada** | Al final de cada corte (3 veces en el semestre) y al terminar la entrega final — práctica pedagógica de cierre |
+| **Opcional** | Si se cambia el algoritmo de firma (hoy HMAC-SHA256 propio, ADR-0021) |
+
+### 8.4 Lo que NO hace este procedimiento (declarado)
+
+- No cifra de más: el secreto vive en el Environment del panel de Dokploy, como las demás
+  variables (`DATABASE_URL`, `GARAGE_*`); la amenaza residual real es quién pueda leer ese
+  panel, y se mitiga con la cuenta personal del equipo (no compartida) y el 2FA del
+  proveedor si el plan lo ofrece.
+- No soporta llaves múltiples ni rotación gradual (`kid` por token): sobreingeniería para
+  un monolito de una instancia (criterio ADR-0019). Con más de una instancia del backend
+  la rotación se aplica por red de seguridad.
+- No cubre la sesión ya copiada del navegador de otro (token VÁLIDO en la cookie ajena):
+  eso no lo arregla rotar el secreto, lo arregla cerrar la sesión (salir borra la cookie)
+  y la expiración del token a los 7 días. Queda registrado como límite del modelo de
+  sesión en ADR-0021.

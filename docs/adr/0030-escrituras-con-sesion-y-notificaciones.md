@@ -1,6 +1,6 @@
 # 0030 — `POST /notificaciones` exige la sesión de la tienda y ninguna ruta de escritura queda sin sesión
 
-- **Estado:** propuesto (pendiente de validación del equipo)
+- **Estado:** aceptado (28/10/2026; la validación grupal de la sesión STRIDE del 31/10, P-6, sigue siendo el paso de cierre)
 - **Fecha:** 2026-10-28
 - **Decide:** Equipo LaPlacita
 - **Escenario relacionado:** ESC-02 (aislamiento por tienda), ESC-03

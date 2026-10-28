@@ -1205,3 +1205,17 @@ Verificado en local sobre el código ya unido con `master`:
 | El registro pide la autorización | En `/cuenta` → Crear cuenta, el formulario no se envía sin marcar la casilla |
 | El SBOM queda en el run | GitHub → Actions → el run del PR → Artifacts: aparece `sbom` |
 | Ajustes de GitHub pendientes (P-2) | GitHub → Settings → Code security: *secret scanning* y *push protection* activados |
+
+---
+
+## Sesión del 28/10 (2) — cierre de los 5 pendientes de 20 minutos (Mateo)
+
+Trabajo sin código (documento + script) tras el merge del PR #24, con el servidor del laboratorio CAÍDO (521 de Cloudflare en PWA y backend desde las ~18:20 — no es un defecto del deploy de S13; el CI/Deploy del merge dieron success antes de la caída).
+
+1. **Trazabilidad del «ADR-0027» fantasma**: el commit `7f047df` menciona «rutas v1 de tienda con sesión (ADR-0027)» pero no existe ningún archivo ADR-0027 — todo su contenido quedó documentado en el **ADR-0030** (que sustentó el PR #24). La numeración 0027 se deja VACÍA a propósito: renumejar equivaldría a inventar historia; este párrafo es la explicación a la que apuntará la sustentación si el docente cruza commits↔ADRs.
+2. **ADR-0030 aceptado** (firma del lado backend; la validación grupal sigue siendo P-6 para la sesión STRIDE del 31/10). Fila de arc42 §9 atualizada a «Aceptado».
+3. **ADR-0031 nuevo** (`0031-sin-etag-ni-listen-notify.md`): formaliza la decisión de S12 que quedó declarada pero sin ADR — NO se implementan ETag ni LISTEN/NOTIFY con una sola instancia (el catálogo corre write-through en memoria y el evento de pedido ya vive dentro del proceso con DLQ, ADR-0026). Incluye los 3 gatillos que reabren la decisión (instancia múltiple, ESC que mida ancho de banda de catálogo, catálogo grande). Fila en arc42 §9.
+4. **P-4 hecho** (se adelantó del 08/11): apéndice §8 en `evidencias-s13.md` con el procedimiento de rotación de `JWT_SECRET` — pasos en Dokploy (generar con `openssl rand -hex 32`, editar Environment, Redeploy), el efecto esperado (las sesiones activas se invalidan, 401 en tokens viejos, pérdida del carrito en curso), y verificación. Filas A-22 (→ mitigada) y P-4 (→ hecho) actualizadas. Queda declarado: el procedimiento está ESCRITO, no ensayado; la primera rotación de prueba va con el cierre del corte.
+5. **Esqueleto `backend/scripts/medir-carga.js`** (arranque S14): oleada concurrente de peticiones con fases «lectura» (catálogo, sin efectos) y «escritura» (pedidos con sesión e Idempotency-Key única, S11); reporta p50/p95/p99, rendimiento y estatus. Sin dependencias nuevas (fetch nativo, mismo criterio de cero dependencias que ADR-0021; el plan decía autocannon — se decide igual que con jose/bcryptjs). Lleva dos TODO explícitos: el umbral ESC-01 (99 % procesado, < 1 % duplicados/perdidos) se contrasta contra la cola vía /metricas, y NO se debe correr la fase escritura antes de desplegar P-1 (rate limit por IP, 04/11).
+
+Batácora: fila «28/10/2026 (2)» en `docs/ia.md` (GLM/OpenCode, 6 prompts del día). Próxima acción del equipo cuando vuelva el servidor: verificar `/privacidad` (200) y `x-frame-options: DENY` en producción.
