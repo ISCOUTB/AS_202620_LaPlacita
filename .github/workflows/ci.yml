@@ -155,6 +155,15 @@ jobs:
 
     sonar:
         runs-on: ubuntu-latest
+        # ADR-0016: el Quality Gate es bloqueante en master (el push corre el
+        # análisis y publica el estado del gate). En los PRs el job no corre:
+        # el análisis de los PRs de Dependabot fallaba de forma sistemática
+        # porque el SONAR_TOKEN no está disponible en esos runs (límite de
+        # GitHub) y bloqueaba merges de dependencias cuyo test, audit y
+        # contract-test sí pasaban. La cobertura de un PR queda cubierta por
+        # el resto del pipeline y el gate final siempre se registra en el
+        # push a master.
+        if: github.event_name == 'push'
         needs: [test, contract-test]
         env:
             SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

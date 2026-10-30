@@ -1219,3 +1219,17 @@ Trabajo sin código (documento + script) tras el merge del PR #24, con el servid
 5. **Esqueleto `backend/scripts/medir-carga.js`** (arranque S14): oleada concurrente de peticiones con fases «lectura» (catálogo, sin efectos) y «escritura» (pedidos con sesión e Idempotency-Key única, S11); reporta p50/p95/p99, rendimiento y estatus. Sin dependencias nuevas (fetch nativo, mismo criterio de cero dependencias que ADR-0021; el plan decía autocannon — se decide igual que con jose/bcryptjs). Lleva dos TODO explícitos: el umbral ESC-01 (99 % procesado, < 1 % duplicados/perdidos) se contrasta contra la cola vía /metricas, y NO se debe correr la fase escritura antes de desplegar P-1 (rate limit por IP, 04/11).
 
 Batácora: fila «28/10/2026 (2)» en `docs/ia.md` (GLM/OpenCode, 6 prompts del día). Próxima acción del equipo cuando vuelva el servidor: verificar `/privacidad` (200) y `x-frame-options: DENY` en producción.
+
+---
+
+## Sesión 30/10 — demo S13 y desbloqueo de pendientes (Mateo)
+
+Día de la entrega de la semana (demo del viernes 30). Trabajo de preparación, sin código de dominio:
+
+1. **Guion de la demo** (`docs/evidencias/demo-s13-viernes-30.md`): tesis de 3 puertas (cuenta / dueño / tienda), 5 pasos con tiempos, checklist previo de 6, plan B por caída del servidor, anclaje a `seguridad-s13.test.js` y bitácora post-demo.
+2. **Hallazgo del CI en los Dependabot PRs** (al ver por qué no se podían cerrar #16/#17/#27/#28): los 5 jobs de calidad (test, audit, contract, frontend) PASAN y el que FALLA en todo PR de Dependabot es el análisis de SonarCloud — el `SONAR_TOKEN` no está disponible en los runs de esos PRs (límite documentado de GitHub). **Corrección**: el job `sonar` ahora corre solo en push a master (ADR-0016: el gate es bloqueante en master; el PR ya queda cubierto por el resto del pipeline). Los PRs de Dependabot quedan desbloqueados: hacer el push y que los PRs rebasados corran el CI completo en verde.
+3. **Guía P-1** (`docs/despliegue-rate-limit-traefik.md`): middleware exacto para el panel (rateLimit average 5/s, burst 25, ipStrategy depth 1 tras Cloudflare + max-body 1 MiB para no romper las subidas de imagen de 512 KB), pasos de aplicación a los dos dominios, verificación (429 del borde sin JSON) y registro de cierre.
+4. **Guía de la sesión STRIDE del 31** (`docs/evidencias/sesion-stride-31-10.md`): agenda de 60 min (recorrido de las 25 filas por bloques, cierre de P-1..P-6, validación/firma de los ADR 0030/0031) y criterios de salida.
+5. **`medir-carga.js` validado en producción** (fase `lectura`, sin efectos: 100 GET, 33.2 resp/s, p50 154 ms / p95 716 ms / p99 737 ms, 100/100 estatus 200, 0 aborts). La herramienta de S14 quedó comprobada punta a punta; la fase escritura sigue bloqueada hasta P-1 (declarado en el script).
+
+**Acción de Mateo en el panel** (cuando toque): aplicar el P-1 con la guía; y en GitHub darle "Update branch"/`@dependabot rebase` a los PRs de Dependabot que se vayan a cerrar para que el CI verde nuevo (sin sonar) corra sobre la base actual.
