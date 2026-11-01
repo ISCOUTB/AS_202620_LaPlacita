@@ -20,10 +20,16 @@ const { token: tokenCliente } = await identidad.registrar({
   correo: `s13-${randomUUID().slice(0, 8)}@utb.edu.co`,
   nombre: 'Cliente S13',
   contrasena: 'clave-cliente-13',
+  avisoVersion: identidad.VERSION_AVISO,
 });
 
 // Lo mismo que hace rechazoFueraDeTienda con la cabecera Authorization.
 const rechazo = (token, tiendaId) => motivoDeRechazo(token ? identidad.usuarioDesdeToken(token) : null, tiendaId);
+
+test('P-5: la versión del aviso coincide en backend y frontend', () => {
+  const aviso = readFileSync(new URL('../../frontend/lib/aviso-privacidad.ts', import.meta.url), 'utf8');
+  assert.equal(aviso.match(/VERSION_AVISO = "(.+)"/)?.[1], identidad.VERSION_AVISO);
+});
 
 test('ADR-0030: sin sesión la ruta v1 responde 401', () => {
   assert.equal(rechazo(null, 'tienda-01')?.estado, 401);

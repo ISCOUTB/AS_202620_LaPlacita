@@ -489,7 +489,10 @@ priorizada en [evidencias-s13](../evidencias/evidencias-s13.md).
   - Bitácora del panel con `usuarioId` seudónimo (refuerza A-12).
   - Aviso de privacidad en `/privacidad` y autorización obligatoria al crear la cuenta
     (Ley 1581 de 2012).
-  - Riesgos aceptados y pendientes del complemento: §14.
+  - Riesgos aceptados y pendientes del complemento: §11.7 y §14.
+- **Cierre del 01/11** ([evidencias-s13 §9](../evidencias/evidencias-s13.md)): acciones del CI
+  fijadas por SHA e imagen base por digest; cada cuenta guarda la versión del aviso de privacidad
+  que aceptó.
 ---
 
 ## 9. Decisiones Arquitectónicas
@@ -800,6 +803,23 @@ Resultado: **0/300 accesos cruzados** → se cumple el umbral de ESC-02.
 | F-05 | CI → SonarCloud | Scanner no responde (gate bloqueante) | Timeout del paso + reintento propuestos |
 | F-06 | Routes → módulos (in-process) | No aplica hoy: sin red no hay respuesta parcial | Se mantiene in-process (ADR-0019, aceptado) |
 
+### 11.7. Amenazas aceptadas (S13)
+
+En la plantilla arc42 los riesgos van en esta sección; aquí se concentran las amenazas aceptadas
+del modelado de S13, con su motivo. La matriz completa está en
+[evidencias-s13 §9.1](../evidencias/evidencias-s13.md), y las condiciones de revisión en §14.
+
+| Amenaza | Elemento C4 | Riesgo (P×I) | Por qué se acepta |
+|---|---|---|---|
+| A-18: registrar el correo UTB de otra persona | API Backend Central | 2×2 = 4 | No hay servicio de correo para verificar. El daño se limita a pedir a nombre de otro, sin datos de pago |
+| A-24: sin `Content-Security-Policy` con `script-src` | App / Web Cliente | 1×3 = 3 | Next exige nonces por petición. El token ya está fuera del alcance de JavaScript |
+| A-25: PIN y token de seguimiento en claro en la base | Base de Datos Principal | 1×3 = 3 | La base solo es accesible en la red interna y el PIN es de un solo uso |
+| A-12: repudio sin retención formal de la bitácora | Portal Establecimiento y API | 1×2 = 2 | Proyecto de un semestre; la bitácora ya registra el `usuarioId` seudónimo |
+| A-13: contadores de intentos en memoria | API Backend Central | 1×2 = 2 | Con una instancia, el riesgo es la ventana de un reinicio |
+| A-14: imagen válida que explota el decodificador del navegador | App / Web Cliente | 1×2 = 2 | Quien sube es el operador de su propia tienda; el antimalware está fuera de alcance |
+| A-10: `GET /metricas` pública | API Backend Central | 1×1 = 1 | Contadores agregados sin datos personales; se usa para medir ESC-01 |
+| 16 avisos moderados de `npm audit` en el frontend | Cadena de suministro | 1×1 = 1 | Solo en herramientas de lint; 0 en producción (`--omit=dev`) |
+
 ---
 
 ## 12. Endurecimiento de A-06 — Exposición del `pin` y bypass de la máquina de estados
@@ -924,7 +944,7 @@ supera 6–8 personas o se necesita despliegue independiente. Ver
 ## 14. Riesgos y deuda técnica (S13)
 
 > En la plantilla arc42 esta es la sección 11. En este documento la §11 ya registra el reto
-> RES-05 del corte 1 y no se renumera; los riesgos van aquí. Los riesgos de S8 (R-1 a R-6)
+> RES-05 del corte 1 y no se renumera: las amenazas aceptadas se resumen en §11.7 y el detalle va aquí. Los riesgos de S8 (R-1 a R-6)
 > siguen en [semana-08 §7](../semana-08.md).
 
 ### 14.1 Amenazas aceptadas
@@ -943,9 +963,10 @@ y qué la haría cambiar. Ids de [evidencias-s13 §3 y §7](../evidencias/eviden
 | ID | Riesgo | Plan | Resp. |
 |---|---|---|---|
 | A-17 | Sin límite de peticiones por IP: *credential stuffing* y pedidos basura | Middleware `rateLimit` de Traefik en Dokploy (P-1) | Mateo |
-| A-19, A-21 | Imagen base y acciones del CI con etiquetas móviles | Fijar por digest y por SHA; Dependabot las actualiza (P-3) | Miguel |
-| A-22 | Sin procedimiento de rotación de `JWT_SECRET` | Documentarlo (P-4) | Mateo |
 | A-23 | *Secret scanning* de GitHub sin activar | Activarlo con *push protection* (P-2) | Miguel |
+| A-22 | Procedimiento de rotación de `JWT_SECRET` escrito, sin ensayar | Hacer una rotación real y registrarla (evidencias-s13 §8) | Mateo |
+
+A-19 y A-21 se cerraron el 01/11 (P-3).
 
 ---
 

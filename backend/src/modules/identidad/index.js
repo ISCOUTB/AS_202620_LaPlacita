@@ -22,6 +22,9 @@ const fallosPorCorreo = estadoCompartido('fallosPorCorreo', () => new Map());
 
 export const MAX_FALLOS = 5;
 export const VENTANA_FALLOS_MS = 15 * 60 * 1000;
+// S13 · P-5: versión vigente del aviso de privacidad (frontend/lib/aviso-privacidad.ts).
+// La cuenta guarda cuál aceptó; si el aviso cambia, se sube en los dos lados.
+export const VERSION_AVISO = '2026-10-28';
 // Correo con forma `algo@dominio.tld`, sin espacios y con una sola arroba.
 // Antes era la regex /^[^\s@]+@[^\s@]+\.[^\s@]+$/, que con entradas largas
 // puede retroceder en tiempo super-lineal (Sonar S8786); esto acepta lo mismo
@@ -73,7 +76,7 @@ function agregar(usuario) {
  * Registra una cuenta de la comunidad (rol cliente) y abre su sesión.
  * Espera a que la base confirme el alta; si falla, deshace el alta en memoria.
  */
-export async function registrar({ correo, nombre, contrasena } = {}) {
+export async function registrar({ correo, nombre, contrasena, avisoVersion } = {}) {
   const correoLimpio = String(correo ?? '').trim().toLowerCase();
   const nombreLimpio = String(nombre ?? '').trim().replace(/\s+/g, ' ');
   if (!esCorreo(correoLimpio)) throw errorCon('Escribe un correo válido', 400);
@@ -86,6 +89,7 @@ export async function registrar({ correo, nombre, contrasena } = {}) {
     throw errorCon('La contraseña debe tener al menos 8 caracteres', 400);
   }
   if (contrasena.length > 128) throw errorCon('La contraseña es demasiado larga', 400);
+  if (avisoVersion !== VERSION_AVISO) throw errorCon('Debes aceptar el aviso de privacidad vigente', 400);
   if (idPorCorreo.has(correoLimpio)) throw errorCon('Ya existe una cuenta con ese correo', 409);
 
   const usuario = {
@@ -95,6 +99,7 @@ export async function registrar({ correo, nombre, contrasena } = {}) {
     hash: cifrarContrasena(contrasena),
     rol: 'cliente',
     tiendaId: null,
+    avisoVersion,
     creadoEn: new Date().toISOString(),
   };
   // La sesión se firma ANTES de guardar: si falta JWT_SECRET (o la firma

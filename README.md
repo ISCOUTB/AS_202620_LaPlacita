@@ -6,6 +6,19 @@
 
 --- 
 
+## Sistema desplegado
+
+| Pieza | URL |
+|---|---|
+| App (PWA) | https://laplacita-app.iscoutb.dev |
+| Panel de tienda | https://laplacita-app.iscoutb.dev/panel |
+| API | https://laplacita-test.iscoutb.dev/api/v1 |
+| Documentación de la API | https://laplacita-test.iscoutb.dev/docs |
+
+Viven en Dokploy, en el servidor del laboratorio de la universidad
+([ADR-0018](docs/adr/0018-retiro-de-azure-despliegue-en-dokploy.md)). Las URL de Azure que aparecen
+más abajo son historial: ya no son el despliegue vigente.
+
 ## Índice
 - [AS\_202620\_LaPlacita](#as_202620_laplacita)
   - [](#)

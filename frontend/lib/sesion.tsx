@@ -4,6 +4,7 @@
 // token vive en una cookie httpOnly que maneja el BFF (app/api/sesion).
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
+import { VERSION_AVISO } from "@/lib/aviso-privacidad"
 
 export interface Usuario {
   id: string
@@ -57,7 +58,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const registrar = useCallback(async (nombre: string, correo: string, contrasena: string) => {
-    const usuario = await pedirSesion({ accion: "registrar", nombre, correo, contrasena })
+    const usuario = await pedirSesion({ accion: "registrar", nombre, correo, contrasena, avisoVersion: VERSION_AVISO })
     setEstado({ usuario, cargando: false })
   }, [])
 
