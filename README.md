@@ -1,10 +1,27 @@
-# AS_202620_LaPlacita
-> Plataforma de pre-pedidos y recolección (Click &amp; Collect) para las cafeterías del campus universitario.
+# LaPlacita
 
-![Estado](https://img.shields.io/badge/Estado-En%20desarrollo-yellow)
-![Click & Collect](https://img.shields.io/badge/Click%20%26%20Collect-Pre--Pedidos-success)
+> Plataforma de pre-pedidos y recolección (Click & Collect) para las cinco tiendas de comida del
+> campus de la Universidad Tecnológica de Bolívar.
 
---- 
+[![CI](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/workflows/ci.yml)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=ISCOUTB_AS_202620_LaPlacita&metric=alert_status)](https://sonarcloud.io/project/overview?id=ISCOUTB_AS_202620_LaPlacita)
+
+Proyecto del curso Arquitecturas de Software, 2026-2. Hoy el proyecto va en la Semana 14
+(evaluación y medición); la entrega final es en la Semana 15.
+
+## Índice
+
+- [Sistema desplegado](#sistema-desplegado)
+- [Problema y objetivos](#problema-y-objetivos)
+- [Qué hace el sistema](#qué-hace-el-sistema)
+- [Arquitectura](#arquitectura)
+- [Cómo ejecutar en local](#cómo-ejecutar-en-local)
+- [Cómo probar](#cómo-probar)
+- [Despliegue](#despliegue)
+- [Estructura del repositorio](#estructura-del-repositorio)
+- [Documentación](#documentación)
+- [Estado del proyecto](#estado-del-proyecto)
+- [Equipo](#equipo)
 
 ## Sistema desplegado
 
@@ -12,441 +29,322 @@
 |---|---|
 | App (PWA) | https://laplacita-app.iscoutb.dev |
 | Panel de tienda | https://laplacita-app.iscoutb.dev/panel |
-| API | https://laplacita-test.iscoutb.dev/api/v1 |
-| Documentación de la API | https://laplacita-test.iscoutb.dev/docs |
+| URL base de la API | `https://laplacita-test.iscoutb.dev/api/v1` |
+| Documentación de la API (Swagger) | https://laplacita-test.iscoutb.dev/docs |
+| Verificación | https://laplacita-test.iscoutb.dev/api/v1/health |
 
-Viven en Dokploy, en el servidor del laboratorio de la universidad
-([ADR-0018](docs/adr/0018-retiro-de-azure-despliegue-en-dokploy.md)). Las URL de Azure que aparecen
-más abajo son historial: ya no son el despliegue vigente.
+Todo vive en Dokploy, en el servidor del laboratorio de la universidad
+([ADR-0018](docs/adr/0018-retiro-de-azure-despliegue-en-dokploy.md)). El panel requiere una cuenta
+de tienda; esas cuentas no se registran desde la app.
 
-## Índice
-- [AS\_202620\_LaPlacita](#as_202620_laplacita)
-  - [](#)
-  - [Índice](#índice)
-  - [Descripción](#descripción)
-  - [Funcionalidades Clave del Sistema](#funcionalidades-clave-del-sistema)
-  - [Impacto Operativo y Beneficios](#impacto-operativo-y-beneficios)
-  - [Problema](#problema)
-  - [Objetivos](#objetivos)
-    - [Objetivo General](#objetivo-general)
-    - [Objetivos Específicos](#objetivos-específicos)
-  - [Usuarios](#usuarios)
-  - [Funcionalidades principales](#funcionalidades-principales)
-  - [Visualización](#visualización)
-  - [Documentación](#documentación)
-    - [Estructura del repositorio](#estructura-del-repositorio)
-    - [Trazabilidad y enlaces a documentación](#trazabilidad-y-enlaces-a-documentación)
-  - [Equipo de desarrollo](#equipo-de-desarrollo)
-  - [Estado actual del proyecto](#estado-actual-del-proyecto)
-  - [Cómo ejecutar](#cómo-ejecutar)
-    - [Pruebas](#pruebas)
-    - [Corte vertical ejecutable](#corte-vertical-ejecutable)
-  - [Guía paso a paso para ejecutar el proyecto](#guía-paso-a-paso-para-ejecutar-el-proyecto)
+## Problema y objetivos
 
----
+Hoy, para comprar en las tiendas del campus hay que ir hasta el punto de venta, hacer fila para
+pedir y volver a esperar mientras preparan el pedido. Entre clases solo hay de 5 a 10 minutos.
+La definición completa está en la [ficha del problema](docs/ficha_del_problema.md).
 
-## Descripción
+**Objetivo general:** gestionar pedidos anticipados con un sistema Click & Collect, para reducir
+la espera en las horas pico.
 
-LaPlacita es una plataforma digital diseñada con el fin de optimizar la experiencia de compra en las cafeterías de la institución mediante un sistema de **Pre-pedidos y Recolección (Click & Collect)**. 
+**Objetivos específicos:**
 
-La solución integra una aplicación para cubrir las cinco tiendas que conforman la zona de comidas del campus, permitiendo que estudiantes, docentes y personal administrativo puedan consultar los menús disponibles, realizar pedidos anticipados, conocer el tiempo estimado de preparación y recoger su compra sin hacer filas que llevan mucho tiempo debido a la aglomeración de personas.
-
-El proyecto busca disminuir relativamente los tiempos de espera durante las horas de mayor demanda, y mejorar la organización de los establecimientos y brindar una experiencia verdaderamente grata con compras más cómoda, rápida y eficiente.
-
----
-
-## Funcionalidades Clave del Sistema
-
-* **Catálogo Unificado y Menús Dinámicos:** Acceso directo a la oferta gastronómica actualizada de las 5 tiendas, incluyendo alertas de disponibilidad de productos en tiempo real.
-* **Notificaciones de Estado:** Avisos automáticos que informan al usuario el estado de su orden (*Recibido*, *En preparación*, *Listo para recoger* y *Entregado*).
-* **Gestión Eficiente de Tiempos:** Algoritmo de estimación de demora que calcula el tiempo de entrega según el flujo y la carga de trabajo en cocina de cada establecimiento.
-* **Punto de Recolección Rápida:** Validación agilizada en ventanilla mediante número de confirmación para una entrega sin fricciones.
-
----
-
-## Impacto Operativo y Beneficios
-
-* **Para la Comunidad Universitaria:** Reducción drástica del tiempo perdido en filas durante los recesos y cambios de clase, permitiendo un uso más eficiente del tiempo libre dentro del campus.
-* **Para los Establecimientos:** Optimización del flujo de trabajo en cocina al recibir pedidos de forma distribuida, reduciendo la congestión en el mostrador y mejorando la capacidad de atención en horas de alta demanda.
----
-
-## Problema 
-Actualmente los usuarios de las cafeterías del campus deben desplazarse hasta los puntos destinados para la venta, esperar en largas filas para realizar el pedido y posteriormente esperar nuevamente mientras este es preparado.
-
----
-
-## Objetivos 
-### Objetivo General
-Desarrollar una plataforma digital que permita gestionar pedidos anticipados en las cafeterías de LaPlacita mediante un sistema **Click &amp; Collect**, Optimizando el proceso de compra y reduciendo los tiempos de espera en largas filas. 
-
-### Objetivos Específicos
-- Facilitar la consulta de menús.
+- Facilitar la consulta de los menús de las cinco tiendas.
 - Reducir las filas en horas pico.
-- Informar el estado del pedido en tiempo real.
-- Garantizar una entrega segura mediante un PIN. 
+- Informar al cliente el estado de su pedido.
+- Garantizar una entrega segura mediante un PIN.
 
----
+**Usuarios:** estudiantes, docentes y personal administrativo con correo `@utb.edu.co`, y el
+personal de cada tienda.
 
-## Usuarios
-Plataforma está dirigida a la comunidad educativa:
+**Tiendas:** El Mesón, El Asa'o, Punto Fit, Alegría y Antojos.
 
-- Estudiantes
-- Docentes
-- Personal Administrativo
-- Visitantes autorizados del campus
+## Qué hace el sistema
 
----
+**En la app del cliente:**
 
-## Funcionalidades principales 
-- Consulta de menú.
-- Búsqueda de productos.
-- Creación de pedidos.
-- Tiempo estimado de preparación.
-- Seguimiento del estado del pedido.
-- Notificaciones al usuario.
-- Validación mediante PIN.
-- Historial de pedidos.
-- Administración de establecimientos.
-- Administración de productos. 
+- Muestra las cinco tiendas, abiertas o cerradas según la hora de Colombia, y su menú por categoría.
+  Los productos agotados aparecen en gris.
+- Permite crear una cuenta con correo institucional, tras aceptar el
+  [aviso de privacidad](https://laplacita-app.iscoutb.dev/privacidad).
+- Permite armar un carrito y hacer el pedido. Cada línea del carrito crea un pedido del contrato v1.
+- Muestra el seguimiento del pedido, actualizado cada 3 segundos, con código corto (A01 a Z99).
+- Muestra el PIN de retiro solo a su dueño y solo cuando el pedido está Listo.
+- Guarda el historial en «Mis pedidos». Se instala como PWA.
 
---- 
+**En el panel de cada tienda (`/panel`):**
 
-## Visualización 
-Los diagramas de arquitectura C4 están disponibles en:
+- Pedidos en vivo con aviso sonoro: confirmar pago, marcar Listo y entregar con el PIN que dicta
+  el cliente.
+- Menú: el rol `trabajador` marca agotados; el rol `admin` además cambia precios y fotos.
+- Resumen del día.
 
-* **Nivel 1 (Contexto):** [`docs/c4/contexto.md`](docs/c4/contexto.md)
-* **Nivel 2 (Contenedores):** [`docs/c4/contenedores.md`](docs/c4/contenedores.md)
+**Estados del pedido:** Recibido → En preparación → Listo → Entregado.
 
-Los prototipos de interfaz están planeados para el Corte 2 (contendores App/Web, Portal, Redis y PostgreSQL marcados como `planeado` en el C4).
+**Lo que no hace, a propósito o por ahora:**
 
----
+| No incluye | Situación |
+|---|---|
+| Pago real | Es simulado: no se tratan datos de tarjeta |
+| Tiempo estimado de preparación | No implementado |
+| Notificaciones push o por correo | El historial se ve dentro de la app; no hay servicio de correo ni de push |
+| Búsqueda de productos | No implementada; el menú se filtra por categoría |
+| Componente de IA generativa | Descartado en el producto ([ADR-0012](docs/adr/0012-no-incorporar-componente-generativo.md)) |
+| Redis | Descartado: la caché del catálogo vive en el proceso ([ADR-0031](docs/adr/0031-sin-etag-ni-listen-notify.md)) |
+
+## Arquitectura
+
+**Monolito modular** con capas internas por módulo
+([ADR-0001](docs/adr/0001-adopcion-monolito-modular.md)), sin extracción a servicios
+([ADR-0019](docs/adr/0019-no-extraccion-a-servicios.md)). El dominio vive en
+`backend/src/modules`, y las rutas HTTP de `backend/app/api/v1` son solo adaptadores del contrato.
+
+| Pieza | Tecnología | Decisión |
+|---|---|---|
+| Frontend y panel | Next.js 16, TypeScript, Tailwind, shadcn/ui, service worker propio | [ADR-0017](docs/adr/0017-frontend-nextjs-pwa-shadcn.md) |
+| API | Next.js 16 (route handlers) sobre Node.js 22, JavaScript ESM | [ADR-0001](docs/adr/0001-adopcion-monolito-modular.md) |
+| Datos | PostgreSQL en Dokploy, con estado del dominio en memoria y rehidratación al arrancar | [ADR-0014](docs/adr/0014-base-de-datos-postgresql-dokploy.md), [ADR-0026](docs/adr/0026-escrituras-at-least-once-y-creacion-confirmada.md) |
+| Imágenes | Garage S3 en la red interna | [ADR-0028](docs/adr/0028-almacen-imagenes-garage-dokploy.md) |
+| Sesión | JWT propio con `node:crypto`, en cookie `httpOnly` a través de un BFF | [ADR-0021](docs/adr/0021-identidad-cuentas-y-sesion-jwt.md) |
+| Calidad | GitHub Actions y SonarCloud con Quality Gate bloqueante | [ADR-0016](docs/adr/0016-quality-gate-sonarcloud-bloqueante.md) |
+
+**Módulos del backend:** `catalogo`, `pedidos`, `pagos`, `entrega`, `notificaciones`, `identidad`
+y `almacen`.
+
+**Reglas que sostienen el diseño:**
+
+- Aislamiento por tienda: una tienda nunca toca los datos de otra, y en el panel el `tiendaId`
+  sale siempre del token ([ADR-0004](docs/adr/0004-aislamiento-por-establecimiento.md),
+  [ADR-0023](docs/adr/0023-panel-de-tienda.md)).
+- Superficie pública mínima: ninguna ruta de escritura queda sin sesión, salvo registro, ingreso
+  y `POST /pedidos` del contrato v1. Una prueba falla si aparece otra
+  ([ADR-0029](docs/adr/0029-superficie-publica-minima.md),
+  [ADR-0030](docs/adr/0030-escrituras-con-sesion-y-notificaciones.md)).
+
+Diagramas C4: [contexto](docs/c4/contexto.md), [contenedores](docs/c4/contenedores.md) y
+[componentes](docs/c4/componentes.md). Arquitectura completa en [arc42](docs/arc42/arc42-template-EN.md).
+
+## Cómo ejecutar en local
+
+**Requisitos:** [Node.js](https://nodejs.org/) 22 o superior con npm, y Git. PostgreSQL es
+opcional: sin `DATABASE_URL` el sistema corre en memoria y los datos se pierden al reiniciar.
+
+```bash
+git clone https://github.com/ISCOUTB/AS_202620_LaPlacita.git
+```
+
+```bash
+cd AS_202620_LaPlacita
+```
+
+### 1. Backend
+
+Un solo comando, desde la raíz del repositorio:
+
+```bash
+cd backend && npm install && npm run dev
+```
+
+Queda en http://localhost:3000. La raíz redirige a `/docs`, y
+http://localhost:3000/api/v1/health debe responder `{"status":"ok"}`.
+
+### 2. Frontend
+
+En otra terminal, también desde la raíz:
+
+```bash
+cd frontend && npm install && npm run dev -- -p 3001
+```
+
+Abre http://localhost:3001. El `-p 3001` es necesario porque el backend ya ocupa el 3000. Por
+defecto el frontend busca el backend en `http://localhost:3000`, así que no hay que configurarlo.
+
+### 3. Entrar al panel (opcional)
+
+Las cuentas de tienda se crean al arrancar el backend. Crea el archivo `backend/.env.local`, que
+git ignora, con una cuenta de prueba, y reinicia el backend:
+
+```text
+CUENTAS_TIENDA=tienda-01|admin|admin@laplacita.test|clave-local-123|Admin Local
+```
+
+Después entra a http://localhost:3001/panel con ese correo y esa contraseña.
+
+### Variables de entorno
+
+No copies `backend/.env.example` tal cual para desarrollar: fija `NODE_ENV=production`. Es la
+plantilla del despliegue. Ninguna variable es obligatoria en local.
+
+**Backend**
+
+| Variable | Para qué | Obligatoria en producción |
+|---|---|---|
+| `DATABASE_URL` | Conexión a PostgreSQL | Sí |
+| `JWT_SECRET` | Firma de las sesiones, mínimo 32 caracteres. En local, si falta, se genera uno por proceso | Sí |
+| `CUENTAS_TIENDA` | Cuentas del personal: `tiendaId\|rol\|correo\|contraseña\|Nombre` separadas por `;` | Sí |
+| `DOMINIOS_CORREO` | Dominios admitidos en el registro; por defecto `utb.edu.co` | No |
+| `GARAGE_API_URL`, `GARAGE_REGION`, `GARAGE_BUCKET`, `GARAGE_ACCESS_KEY_ID`, `GARAGE_SECRET_ACCESS_KEY` | Almacén de imágenes. Sin ellas, las imágenes viven en memoria | Sí, para conservar las fotos |
+
+**Frontend**
+
+| Variable | Para qué |
+|---|---|
+| `BACKEND_URL` | URL del backend; se lee al ejecutar, no al compilar. Por defecto `http://localhost:3000` |
+
+### Compilar para producción
+
+```bash
+cd backend && npm run build && npm start
+```
+
+`npm start` exige `JWT_SECRET` para poder iniciar sesión. El frontend se compila igual desde
+`frontend/`. Los dos tienen `Dockerfile`, y son los que usa el despliegue.
+
+## Cómo probar
+
+### Pruebas automatizadas
+
+Backend:
+
+```bash
+cd backend && npm test
+```
+
+Solo la prueba de contrato contra `backend/openapi.yaml`:
+
+```bash
+cd backend && npm run contract-test
+```
+
+Frontend:
+
+```bash
+cd frontend && npm run lint && npm run build
+```
+
+Las pruebas que necesitan base de datos se omiten si no hay `DATABASE_URL`; en el CI corren contra
+un PostgreSQL real. Para correrlas en local, define esa variable antes de `npm test`.
+
+### Pipeline
+
+[`ci.yml`](.github/workflows/ci.yml) corre en cada push y pull request a `master`:
+
+| Job | Qué hace |
+|---|---|
+| `test` | Pruebas del backend con PostgreSQL |
+| `contract-test` | Contrato OpenAPI |
+| `frontend` | Lint y build de la PWA |
+| `audit` | `npm audit --audit-level=high` y SBOM de los dos paquetes |
+| `sonar` | Análisis de SonarCloud y Quality Gate; solo en push a `master` |
+
+Resultado público del análisis en
+[SonarCloud](https://sonarcloud.io/project/overview?id=ISCOUTB_AS_202620_LaPlacita).
+
+### Recorrer el flujo a mano
+
+Sin levantar la app, este comando recorre todo el dominio, de catálogo a entrega con PIN:
+
+```bash
+cd backend && node src/corte-vertical.js
+```
+
+Para probar la API desde el navegador, usa `/docs`. Para verificar el sistema desplegado de punta a
+punta, sigue el [tutorial de la demo](docs/entregables/tutorial-demo.md).
+
+### Mediciones
+
+Están en `backend/scripts`. Usa siempre `--url` en los que van por red: el valor por defecto apunta
+a un despliegue real.
+
+| Script | Qué mide | Escenario |
+|---|---|---|
+| `node scripts/medir-aislamiento.js` | 300 accesos cruzados entre tiendas; el umbral es 0 | ESC-02 |
+| `node scripts/medir-persistencia.js pre 3 --url <url>`, reinicio y `post --url <url>` | Pedidos que sobreviven a un reinicio | ESC-01 |
+| `node scripts/medir-carga.js --url <url> --fase lectura` | Latencia y rendimiento. La fase `escritura` crea pedidos reales | ESC-01 |
+| `node scripts/medir-exposicion-pin.js` | **Desactualizado:** confirma pagos sin sesión y desde [ADR-0029](docs/adr/0029-superficie-publica-minima.md) falla con 403. El resultado de S9 sigue en su [evidencia](docs/evidencias/evidencias-s9.md) | ESC-03 |
+
+## Despliegue
+
+| Pieza | Cómo se publica |
+|---|---|
+| Backend | Automático: un push a `master` que toque `backend/**` pasa pruebas y contrato, y [`deploy-dokploy.yml`](.github/workflows/deploy-dokploy.yml) dispara Dokploy |
+| Frontend | Manual: botón **Deploy** en Dokploy después del merge |
+
+Las variables van en **Environment** de Dokploy, no en Build-time. Guías:
+[Garage](docs/despliegue-garage-dokploy.md) y
+[límite por IP](docs/despliegue-rate-limit-traefik.md).
+
+## Estructura del repositorio
+
+```text
+AS_202620_LaPlacita/
+├── .github/
+│   ├── dependabot.yml
+│   └── workflows/            ci.yml y deploy-dokploy.yml
+├── backend/
+│   ├── app/api/v1/           Rutas HTTP del contrato
+│   ├── app/docs/             Swagger UI
+│   ├── src/modules/          Dominio: un módulo por contexto
+│   ├── src/http/             Sesión, acceso de tienda y creación de pedidos
+│   ├── src/persistencia/     PostgreSQL y cola de escrituras
+│   ├── scripts/              Mediciones reproducibles
+│   ├── tests/                Pruebas con node:test
+│   ├── openapi.yaml          Contrato de la API
+│   ├── Dockerfile
+│   └── sonar-project.properties
+├── frontend/
+│   ├── app/                  Páginas, BFF de sesión y proxy /api/v1
+│   ├── components/           Interfaz: utb, panel, tiendas, carrito
+│   ├── lib/                  Cliente del contrato, sesión y datos de tiendas
+│   ├── public/sw.js          Service worker
+│   └── Dockerfile
+├── docs/                     Ver la tabla de Documentación
+├── correcciones.md           Hallazgos de cada revisión y cómo se corrigieron
+└── README.md
+```
+
+El detalle del frontend (pantallas y sistema visual) está en [`frontend/README.md`](frontend/README.md).
 
 ## Documentación
 
-### Estructura del repositorio 
+| Documento | Contenido |
+|---|---|
+| [Ficha del problema](docs/ficha_del_problema.md) | Problema, usuarios y alcance |
+| [arc42](docs/arc42/arc42-template-EN.md) | Arquitectura completa, escenarios de calidad y glosario |
+| [C4](docs/c4/contexto.md) | Contexto, contenedores y componentes |
+| [ADR](docs/adr/) | Decisiones de arquitectura. El número 0027 no existe: ver [`correcciones.md`](correcciones.md) |
+| [Aspectos](docs/aspectos.md) | Trazabilidad de requisito a evidencia |
+| [Dominio](docs/dominio/mapa-de-contextos.md) | Contextos, propiedad de datos y auditoría de modularidad |
+| [Evidencias](docs/evidencias/) | Evidencias semanales con sus mediciones |
+| [Entregables](docs/entregables/) | Cortes, guion de la sustentación y tutorial de la demo |
+| [Plan S12–S15](docs/plan_ejecucion/LaPlacita-plan-S12-S15.md) | Plan de ejecución hasta la entrega final |
+| [`correcciones.md`](correcciones.md) | Historial de correcciones por semana |
+| [Registro de IA](docs/ia.md) | Uso de herramientas de IA, con lo rechazado y su motivo |
 
-> **Monorepo con división backend/frontend (12/10/2026):** todo el código del sistema vive en
-> [`backend/`](backend/); [`frontend/`](frontend/) es el placeholder de la aplicación de usuario
-> (planeada para el corte 3). Las citas históricas de semanas anteriores (S1–S10) conservan las
-> rutas de su fecha; el mapa de correspondencias está en [`correcciones.md`](correcciones.md).
+Convenciones: un ADR aceptado no se edita, se reemplaza por otro; las evidencias fechadas no se
+reescriben; cada trabajo agrega su entrada en `correcciones.md` y en `docs/ia.md`.
 
-```
-  AS_202620_LaPlacita/
-  │
-  ├── .github/
-  │   └── workflows/
-  │          ├── ci.yml
-  │          └── deploy-dokploy.yml
-  ├── README.md
-  ├── correcciones.md
-  ├── backend/                      # API + dominio + pruebas (estado desplegable)
-  │   ├── Dockerfile
-  │   ├── sonar-project.properties
-  │   ├── next.config.mjs
-  │   ├── jsconfig.json
-  │   ├── package.json
-  │   ├── package-lock.json
-  │   ├── .env.example
-  │   ├── openapi.yaml              # Contrato OpenAPI 3.1 (v1)
-  │   ├── app/route.js                # redirect / → /docs
-  │   ├── app/docs/route.js           # Swagger UI (documentación interactiva de la API)
-  │   ├── app/api/v1/
-  │   │     ├── health/route.js                     # GET /api/v1/health
-  │   │     ├── catalogo/productos/[productoId]/route.js
-  │   │     ├── catalogo/tiendas/[tiendaId]/productos/route.js
-  │   │     ├── pedidos/route.js
-  │   │     ├── pedidos/[pedidoId]/route.js
-  │   │     ├── pagos/[pedidoId]/confirmar/route.js
-  │   │     ├── entrega/[pedidoId]/listo/route.js
-  │   │     ├── entrega/[pedidoId]/validar/route.js
-  │   │     ├── notificaciones/route.js
-  │   │     ├── notificaciones/[pedidoId]/route.js
-  │   │     ├── openapi/route.js                    # GET /api/v1/openapi (sirve el contrato)
-  │   │     └── metricas/route.js                   # GET /api/v1/metricas (capa HTTP del contrato)
-  │   ├── scripts/
-  │   │     ├── medir-aislamiento.js                # Medición reproducible de RES-05 (0 accesos cruzados)
-  │   │     ├── medir-exposicion-pin.js             # Medición reproducible de ESC-03 (0 exposiciones)
-  │   │     └── medir-persistencia.js               # Medición reproducible de ESC-01 (supervivencia al reinicio)
-  │   ├── src/
-  │   │     ├── health.js                           # Lógica pura del endpoint /api/v1/health
-  │   │     ├── logger.js                           # Bitácora JSON (ts, level, service, route, tiendaId, pedidoId)
-  │   │     ├── metricas.js                         # Contadores de ESC-01/03/04 para GET /api/v1/metricas
-  │   │     ├── corte-vertical.js                   # Corte vertical ejecutable (flujo completo con tiendaId)
-  │   │     ├── persistencia/index.js               # Adaptador PostgreSQL (ESC-01, ADR-0014)
-  │   │     └── modules/
-  │   │           ├── catalogo/index.js
-  │   │           ├── entrega/index.js
-  │   │           ├── notificaciones/index.js
-  │   │           ├── pagos/index.js
-  │   │           └── pedidos/index.js
-  │   └── tests/
-  │         ├── health.test.js
-  │         ├── modulos.test.js
-  │         ├── corte-vertical.test.js
-  │         ├── aislamiento.test.js
-  │         ├── contract-openapi.test.js
-  │         ├── observabilidad.test.js              # logger JSON + GET /metricas
-  │         └── persistencia.test.js                # supervivencia al reinicio (requiere PostgreSQL)
-  ├── frontend/                     # PWA de usuario (Next.js 16, en desarrollo — rama frontend-mvp)
-  └── docs/
-        ├── adr/
-        │     ├── 0001-adopcion-monolito-modular.md
-        │     ├── 0002-ratificacion-monolito-modular.md
-        │     ├── 0003-despliegue-railway-docker-sonarcloud.md
-        │     ├── 0004-aislamiento-por-establecimiento.md
-        │     ├── 0005-reajuste-contextos-propiedad.md
-        │     ├── 0006-estrategia-integracion-sincrona.md
-        │     ├── 0007-v01-v03-dueno-pin-metodos-intencion.md
-        │     ├── 0008-ratificacion-estrategia-integracion-sincrona.md
-        │     ├── 0009-despliegue-azure.md
-        │     ├── 0010-analisis-sonarcloud.md
-        │     ├── 0011-base-de-datos-universidad.md
-        │     ├── 0012-no-incorporar-componente-generativo.md
-        │     ├── 0013-proyeccion-publica-pedido-sin-pin.md
-        │     ├── 0014-base-de-datos-postgresql-dokploy.md
-        │     ├── 0015-ratificacion-ediciones-post-aceptacion.md
-        │     └── 0016-quality-gate-sonarcloud-bloqueante.md
-        ├── arc42/
-        │    ├── images/
-        │    │     └── arc42-logo.png
-        │    └── arc42-template-EN.md
-        ├── c4/
-        │    ├── contexto.md
-        │    ├── contenedores.md
-        │    └── componentes.md
-        ├── dominio/
-        │    ├── contextos-delimitados.md
-        │    ├── mapa-de-contextos.md
-        │    ├── propiedad-de-datos.md
-        │    └── auditoria-modularidad.md
-        ├── aspectos.md
-        ├── ficha_del_problema.md
-        └── ia.md
-```
-### Trazabilidad y enlaces a documentación 
-La documentación del proyecto sigue rigurosamente los lineamientos del curso y se encuentra distribuida en el repositorio de la siguiente manera:
+## Estado del proyecto
 
-* **Ficha del Problema:** [docs/ficha_del_problema.md](docs/ficha_del_problema.md) — Definición profunda del problema de las cafeterías del campus.
-* **Registro de Aspectos:** [docs/aspectos.md](docs/aspectos.md) — Tabla de trazabilidad y declaración de aspectos de desarrollo.
-* **Modelo Arc42:** [docs/arc42/](docs/arc42/arc42-template-EN.md) — Documentación arquitectónica estructurada en las secciones del estándar arc42.
-* **Decisiones de Arquitectura (ADR):** [docs/adr/](docs/adr/) — Registro histórico de decisiones técnicas adoptadas por el equipo.
-* **Diagramas C4:** [docs/c4/](docs/c4/contexto.md) — Modelos visuales y estructurados de arquitectura de software.
-* **Registro de IA:** [docs/ia.md](docs/ia.md) — Trazabilidad transparente del uso de herramientas de Inteligencia Artificial.
+| Semana | Tema | Evidencia |
+|---|---|---|
+| S1–S4 | Problema, escenarios de calidad, estrategia y corte vertical | [Semana 4](docs/entregables/entregablesemana4.md) |
+| S5 | Primer corte: aislamiento por tienda (RES-05) | [Corte 1](docs/entregables/entregable-corte1.md) |
+| S6 | Contextos delimitados y propiedad de datos | [Semana 6](docs/entregables/resumen-semana6.md) |
+| S7 | Contrato de API y prueba de contrato | [Evidencia S7](docs/evidencia-contrato-s7.md) |
+| S8 | Despliegue, operación y costos (Azure, retirado después) | [Semana 8](docs/semana-08.md) |
+| S9 | Exposición del PIN y máquina de estados | [Evidencia S9](docs/evidencias/evidencias-s9.md) |
+| S10 | Segundo corte: persistencia y disponibilidad (ESC-01) | [Evidencia S10](docs/evidencias/evidencias-s10.md) |
+| S11 | Fallos parciales, idempotencia y decisión de no extraer | [Evidencia S11](docs/evidencias/evidencias-s11.md) |
+| S12 | Consistencia, caché y mensajes | [Evidencia S12](docs/evidencias/evidencias-s12.md) |
+| S13 | Modelado de amenazas, dependencias y privacidad | [Evidencia S13](docs/evidencias/evidencias-s13.md) |
+| S14 | Medición contra umbrales y panel completo | En curso |
+| S15 | Entrega final y sustentación | Pendiente |
 
----
+Pendientes de seguridad en [evidencias-s13 §9.5](docs/evidencias/evidencias-s13.md).
 
-## Equipo de desarrollo 
+## Equipo
+
 - Mateo Josué Buendía Barrios
 - Miguel Ángel Isaza Montalvo
 - Samuel David Jiménez Álvarez
 - Jorge Alberto Martínez Castillo
-
----
-
-## Estado actual del proyecto
-
-**Corte 1 — Aislamiento estricto por establecimiento (RES-05) — (06/09/2026)**
-
-* Restricción RES-05 implementada: las operaciones de catálogo, pedidos y entrega exigen `tiendaId`; repositorios particionados por tienda en `src/modules/*` (decisión en [`docs/adr/0004-aislamiento-por-establecimiento.md`](docs/adr/0004-aislamiento-por-establecimiento.md))
-* Línea base medida sobre `812d227`: **2/2 accesos cruzados** logrados (incumplía ESC-02); post-cambio: **0/300** (cumple umbral)
-* Nueva prueba de aislamiento ([`tests/aislamiento.test.js`](backend/tests/aislamiento.test.js)) y medición reproducible ([`scripts/medir-aislamiento.js`](backend/scripts/medir-aislamiento.js))
-* Suites en verde: 13 pruebas (`npm test`); CI en GitHub Actions + paso SonarCloud (activo cuando exista `SONAR_TOKEN`) *(estado del corte 1, superado en S10: job obligatorio con token y Quality Gate bloqueante en verde — ADR-0016)*
-* Diagnóstico completo en arc42 §11 e incidencias de corte marcadas en [`correcciones.md`](correcciones.md)
-* Configuración SonarCloud pendiente: definir organización/projectKey y `SONAR_TOKEN` (ADRs y `sonar-project.properties` ya listos) *(estado del corte 1, superado en S10: org `isco-utb` vinculada y análisis en verde con gate bloqueante — ADR-0016)*
-
-**Semana 6 — Contextos delimitados y propiedad de datos (13/09/2026)**
-* Mapa DDD con C/S, OHS, SK `tiendaId` y ACL futura ([`docs/dominio/mapa-de-contextos.md`](docs/dominio/mapa-de-contextos.md), §8 en [`docs/arc42/arc42-template-EN.md`](docs/arc42/arc42-template-EN.md))
-* Tabla dueño único + auditoría V-01…V-06 con plan ([`docs/dominio/propiedad-de-datos.md`](docs/dominio/propiedad-de-datos.md), [`docs/dominio/auditoria-modularidad.md`](docs/dominio/auditoria-modularidad.md))
-* C4 nivel 3 ([`docs/c4/componentes.md`](docs/c4/componentes.md)) + ADR-0005 de reajuste; contenedores intactos
-* Trazabilidad Aspecto→Contexto en [`docs/aspectos.md`](docs/aspectos.md); correcciones en [`correcciones.md`](correcciones.md)
-* V-01 y V-03 ya implementados en código el mismo día (`pedidos.asignarPin` único escritor de `pin`; métodos de intención `confirmarPago/marcarListo/confirmarEntrega`), sin romper `corte-1` (`npm test` 14/14, aislamiento 0/300) — detalle en `correcciones.md` y ADR-0007
-* Pendiente: `SONAR_TOKEN`/organización de SonarCloud (requiere que el equipo cree el proyecto en sonarcloud.io con su cuenta) *(estado en S6, superado en S10: token activo, análisis en verde y Quality Gate público — ADR-0016 y [`docs/evidencias/evidencias-s10.md`](docs/evidencias/evidencias-s10.md))*
-
-**Semana 7 — Contrato de API y prueba de contrato (16-17/09/2026)**
-* Contrato OpenAPI 3.1 versionado en [`openapi.yaml`](backend/openapi.yaml): **10 paths / 11 operaciones REST** (health, catálogo, pedidos, pagos, entrega, notificaciones) con esquemas de request/response
-* Prueba de contrato ([`tests/contract-openapi.test.js`](backend/tests/contract-openapi.test.js), 23 tests) que valida que los módulos cumplen el contrato, que cada path tiene su `route.js`, y **falla ante cambios incompatibles**; job `contract-test` en [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
-* ADR de integración síncrona in-process ([`docs/adr/0006-estrategia-integracion-sincrona.md`](docs/adr/0006-estrategia-integracion-sincrona.md)), ratificado por [`docs/adr/0008-ratificacion-estrategia-integracion-sincrona.md`](docs/adr/0008-ratificacion-estrategia-integracion-sincrona.md)
-* Rutas HTTP en `app/api/v1/*` que delegan en `src/modules/*` (dominio puro, ADR-0001): la capa HTTP es solo el adaptador del contrato, sin lógica de negocio
-* arc42 §6 con flujos de interacción por protocolo/formato; C4 de componentes/contenedores con etiquetas HTTP REST/JSON; aspecto A-07 en [`docs/aspectos.md`](docs/aspectos.md)
-* Suites en verde: **37 pruebas** (`npm test`) y `npm run contract-test` (**23/23**)
-* Nota (estado en S7, superado en S8): en esta semana el despliegue documentado en [ADR-0003](docs/adr/0003-despliegue-railway-docker-sonarcloud.md) era Railway y aún no estaba activo, por lo que el contrato solo exponía el servidor local (`/api/v1`). Desde S8 el despliegue real es Azure Container Apps con URL pública — ver la nota de S8 y [ADR-0009](docs/adr/0009-despliegue-azure.md)
-
-**Semana 8 — Despliegue, operación y costos (24-25/09/2026)**
-* Evidencia S8 en [`docs/semana-08.md`](docs/semana-08.md): API desplegada y verificada desde fuera de la red en `https://laplacita-app.graymoss-fdd72159.canadacentral.azurecontainerapps.io` (`GET /api/v1/health` → `http=200`, 27/09/2026 18:15 COT — detalle en [`docs/evidencia-despliegue-azure.md`](docs/evidencia-despliegue-azure.md); *retirado el 13/10/2026: desde ADR-0018 la producción vive en Dokploy, URL arriba*); IaC trazada (`Dockerfile:1-17`, `.github/workflows/ci.yml`, `src/health.js`, `app/api/v1/**/route.js`, `openapi.yaml` 11 paths / 12 operaciones); pipeline `test` ✅ `contract-test` ✅ `sonar` informativo (`continue-on-error` hasta vincular org, ADR-0010 — *estado en S8, superado en S10: el job es obligatorio, corre con token y espera el Quality Gate; ver la sección de S10*); costos **0 USD/mes** (Azure Students + universidad, ruptura ×36) con supuestos S-1…S-5 y taller S8 en [ADR-0009](docs/adr/0009-despliegue-azure.md) y [ADR-0011](docs/adr/0011-base-de-datos-universidad.md)
-* Observabilidad: bitácora JSON en rutas ([`src/logger.js`](backend/src/logger.js), sin PIN ni tarjeta) + `GET /api/v1/metricas` ([`src/metricas.js`](backend/src/metricas.js): pedidos, pagos, listos, entregas, rechazos y bloqueos por ESC-01/03/04) con [`tests/observabilidad.test.js`](backend/tests/observabilidad.test.js)
-* arc42 §7 vista de despliegue (una caja por pieza + dónde se ejecuta) y §2 RES-06 (tope 5 USD/mes sin tarjeta); suites en verde: **44 pruebas** (`npm test`) y `npm run contract-test` (**23/23**)
-* T1 (SonarCloud) queda en diagnóstico y plan, no en cumplido: falta run verde + URL del Quality Gate *(superado en S10: run verde con token y Quality Gate público consultable — ver la sección de S10 y [`docs/evidencias/evidencias-s10.md`](docs/evidencias/evidencias-s10.md))*
-
-**Semana 10 — Segundo corte · ESC-01 disponibilidad de los datos vía persistencia (11/10/2026)**
-* Escenario operativo del corte declarado: **ESC-01 — Picos de demanda entre clases** ([`docs/evidencias/evidencias-s10.md`](docs/evidencias/evidencias-s10.md) §1), con hipótesis, montaje, variables y umbral **0 pedidos perdidos tras reinicio del contenedor**
-* Línea base medida contra el despliegue real de Azure: **3 pedidos creados y 0/3 supervivientes** tras el reinicio (`2026-10-12T04:03–04:16Z`) — el defecto del estado en memoria quedó evidenciado con horas (§4)
-* Decisión registrada en [ADR-0014](docs/adr/0014-base-de-datos-postgresql-dokploy.md): PostgreSQL gestionado por Dokploy en la infraestructura de la universidad, que **precisa el ADR-0011 sin modificarlo** (misma infraestructura y motor; Dokploy es la capa de gestión)
-* Persistencia implementada: adaptador [`src/persistencia/index.js`](backend/src/persistencia/index.js) (UPSERT con cola de escritura serializada, DDL con advisory lock, rehidratación al arranque, escritura en segundo plano con bitácora de fallos), puerto de rehidratación `restaurarEstadoDesde` en el módulo `pedidos` y espera de rehidratación en la ruta de lectura; sin `DATABASE_URL` el sistema conserva el modo memoria y la suite corre sin base de datos
-* Prueba de supervivencia ([`tests/persistencia.test.js`](backend/tests/persistencia.test.js)) con servicio PostgreSQL en CI; medición reproducible del experimento en [`scripts/medir-persistencia.js`](backend/scripts/medir-persistencia.js)
-* Pipeline transversal cerrado: job `sonar` obligatorio (sin `continue-on-error` ni condicional de token) con **Quality Gate público en OK** (`https://sonarcloud.io/project/overview?id=ISCOUTB_AS_202620_LaPlacita`) y bloqueante (`sonar.qualitygate.wait=true`); runs en verde: `e01991d`, `cbd4cf0`, `d25bef4`, `fda91fd`
-* Regresiones medidas tras la persistencia: ESC-02 **0/300** accesos cruzados y ESC-03 **0/100** exposiciones (§7)
-* Suites en verde: **51 pruebas** con base de datos (50 sin ella, 1 skip condicional) y `npm run contract-test` (**27/27** — superado el 12/10 en `105bb4b`: la aserción de regresión ESC-01 la sube a 28/28)
-* Pendiente al cierre del corte: experimento post-cambio contra el despliegue con base de datos (§6, Fase D) — bloqueado por el firewall del servidor de la universidad; se ejecutará en cuanto el puerto 5433 quede accesible desde Azure
-
-**Post-cierre · Reestructuración del monorepo y cierre de arrastres (12/10/2026)**
-
-* División `backend/` / `frontend/` del monorepo con `git mv` (historial preservado): todo el código del sistema vive en [`backend/`](backend/); [`frontend/`](frontend/) es el placeholder de la aplicación de usuario, planeada para el corte 3. Mapa de correspondencias de rutas en [`correcciones.md`](correcciones.md)
-* [ADR-0015](docs/adr/0015-ratificacion-ediciones-post-aceptacion.md) ratifica las ediciones post-aceptación de ADR-0003/0009/0010 (propuesto el 12/10 — *aceptado por el equipo el 18/10/2026*) y declara el reemplazo de ADR-0003 por ADR-0009 en despliegue
-* [ADR-0016](docs/adr/0016-quality-gate-sonarcloud-bloqueante.md) registra la decisión vigente del análisis estático: **Quality Gate obligatorio y bloqueante**, que reemplaza al ADR-0010; cabeceras de ADR-0003 y ADR-0010 anotadas con el estado «Reemplazado», contenido histórico intacto
-* Suites en verde tras la reestructuración y el fix ESC-01 de la Fase D: **51 pruebas** (`npm test`, 2 skip sin base de datos) y `npm run contract-test` (**28/28**); `npm run build` correcto
-* **Despliegue automático** (12/10/2026): [`.github/workflows/deploy-backend.yml`](.github/workflows/deploy-backend.yml) construye la imagen en el runner, la empuja a ACR con tag inmutable por SHA y actualiza el Container App, con health check de reintentos — se dispara por push que toque `backend/**` o manualmente (`workflow_dispatch`); detalle en [`correcciones.md`](correcciones.md) §Despliegue automático
-* **Fusión `dokploy-test` → master** (12/10/2026): fix ESC-01 (rutas de escritura esperan la rehidratación), evidencia Fase D y `/docs` quedaron en master con CI y Quality Gate en verde
-* **Frontend PWA** (12-13/10/2026): base v0 (Next.js 16 + TypeScript + shadcn/ui + SW propio) conectada al contrato real y desplegada en Dokploy; decisiones en [ADR-0017](docs/adr/0017-frontend-nextjs-pwa-shadcn.md); las ramas `frontend-mvp` y `dokploy-test` quedaron fusionadas en `master` (13/10)
-* **Entorno con base de datos** (12/10/2026): Dokploy despliega el backend en el mismo servidor del PostgreSQL, por red interna — gate de pruebas → webhook de redeploy → health check, vía [`deploy-dokploy.yml`](.github/workflows/deploy-dokploy.yml)
-* **Retiro de Azure · todo en Dokploy** (13/10/2026): el servidor del laboratorio de la universidad pasa a ser el **único despliegue** — backend, PWA y PostgreSQL en la misma red interna, sin firewall y a costo 0; decisión en [ADR-0018](docs/adr/0018-retiro-de-azure-despliegue-en-dokploy.md), que reemplaza al ADR-0009. ESC-01 queda acreditado contra esta infraestructura (3/3); el pendiente "Fase D contra Azure" queda sin objeto — detalle en [`correcciones.md`](correcciones.md) §Retiro de Azure
-
-**Semana 11 — Fallos parciales, idempotencia y decisión de extracción (17-18/10/2026)**
-
-* Tabla de modos de fallo F-01…F-06 con su mitigación y estado en arc42 §11.6 y [`docs/evidencias/evidencias-s11.md`](docs/evidencias/evidencias-s11.md) (validada por el equipo el 17/10)
-* **Idempotencia implementada** (18/10): cabecera opcional `Idempotency-Key` en `POST /pedidos` — mismo contenido → mismo pedido, otro contenido → `409`; declarada en [`backend/openapi.yaml`](backend/openapi.yaml) y probada en [`backend/tests/idempotencia.test.js`](backend/tests/idempotencia.test.js), que falla sin la clave (cierra F-01/F-02)
-* Saga coreografiada diseñada (arc42 §13.1); no aplica mientras no se extraiga ningún módulo
-* Decisión: **no extraer** módulos — [ADR-0019](docs/adr/0019-no-extraccion-a-servicios.md) (aceptado), con criterios de reevaluación declarados
-* Fix D2 de la auditoría S10: orden de escrituras por pedido garantizado ([`backend/src/persistencia/cola-escrituras.js`](backend/src/persistencia/cola-escrituras.js))
-* Suites: `npm test` **61 pruebas** (2 omitidas sin base de datos en local) y `npm run contract-test` **28/28**
-* Deuda declarada: persistir las claves de idempotencia, envío de la cabecera desde la PWA, outbox, circuit breaker y reintento del scanner
-
----
-
-## Cómo ejecutar
-
-Requiere **Node.js 22 o superior** (el proyecto usa JavaScript ESM nativo). El backend está construido sobre **Next.js** (API Routes, App Router) y vive en [`backend/`](backend/).
-
-```bash
-cd backend
-npm install && npm run dev   # comando único de arranque (instala y levanta el backend)
-```
-
-Equivalente en dos pasos:
-
-```bash
-cd backend
-npm install
-npm run dev
-```
-
-El servidor arranca en `http://localhost:3000` con un endpoint de verificación en `/api/v1/health`.
-
-Para producción:
-
-```bash
-cd backend
-npm run build
-npm start
-```
-
-### Pruebas
-
-```bash
-cd backend
-npm test
-```
-
-Estas mismas pruebas se ejecutan automáticamente en cada push o pull request mediante GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
-
-### Documentación interactiva de la API
-
-El backend expone una UI estilo FastAPI para explorar y **probar** los endpoints desde el navegador:
-
-```bash
-cd backend
-npm run dev
-# abrir http://localhost:3000/docs
-```
-
-| Ruta | Qué sirve |
-|---|---|
-| [`/docs`](http://localhost:3000/docs) | Swagger UI 5 con **Try it out** (cargada por CDN, sin dependencias npm) |
-| `/api/v1/openapi` | El contrato OpenAPI 3.1 ([`backend/openapi.yaml`](backend/openapi.yaml)) servido tal cual — única fuente, el mismo archivo que valida la prueba de contrato |
-| `/` | Redirect a `/docs` |
-
-Como el `servers` del contrato es relativo (`/api/v1`), el Try it out ejecuta los requests contra el host que sirve la página — local, el entorno de pruebas de Dokploy o producción en Azure — sin configurar nada.
-
-### Corte vertical ejecutable
-
-`backend/src/corte-vertical.js` atraviesa los 5 módulos en un solo flujo end-to-end: catálogo → pedidos → pagos → entrega → notificaciones. Todo el flujo se ejecuta en el contexto de una tienda (`tiendaId`). Simula un pedido real desde la consulta del producto hasta la entrega validada por PIN.
-
-```bash
-cd backend
-node src/corte-vertical.js
-```
-
-Salida esperada: el pedido avanza por los 4 estados (`Recibido` → `En preparación` → `Listo` → `Entregado`), se genera un PIN de 4 dígitos en el paso "Listo", y se valida ese mismo PIN en el punto de recolección. Cada cambio de estado queda registrado como notificación.
-
-### Medir el aislamiento (RES-05 / ESC-02)
-
-`backend/scripts/medir-aislamiento.js` lanza 100 ciclos × 3 accesos cruzados hacia otra tienda (300 intentos) y verifica que **ninguno** se concrete (umbral ESC-02 = 0).
-
-```bash
-cd backend
-node scripts/medir-aislamiento.js
-```
-
-Salida esperada: `accesosCruzadosLogrados: 0`, cumple umbral → termina con código `0`.
-
-> Nota: en este corte, el punto de recolección se valida solo con **PIN** (el QR fue descartado como mecanismo).
-
-> **Limitación actual:** los módulos de dominio (`src/modules/*`) mantienen su estado en memoria (`Map` por tienda, contadores y arreglos). Esto es adecuado para este corte de demostración y para las pruebas, pero el estado **no persiste** entre requests ni entre reinicios del proceso. La persistencia real (p. ej. PostgreSQL/Redis) queda pendiente para iteraciones futuras, según ADR-0001.
-
----
-
-## Guía paso a paso para ejecutar el proyecto
-
-1. **Requisitos previos**
-   - [Node.js](https://nodejs.org/) versión 22 o superior (incluye `npm`).
-   - Git instalado.
-   - Verifica tu versión de Node:
-     ```bash
-     node -v
-     ```
-
-2. **Clonar el repositorio**
-   ```bash
-   git clone https://github.com/ISCOUTB/AS_202620_LaPlacita.git
-   cd AS_202620_LaPlacita/backend
-   ```
-
-3. **Instalar las dependencias**
-   ```bash
-   npm install
-   ```
-   Esto descarga Next.js, React y el resto de dependencias declaradas en `backend/package.json`.
-
-4. **Levantar el servidor en modo desarrollo**
-   ```bash
-   npm run dev
-   ```
-   El backend queda disponible en `http://localhost:3000`.
-
-5. **Verificar que el servidor responde correctamente**
-   Abre en el navegador (o con `curl`) la siguiente URL:
-   ```
-   http://localhost:3000/api/v1/health
-   ```
-   Deberías ver la respuesta:
-   ```json
-   { "status": "ok" }
-   ```
-   > La raíz `http://localhost:3000/` redirige a `/docs` (documentación interactiva de la API). La aplicación de usuario vive en [`frontend/`](frontend/) — PWA Next.js 16 (en desarrollo, rama `frontend-mvp`); arranca con `cd frontend && npm run dev` en el puerto 3001.
-
-6. **Ejecutar las pruebas automatizadas**
-   ```bash
-   npm test
-   ```
-   Debería mostrar la prueba de `/api/v1/health` en verde. Estas mismas pruebas corren automáticamente en cada push o pull request mediante GitHub Actions.
-
-7. **(Opcional) Ejecutar el corte vertical**
-   Para ver el flujo completo de dominio (catálogo → pedidos → pagos → entrega → notificaciones) simulado por consola:
-   ```bash
-   node src/corte-vertical.js
-   ```
-
-8. **(Opcional) Compilar para producción**
-   ```bash
-   npm run build
-   npm start
-   ```

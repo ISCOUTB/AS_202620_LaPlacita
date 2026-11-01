@@ -41,11 +41,11 @@ base en `components/utb/` (botón, chip de estado, aviso, marca, encabezado, bar
 cd backend && npm install && npm run dev
 
 # terminal 2 — frontend (http://localhost:3001)
-cd frontend && npm install && npm run dev
+cd frontend && npm install && npm run dev -- -p 3001
 ```
 
-Abrir `http://localhost:3001`. En despliegue, `BACKEND_URL` apunta al backend real
-(plantilla en `.env.example`).
+Abrir `http://localhost:3001`. En despliegue, `BACKEND_URL` apunta al backend real; en local
+no hace falta definirla.
 
 ## Pantallas
 

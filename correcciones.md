@@ -1272,3 +1272,31 @@ responde 400 a un registro sin `avisoVersion`.
 | El webhook despliega de verdad | En el siguiente push a `backend/**`, el paso «Redesplegar en Dokploy» muestra 200 y Dokploy lista un despliegue con ese commit |
 | Los ajustes de GitHub (P-2) | GitHub → Settings → Advanced Security: *Secret Protection* y *Push protection* activados |
 | El límite por IP (P-1) | Verificación de `docs/despliegue-rate-limit-traefik.md` |
+
+---
+
+## README al día con el sistema (01/11/2026)
+
+El README conservaba el estado de S7–S11. Se reescribió contra el repositorio y se ejecutó en local
+lo que documenta: backend y frontend en limpio, registro, pedido, ingreso de tienda y `corte-vertical`.
+El detalle semana a semana que se retiró sigue en el historial de git y en esta bitácora.
+
+| # | Lo que decía | Lo real |
+|---|---|---|
+| 1 | Frontend «placeholder» en la rama `frontend-mvp` | PWA y panel en `master`, desplegados |
+| 2 | Estado en memoria, sin persistencia | PostgreSQL con rehidratación (ADR-0014) |
+| 3 | Tiempo estimado, búsqueda y notificaciones automáticas | No implementados; se declaran en «Lo que no hace» |
+| 4 | Workflow `deploy-backend.yml` y producción en Azure | Solo `deploy-dokploy.yml`; todo en Dokploy (ADR-0018) |
+| 5 | Rutas `entrega/*` y árbol de archivos de S10 | Retiradas (ADR-0029); árbol actualizado |
+| 6 | Frontend en el puerto 3001 con `npm run dev` | Hace falta `npm run dev -- -p 3001`; corregido también en `frontend/README.md` |
+| 7 | Sin variables de entorno ni cuentas de tienda | Tablas de variables y pasos para entrar al panel |
+
+Hallazgo: `backend/scripts/medir-exposicion-pin.js` falla con 403 desde ADR-0029, porque confirma el
+pago sin dueño. No se corrigió; quedó declarado en el README.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Los comandos del README funcionan | Seguir «Cómo ejecutar en local» en un clon limpio |
+| El panel abre con la cuenta de ejemplo | Crear `backend/.env.local` como indica el README y entrar a `/panel` |
