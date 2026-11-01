@@ -42,10 +42,10 @@ jobs:
             --health-timeout 5s
             --health-retries 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Configurar Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
           cache: 'npm'
@@ -63,11 +63,18 @@ jobs:
         run: npm run contract-test
         working-directory: backend
 
+      # Dokploy solo despliega si el webhook dice la rama como un push de GitHub
+      # (cabecera X-GitHub-Event y `ref` en el cuerpo). Sin eso responde 301
+      # «Branch Not Match» sin desplegar, y curl -f no falla con un 3xx: el paso
+      # salía en verde y el health check validaba la versión anterior. Por eso
+      # aquí se exige un 200.
       - name: Redesplegar en Dokploy
         run: |
-          echo "Disparando redeploy del backend en el laboratorio de la U..."
-          curl -fsS --max-time 30 -X POST "$DOKPLOY_TEST_WEBHOOK"
-          echo "Webhook aceptado: Dokploy reconstruye en el servidor."
+          echo "Disparando redeploy del backend ($GITHUB_SHA) en el laboratorio de la U..."
+          cuerpo=$(printf '{"ref":"refs/heads/master","after":"%s","head_commit":{"id":"%s","message":"CI %s"}}' "$GITHUB_SHA" "$GITHUB_SHA" "$GITHUB_SHA")
+          codigo=$(curl -sS --max-time 30 -o respuesta.txt -w '%{http_code}' -X POST             -H 'Content-Type: application/json' -H 'X-GitHub-Event: push'             -d "$cuerpo" "$DOKPLOY_TEST_WEBHOOK")
+          echo "Dokploy respondió $codigo: $(cat respuesta.txt)"
+          test "$codigo" = "200"
         env:
           DOKPLOY_TEST_WEBHOOK: ${{ secrets.DOKPLOY_TEST_WEBHOOK }}
 

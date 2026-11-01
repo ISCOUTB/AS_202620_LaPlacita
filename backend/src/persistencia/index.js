@@ -63,6 +63,9 @@ CREATE TABLE IF NOT EXISTS usuarios (
   tienda_id  TEXT,
   creado_en  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+-- S13 · P-5: versión del aviso de privacidad que aceptó la cuenta. NULL en las
+-- cuentas de tienda y en las creadas antes de versionar el aviso.
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS aviso_version TEXT;
 -- Catálogo editable desde el panel (ADR-0023). Se siembra con el menú del código.
 CREATE TABLE IF NOT EXISTS productos (
   producto_id    TEXT          PRIMARY KEY,
@@ -139,6 +142,7 @@ function filaAUsuario(fila) {
     hash: fila.hash,
     rol: fila.rol,
     tiendaId: fila.tienda_id ?? null,
+    avisoVersion: fila.aviso_version ?? null,
     creadoEn: fila.creado_en ? new Date(fila.creado_en).toISOString() : null,
   };
 }
@@ -192,7 +196,7 @@ async function arrancar() {
   );
   registrosCargados = rows.map(filaAPedido);
   const cuentas = await pool.query(
-    'SELECT usuario_id, correo, nombre, hash, rol, tienda_id, creado_en FROM usuarios ORDER BY creado_en',
+    'SELECT usuario_id, correo, nombre, hash, rol, tienda_id, aviso_version, creado_en FROM usuarios ORDER BY creado_en',
   );
   usuariosCargados = cuentas.rows.map(filaAUsuario);
   const menu = await pool.query('SELECT producto_id, tienda_id, nombre, precio, disponible, imagen_id, descripcion FROM productos');
@@ -329,11 +333,20 @@ export async function guardarUsuario(usuario) {
   }
   await iniciar();
   await pool.query(
-    `INSERT INTO usuarios (usuario_id, correo, nombre, hash, rol, tienda_id, creado_en)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `INSERT INTO usuarios (usuario_id, correo, nombre, hash, rol, tienda_id, aviso_version, creado_en)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      ON CONFLICT (usuario_id) DO UPDATE
      SET nombre = EXCLUDED.nombre, hash = EXCLUDED.hash, rol = EXCLUDED.rol, tienda_id = EXCLUDED.tienda_id`,
-    [usuario.id, usuario.correo, usuario.nombre, usuario.hash, usuario.rol, usuario.tiendaId, usuario.creadoEn],
+    [
+      usuario.id,
+      usuario.correo,
+      usuario.nombre,
+      usuario.hash,
+      usuario.rol,
+      usuario.tiendaId,
+      usuario.avisoVersion ?? null,
+      usuario.creadoEn,
+    ],
   );
 }
 
@@ -490,7 +503,7 @@ export async function cargarUsuarios() {
   }
   await iniciar();
   const { rows } = await pool.query(
-    'SELECT usuario_id, correo, nombre, hash, rol, tienda_id, creado_en FROM usuarios ORDER BY creado_en',
+    'SELECT usuario_id, correo, nombre, hash, rol, tienda_id, aviso_version, creado_en FROM usuarios ORDER BY creado_en',
   );
   return rows.map(filaAUsuario);
 }

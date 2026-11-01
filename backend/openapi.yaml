@@ -1232,7 +1232,10 @@ components:
           type: string
           minLength: 8
           maxLength: 128
-      required: [correo, nombre, contrasena]
+        avisoVersion:
+          type: string
+          description: Versión vigente del aviso de privacidad que el usuario aceptó (S13)
+      required: [correo, nombre, contrasena, avisoVersion]
 
     SesionRequest:
       type: object

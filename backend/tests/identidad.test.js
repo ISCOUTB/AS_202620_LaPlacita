@@ -14,6 +14,7 @@ const pedidos = await import('../src/modules/pedidos/index.js');
 const pagos = await import('../src/modules/pagos/index.js');
 const entrega = await import('../src/modules/entrega/index.js');
 
+const registrar = (datos) => identidad.registrar({ avisoVersion: identidad.VERSION_AVISO, ...datos });
 const correoNuevo = () => `prueba-${randomUUID().slice(0, 8)}@utb.edu.co`;
 
 test('la contraseña se guarda derivada con scrypt y nunca en claro', () => {
@@ -42,7 +43,7 @@ test('un token alterado, vencido o con otro algoritmo no se acepta', () => {
 
 test('registro con correo institucional abre sesión y no expone el hash', async () => {
   const correo = correoNuevo();
-  const { token, usuario } = await identidad.registrar({ correo, nombre: 'Ana Pérez', contrasena: 'clave-segura-1' });
+  const { token, usuario } = await registrar({ correo, nombre: 'Ana Pérez', contrasena: 'clave-segura-1' });
   assert.equal(usuario.correo, correo);
   assert.equal(usuario.rol, 'cliente');
   assert.equal('hash' in usuario, false);
@@ -55,27 +56,36 @@ test('sin JWT_SECRET en producción el registro falla sin dejar la cuenta creada
   delete process.env.JWT_SECRET;
   const correo = correoNuevo();
   try {
-    await assert.rejects(identidad.registrar({ correo, nombre: 'Sin secreto', contrasena: 'clave-segura-1' }), /JWT_SECRET/);
+    await assert.rejects(registrar({ correo, nombre: 'Sin secreto', contrasena: 'clave-segura-1' }), /JWT_SECRET/);
   } finally {
     process.env.NODE_ENV = entorno.NODE_ENV;
     if (entorno.JWT_SECRET) process.env.JWT_SECRET = entorno.JWT_SECRET;
   }
   // Con el secreto disponible, el mismo correo se puede registrar: no quedó a medias.
-  const { usuario } = await identidad.registrar({ correo, nombre: 'Sin secreto', contrasena: 'clave-segura-1' });
+  const { usuario } = await registrar({ correo, nombre: 'Sin secreto', contrasena: 'clave-segura-1' });
   assert.equal(usuario.correo, correo);
 });
 
 test('el registro rechaza otros dominios, contraseñas cortas y correos repetidos', async () => {
-  await assert.rejects(identidad.registrar({ correo: 'ana@gmail.com', nombre: 'Ana', contrasena: 'clave-segura-1' }), (e) => e.estado === 400);
-  await assert.rejects(identidad.registrar({ correo: correoNuevo(), nombre: 'Ana', contrasena: 'corta' }), (e) => e.estado === 400);
+  await assert.rejects(registrar({ correo: 'ana@gmail.com', nombre: 'Ana', contrasena: 'clave-segura-1' }), (e) => e.estado === 400);
+  await assert.rejects(registrar({ correo: correoNuevo(), nombre: 'Ana', contrasena: 'corta' }), (e) => e.estado === 400);
   const correo = correoNuevo();
-  await identidad.registrar({ correo, nombre: 'Ana', contrasena: 'clave-segura-1' });
-  await assert.rejects(identidad.registrar({ correo: correo.toUpperCase(), nombre: 'Ana', contrasena: 'clave-segura-1' }), (e) => e.estado === 409);
+  await registrar({ correo, nombre: 'Ana', contrasena: 'clave-segura-1' });
+  await assert.rejects(registrar({ correo: correo.toUpperCase(), nombre: 'Ana', contrasena: 'clave-segura-1' }), (e) => e.estado === 409);
+});
+
+test('P-5: sin aceptar el aviso vigente no se crea la cuenta', async () => {
+  const correo = correoNuevo();
+  const datos = { correo, nombre: 'Ana', contrasena: 'clave-segura-1' };
+  await assert.rejects(identidad.registrar(datos), (e) => e.estado === 400 && /aviso de privacidad/.test(e.message));
+  await assert.rejects(identidad.registrar({ ...datos, avisoVersion: '2000-01-01' }), (e) => e.estado === 400);
+  // No quedó a medias: el mismo correo se registra al aceptar el aviso.
+  await identidad.registrar({ ...datos, avisoVersion: identidad.VERSION_AVISO });
 });
 
 test('el inicio de sesión no distingue correo inexistente de contraseña errada', async () => {
   const correo = correoNuevo();
-  await identidad.registrar({ correo, nombre: 'Luis', contrasena: 'clave-segura-1' });
+  await registrar({ correo, nombre: 'Luis', contrasena: 'clave-segura-1' });
   assert.ok(identidad.iniciarSesion({ correo, contrasena: 'clave-segura-1' }).token);
   let a;
   let b;
@@ -87,7 +97,7 @@ test('el inicio de sesión no distingue correo inexistente de contraseña errada
 
 test('tras 5 intentos fallidos el correo queda bloqueado y luego se libera', async () => {
   const correo = correoNuevo();
-  await identidad.registrar({ correo, nombre: 'Sara', contrasena: 'clave-segura-1' });
+  await registrar({ correo, nombre: 'Sara', contrasena: 'clave-segura-1' });
   const t0 = 1_000_000;
   for (let i = 0; i < identidad.MAX_FALLOS; i += 1) {
     assert.throws(() => identidad.iniciarSesion({ correo, contrasena: 'mala' }, { ahora: t0 }), (e) => e.estado === 401);
@@ -107,8 +117,8 @@ function pedidoListoDe(clienteId) {
 }
 
 test('el PIN solo lo ve su dueño y solo cuando el pedido está Listo', async () => {
-  const { usuario: dueno } = await identidad.registrar({ correo: correoNuevo(), nombre: 'Dueño', contrasena: 'clave-segura-1' });
-  const { usuario: otro } = await identidad.registrar({ correo: correoNuevo(), nombre: 'Otro', contrasena: 'clave-segura-1' });
+  const { usuario: dueno } = await registrar({ correo: correoNuevo(), nombre: 'Dueño', contrasena: 'clave-segura-1' });
+  const { usuario: otro } = await registrar({ correo: correoNuevo(), nombre: 'Otro', contrasena: 'clave-segura-1' });
   const pedido = pedidoListoDe(dueno.id);
 
   assert.throws(() => pedidos.pinParaDueno(pedido.id, 'tienda-01', dueno.id), (e) => e.estado === 409, 'aún no está Listo');
@@ -127,7 +137,7 @@ test('el PIN solo lo ve su dueño y solo cuando el pedido está Listo', async ()
 });
 
 test('los pedidos de una cuenta se listan sin PIN y sin los de otras cuentas', async () => {
-  const { usuario } = await identidad.registrar({ correo: correoNuevo(), nombre: 'Lista', contrasena: 'clave-segura-1' });
+  const { usuario } = await registrar({ correo: correoNuevo(), nombre: 'Lista', contrasena: 'clave-segura-1' });
   pedidoListoDe(usuario.id);
   pedidoListoDe(usuario.id);
   pedidoListoDe('otra-persona');

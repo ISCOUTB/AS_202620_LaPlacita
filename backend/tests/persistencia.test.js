@@ -136,16 +136,24 @@ test('con persistencia, las cuentas sobreviven al reinicio (ADR-0021)', async (t
   }
   const identidad = await import('../src/modules/identidad/index.js');
   const correo = `persistencia-${Date.now()}-${Math.floor(Math.random() * 1e6)}@utb.edu.co`;
-  await identidad.registrar({ correo, nombre: 'Cuenta persistida', contrasena: 'clave-segura-1' });
+  await identidad.registrar({
+    correo,
+    nombre: 'Cuenta persistida',
+    contrasena: 'clave-segura-1',
+    avisoVersion: identidad.VERSION_AVISO,
+  });
 
   // "Reinicio": memoria de cuentas vacía y rehidratación desde la base. El
   // registro esperó la confirmación de la base, así que la cuenta ya está ahí.
   identidad.restaurarUsuariosDesde([]);
-  identidad.restaurarUsuariosDesde(await persistencia.cargarUsuarios());
+  const filas = await persistencia.cargarUsuarios();
+  identidad.restaurarUsuariosDesde(filas);
 
   const { usuario } = identidad.iniciarSesion({ correo, contrasena: 'clave-segura-1' });
   assert.equal(usuario.correo, correo);
   assert.equal('hash' in usuario, false);
+  // S13 · P-5: la versión del aviso aceptada queda con la cuenta.
+  assert.equal(filas.find((f) => f.correo === correo).avisoVersion, identidad.VERSION_AVISO);
 });
 
 test('con persistencia, un cambio de menú del panel sobrevive al reinicio (ADR-0023)', async (t) => {

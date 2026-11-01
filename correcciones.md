@@ -1233,3 +1233,42 @@ Día de la entrega de la semana (demo del viernes 30). Trabajo de preparación, 
 5. **`medir-carga.js` validado en producción** (fase `lectura`, sin efectos: 100 GET, 33.2 resp/s, p50 154 ms / p95 716 ms / p99 737 ms, 100/100 estatus 200, 0 aborts). La herramienta de S14 quedó comprobada punta a punta; la fase escritura sigue bloqueada hasta P-1 (declarado en el script).
 
 **Acción de Mateo en el panel** (cuando toque): aplicar el P-1 con la guía; y en GitHub darle "Update branch"/`@dependabot rebase` a los PRs de Dependabot que se vayan a cerrar para que el CI verde nuevo (sin sonar) corra sobre la base actual.
+
+---
+
+## Cierre de la Evidencia S13 (01/11/2026)
+
+Contraste de la evidencia contra la ficha `semana-13-evidencia-s13` y el seguimiento del 31/10 y
+el 01/11 del repositorio de retroalimentación. Sin nota publicada de S13 a esta fecha.
+
+| # | Hallazgo | Qué se hizo | Detectado por el sistema |
+|---|---|---|---|
+| 1 | La tabla STRIDE tenía una sola columna de prioridad, sin probabilidad, impacto ni elemento del C4 | Matriz consolidada y ordenada en evidencias-s13 §9.1, sin reescribir §3 ni §7 | Sí |
+| 2 | Sin correspondencia escrita entre prioridad y trabajo hecho | evidencias-s13 §9.2 | Sí |
+| 3 | Análisis de dependencias sin URL del run ni decisión sobre los hallazgos | evidencias-s13 §9.3: `npm audit` y 10 PR de Dependabot con decisión y motivo | Sí |
+| 4 | §5 no coincidía con el código (correo, nombre, pedido sin cuenta, contraseña) | evidencias-s13 §9.4, contrastado con las tablas | Sí |
+| 5 | arc42 §11 no traía las amenazas aceptadas: su numeración la ocupa RES-05 | arc42 §11.7; §14 se conserva con las condiciones de revisión | Sí |
+| 6 | P-5: no se guardaba qué aviso aceptó cada cuenta | Columna `usuarios.aviso_version`; el registro exige la versión vigente | No: requiere ejecutar el registro |
+| 7 | P-3: acciones y `node:22-alpine` con etiquetas móviles | Acciones por SHA e imagen por digest | Sí |
+| 8 | A-09 figuraba Parcial aunque las lecturas por id ya exigen dueño o token (ADR-0025) | Estado corregido en §9.1 | Sí |
+| 9 | El webhook de Dokploy respondía 301 «Branch Not Match» sin desplegar y el paso salía en verde: `curl -f` no falla con un 3xx, y el health check validaba la versión anterior | `deploy-dokploy.yml` envía la rama como un push de GitHub y exige un 200 | Sí |
+| 10 | El README no daba la URL vigente | Sección «Sistema desplegado» | Sí |
+
+La sesión STRIDE del 31/10 **no se realizó**: se reprogramó para la reunión del 03/11 y no se
+registra como hecha. ADR-0030 y ADR-0031 siguen sin validación grupal. Tampoco se ensayó la rotación
+de `JWT_SECRET`, y P-1 y P-2 siguen pendientes. Hallazgo nuevo (P-7): la URL de Azure retirada en
+ADR-0018 sigue respondiendo 200 y hay que apagarla (evidencias-s13 §9.5).
+
+Verificación: `npm test` 137 pruebas y 0 fallos, con y sin PostgreSQL local; contrato 34/34; lint y
+build del frontend. Al desplegar, el frontend debe salir junto con el backend: el backend nuevo
+responde 400 a un registro sin `avisoVersion`.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| La versión del aviso queda con la cuenta | Crear una cuenta en `/cuenta` y consultar `SELECT aviso_version FROM usuarios` en la base |
+| El registro sin aceptar el aviso se rechaza | `POST /api/v1/auth/registro` sin `avisoVersion` responde 400 |
+| El webhook despliega de verdad | En el siguiente push a `backend/**`, el paso «Redesplegar en Dokploy» muestra 200 y Dokploy lista un despliegue con ese commit |
+| Los ajustes de GitHub (P-2) | GitHub → Settings → Code security: *secret scanning* y *push protection* activados |
+| El límite por IP (P-1) | Verificación de `docs/despliegue-rate-limit-traefik.md` |

@@ -1,9 +1,10 @@
 import type { Metadata } from "next"
+import { VERSION_AVISO } from "@/lib/aviso-privacidad"
 
 export const metadata: Metadata = { title: "Privacidad · LaPlacita" }
 
 // S13 · aviso de privacidad (Ley 1581 de 2012). Debe coincidir con el
-// inventario de datos de docs/evidencias/evidencias-s13.md §6.
+// inventario de datos de docs/evidencias/evidencias-s13.md §5.
 const DATOS = [
   {
     dato: "Nombre",
@@ -61,6 +62,8 @@ export default function PrivacidadPage() {
           reclamos en máximo 15. Los datos se guardan mientras dure el proyecto en el semestre.
         </p>
       </section>
+
+      <p className="text-xs text-tenue">Versión del aviso: {VERSION_AVISO}</p>
     </div>
   )
 }
