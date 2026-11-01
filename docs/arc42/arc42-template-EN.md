@@ -963,10 +963,9 @@ y qué la haría cambiar. Ids de [evidencias-s13 §3 y §7](../evidencias/eviden
 | ID | Riesgo | Plan | Resp. |
 |---|---|---|---|
 | A-17 | Sin límite de peticiones por IP: *credential stuffing* y pedidos basura | Middleware `rateLimit` de Traefik en Dokploy (P-1) | Mateo |
-| A-23 | *Secret scanning* de GitHub sin activar | Activarlo con *push protection* (P-2) | Miguel |
 | A-22 | Procedimiento de rotación de `JWT_SECRET` escrito, sin ensayar | Hacer una rotación real y registrarla (evidencias-s13 §8) | Mateo |
 
-A-19 y A-21 se cerraron el 01/11 (P-3).
+A-19, A-21 y A-23 se cerraron el 01/11 (P-3 y P-2).
 
 ---
 

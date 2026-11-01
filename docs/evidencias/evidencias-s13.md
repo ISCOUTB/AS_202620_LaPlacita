@@ -358,7 +358,7 @@ valores desglosan la prioridad ya declarada en §3 y §7.2 (y los P×I de arc42 
 | A-20 | T | Portal Establecimiento | 1 | 3 | 3 Baja | `X-Frame-Options: DENY` y `frame-ancestors` | ✅ Hecha 28/10 | Miguel |
 | A-21 | T / E | Cadena de suministro (FC-4) | 1 | 3 | 3 Baja | Acciones fijadas por SHA (P-3) | ✅ Hecha 01/11 | Miguel |
 | A-22 | S / E | API Backend Central (`identidad`) | 1 | 3 | 3 Baja | Secreto largo y procedimiento §8 | ✅ Hecha; ensayo pendiente | Mateo |
-| A-23 | I | Repositorio (FC-4) | 1 | 3 | 3 Baja | *Secret scanning* y *push protection* (P-2) | 🟡 Pendiente, 03/11 | Miguel |
+| A-23 | I | Repositorio (FC-4) | 1 | 3 | 3 Baja | *Secret scanning* y *push protection* (P-2) | ✅ Hecha 01/11 | Miguel |
 | A-24 | I | App / Web Cliente | 1 | 3 | 3 Baja | Cookie `httpOnly` y escape de React | ⚪ Aceptada | Miguel |
 | A-25 | I | Base de Datos Principal | 1 | 3 | 3 Baja | Base solo en la red interna (ADR-0014) | ⚪ Aceptada | Mateo |
 | A-12 | R | Portal Establecimiento y API Backend Central | 1 | 2 | 2 Baja | Bitácora con `usuarioId` | ⚪ Aceptada con deuda | Mateo |
@@ -372,8 +372,8 @@ valores desglosan la prioridad ya declarada en §3 y §7.2 (y los P×I de arc42 
   sin sesión y la identidad de tienda, y por eso fueron lo primero: ADR-0029 el 25/10 y ADR-0030
   el 28/10.
 - De las 9 de riesgo Medio, 7 están hechas, A-18 está aceptada y solo **A-17** sigue pendiente.
-- Lo que queda abierto es A-17 (riesgo 4) y A-23 (riesgo 3). Ninguna amenaza Alta espera a una
-  de menor prioridad.
+- Lo único que queda abierto es A-17 (riesgo 4). Ninguna amenaza Alta espera a una de menor
+  prioridad.
 
 ### 9.3 Dependencias: resultado y hallazgos decididos
 
@@ -426,15 +426,17 @@ Cierra los puntos de §7.4. Modelo revisado: tablas `usuarios` y `pedidos`
 - **Prueba de la autorización:** desde el 01/11 el registro exige la versión vigente del aviso
   (400 si falta) y queda guardada con la cuenta. Las cuentas de tienda y las anteriores a esa
   fecha tienen `NULL`.
-- **Sigue pendiente:** un correo de contacto real en el aviso y la herramienta de borrado de
-  cuenta. Hoy el borrado es manual, a solicitud.
+- **Contacto para ejercer derechos:** misaza@utb.edu.co, publicado en `/privacidad` desde el
+  01/11. Es un dato de contacto, no cambia qué se trata ni para qué, así que la versión del aviso
+  se mantiene.
+- **Sigue pendiente:** la herramienta de borrado de cuenta. Hoy el borrado es manual, a solicitud.
 
 ### 9.5 Pendientes al cierre
 
 | # | Estado (01/11) | Qué falta |
 |---|---|---|
 | P-1 | 🟡 Pendiente | Aplicar en Dokploy la guía [`despliegue-rate-limit-traefik.md`](../despliegue-rate-limit-traefik.md). Mateo, 04/11 |
-| P-2 | 🟡 Vencida, nueva fecha 03/11 | Activar en GitHub → Settings → Code security. Lo hace quien administre el repositorio |
+| P-2 | ✅ Hecha 01/11 (vencía el 31/10) | *Secret Protection* y *Push protection* activos en GitHub → Settings → Advanced Security. Solo se comprueba con acceso de administrador |
 | P-3 | ✅ Hecha 01/11 | Acciones por SHA y `node:22-alpine` por digest; Dependabot las sigue actualizando |
 | P-4 | ✅ Escrita; ensayo pendiente | Hacer una rotación real fuera de una demo y registrarla como pide §8.1 |
 | P-5 | ✅ Hecha 01/11 | Columna `aviso_version` y validación en el registro |
@@ -462,6 +464,8 @@ versionado y sin claves en el historial. Las coincidencias del patrón son varia
 marcadores de las guías (`<hex aleatorio>`) y los propios comandos citados en la documentación.
 
 Verificación del cierre: `npm test` 137 pruebas, 0 fallos (136 pasan con PostgreSQL local y 1 se
-omite; sin base, 131 y 6), contrato 34/34, lint y build del frontend sin errores. No verificado:
-la imagen Docker con el digest (no hay Docker local) y el webhook corregido, que solo se comprueba
-con el primer despliegue real.
+omite; sin base, 131 y 6), contrato 34/34, lint y build del frontend sin errores.
+
+Despliegue del 01/11 (PR #31): el [run 41322752031](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/41322752031)
+terminó en verde, y ese paso ahora exige un 200 de Dokploy. Producción sirve la versión nueva:
+`/api/v1/openapi` incluye `avisoVersion` y `/privacidad` muestra la versión del aviso.

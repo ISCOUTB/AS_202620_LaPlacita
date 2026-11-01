@@ -1256,7 +1256,7 @@ el 01/11 del repositorio de retroalimentación. Sin nota publicada de S13 a esta
 
 La sesión STRIDE del 31/10 **no se realizó**: se reprogramó para la reunión del 03/11 y no se
 registra como hecha. ADR-0030 y ADR-0031 siguen sin validación grupal. Tampoco se ensayó la rotación
-de `JWT_SECRET`, y P-1 y P-2 siguen pendientes. Hallazgo nuevo (P-7): la URL de Azure retirada en
+de `JWT_SECRET`, y P-1 sigue pendiente. P-2 se activó el 01/11. Hallazgo nuevo (P-7): la URL de Azure retirada en
 ADR-0018 sigue respondiendo 200 y hay que apagarla (evidencias-s13 §9.5).
 
 Verificación: `npm test` 137 pruebas y 0 fallos, con y sin PostgreSQL local; contrato 34/34; lint y
@@ -1270,5 +1270,5 @@ responde 400 a un registro sin `avisoVersion`.
 | La versión del aviso queda con la cuenta | Crear una cuenta en `/cuenta` y consultar `SELECT aviso_version FROM usuarios` en la base |
 | El registro sin aceptar el aviso se rechaza | `POST /api/v1/auth/registro` sin `avisoVersion` responde 400 |
 | El webhook despliega de verdad | En el siguiente push a `backend/**`, el paso «Redesplegar en Dokploy» muestra 200 y Dokploy lista un despliegue con ese commit |
-| Los ajustes de GitHub (P-2) | GitHub → Settings → Code security: *secret scanning* y *push protection* activados |
+| Los ajustes de GitHub (P-2) | GitHub → Settings → Advanced Security: *Secret Protection* y *Push protection* activados |
 | El límite por IP (P-1) | Verificación de `docs/despliegue-rate-limit-traefik.md` |

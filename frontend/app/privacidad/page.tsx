@@ -58,7 +58,11 @@ export default function PrivacidadPage() {
         <h2 className="font-display text-lg font-bold text-noche">Tus derechos</h2>
         <p className="text-sm text-suave">
           Puedes conocer, actualizar, corregir o pedir que borremos tus datos, y retirar tu autorización. Escríbenos
-          desde tu correo institucional al equipo del proyecto: respondemos las consultas en máximo 10 días hábiles y los
+          desde tu correo institucional a{" "}
+          <a href="mailto:misaza@utb.edu.co" className="font-medium text-azul underline">
+            misaza@utb.edu.co
+          </a>
+          : respondemos las consultas en máximo 10 días hábiles y los
           reclamos en máximo 15. Los datos se guardan mientras dure el proyecto en el semestre.
         </p>
       </section>
