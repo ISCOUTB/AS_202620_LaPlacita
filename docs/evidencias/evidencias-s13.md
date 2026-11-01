@@ -426,8 +426,10 @@ Cierra los puntos de §7.4. Modelo revisado: tablas `usuarios` y `pedidos`
 - **Prueba de la autorización:** desde el 01/11 el registro exige la versión vigente del aviso
   (400 si falta) y queda guardada con la cuenta. Las cuentas de tienda y las anteriores a esa
   fecha tienen `NULL`.
-- **Sigue pendiente:** un correo de contacto real en el aviso y la herramienta de borrado de
-  cuenta. Hoy el borrado es manual, a solicitud.
+- **Contacto para ejercer derechos:** misaza@utb.edu.co, publicado en `/privacidad` desde el
+  01/11. Es un dato de contacto, no cambia qué se trata ni para qué, así que la versión del aviso
+  se mantiene.
+- **Sigue pendiente:** la herramienta de borrado de cuenta. Hoy el borrado es manual, a solicitud.
 
 ### 9.5 Pendientes al cierre
 
