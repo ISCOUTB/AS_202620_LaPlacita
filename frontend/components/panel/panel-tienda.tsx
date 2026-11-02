@@ -90,7 +90,7 @@ export function PanelTienda({ usuario, alSalir }: { usuario: Usuario; alSalir: (
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-6 md:px-6">
-        {pestana === "pedidos" && <PanelPedidos nombres={nombres} />}
+        {pestana === "pedidos" && <PanelPedidos nombres={nombres} esAdmin={esAdmin} />}
         {pestana === "menu" && <PanelMenu menu={menu} esAdmin={esAdmin} alActualizar={actualizarEnMenu} />}
         {pestana === "resumen" && <PanelResumen />}
       </main>

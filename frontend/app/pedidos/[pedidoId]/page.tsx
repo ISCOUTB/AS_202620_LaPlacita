@@ -35,6 +35,7 @@ export default function SeguimientoPage({
   const [estado, setEstado] = useState<EstadoPedido | null>(null)
   const [codigo, setCodigo] = useState<string | null>(null)
   const [productos, setProductos] = useState<ProductoDelPedido[]>([])
+  const [cancelado, setCancelado] = useState(false)
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([])
   const [error, setError] = useState<string | null>(null)
   const [pin, setPin] = useState<string | null>(null)
@@ -64,8 +65,9 @@ export default function SeguimientoPage({
       setEstado(pedido.estado)
       setCodigo(pedido.codigo ?? null)
       setProductos(productosDe(pedido))
+      setCancelado(Boolean(pedido.canceladoEn))
       setError(null)
-      if (pedido.estado === "Entregado" && temporizador.current) {
+      if ((pedido.estado === "Entregado" || pedido.canceladoEn) && temporizador.current) {
         clearInterval(temporizador.current)
         temporizador.current = null
       }
@@ -92,7 +94,7 @@ export default function SeguimientoPage({
   // PIN: solo con el pedido Listo y sesión iniciada. Se pide una vez por
   // llegada a Listo; los setState ocurren tras el await (React 19).
   useEffect(() => {
-    if (estado !== "Listo" || !usuario || !pedidoId || !tiendaId) return
+    if (estado !== "Listo" || cancelado || !usuario || !pedidoId || !tiendaId) return
     let vigente = true
     obtenerPin(pedidoId, tiendaId)
       .then((r) => {
@@ -113,11 +115,11 @@ export default function SeguimientoPage({
     return () => {
       vigente = false
     }
-  }, [estado, usuario, pedidoId, tiendaId])
+  }, [estado, cancelado, usuario, pedidoId, tiendaId])
 
   const indice = indiceEstado(estado)
   const nombreTienda = getStoreByTiendaId(tiendaId)?.name ?? tiendaId
-  const listo = estado === "Listo"
+  const listo = estado === "Listo" && !cancelado
   const pinVisible = Boolean(listo && usuario && pin)
   // Con el PIN en pantalla, la tarjeta azul es la del PIN; la del código pasa a blanca.
   const tarjetaAzul = listo && !pinVisible
@@ -136,8 +138,8 @@ export default function SeguimientoPage({
           <p className="text-sm text-white/75">
             {nombreTienda} · <CodigoPedido codigo={codigo} pedidoId={pedidoId} />
           </p>
-          <h1 className="font-display text-3xl font-extrabold">{estado ?? "Consultando…"}</h1>
-          {estado && <p className="text-white/85">{INFO_ESTADO[estado].detalle}</p>}
+          <h1 className="font-display text-3xl font-extrabold">{cancelado ? "Cancelado" : (estado ?? "Consultando…")}</h1>
+          {estado && !cancelado && <p className="text-white/85">{INFO_ESTADO[estado].detalle}</p>}
         </div>
       </section>
 
@@ -151,6 +153,13 @@ export default function SeguimientoPage({
         )}
 
         {!error && !estado && <div className="h-64 animate-pulse rounded-2xl bg-superficie shadow-tarjeta" />}
+
+        {cancelado && (
+          <Aviso
+            titulo="La tienda canceló este pedido"
+            texto={`Ya no se puede recoger. Si pagaste, habla con ${nombreTienda}.`}
+          />
+        )}
 
         {pinVisible && (
           <section
@@ -192,7 +201,7 @@ export default function SeguimientoPage({
           </p>
         )}
 
-        {estado && (
+        {estado && !cancelado && (
           <>
             <section
               aria-label="Código del pedido"

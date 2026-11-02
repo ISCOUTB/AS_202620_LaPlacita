@@ -56,8 +56,8 @@ no hace falta definirla.
 | `/tiendas/[slug]` | Menú con filtro por categoría, carrito y checkout | `GET /catalogo/tiendas/{tiendaId}/productos` |
 | Carrito (drawer) | Multi-item agrupado por tienda; "Hacer pedido" crea **un pedido por tienda** con todos sus productos (ADR-0032) | `POST /pedidos` |
 | `/pedidos/[pedidoId]` | Seguimiento en vivo (polling 3 s): estado, línea de tiempo, código del pedido, historial y **PIN de retiro** cuando está Listo (solo el dueño, con sesión) | `GET /pedidos/{id}`, `GET /notificaciones/{id}` |
-| `/mis-pedidos` | Con sesión: pedidos de la cuenta en cualquier dispositivo; sin sesión: los del equipo | `GET /pedidos` (sesión) o localStorage + `GET /pedidos/{id}` |
-| `/panel` | **Panel de tienda** (personal): pedidos en vivo por columnas con aviso sonoro, confirmar pago, marcar listo, entregar con PIN; menú (agotados; precios solo admin) y resumen del día | `/tienda/*` con sesión de tienda (ADR-0023) |
+| `/mis-pedidos` | Con sesión: pedidos de la cuenta en cualquier dispositivo; sin sesión: los del equipo. Arriba, recuadro con los pedidos de hoy en curso (los Listos primero); debajo, los anteriores plegados | `GET /pedidos` (sesión) o localStorage + `GET /pedidos/{id}` |
+| `/panel` | **Panel de tienda** (personal): pedidos en vivo por columnas con aviso sonoro, confirmar pago, marcar listo, entregar con PIN; el admin elimina pedidos con confirmación (ADR-0033); menú (agotados; precios solo admin) y resumen del día | `/tienda/*` con sesión de tienda (ADR-0023) |
 | `/cuenta` | Ingresar o crear cuenta (correo @utb.edu.co) y perfil con cerrar sesión | BFF `/api/sesion` → `/auth/sesion`, `/auth/registro`, `/auth/yo` |
 | `/~offline` | Página sin conexión | service worker |
 

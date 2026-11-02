@@ -47,6 +47,8 @@ export interface Pedido {
   items?: ItemPedido[]
   total: number
   estado: EstadoPedido
+  /** Momento en que la tienda eliminó el pedido (ADR-0033). Null si sigue vigente. */
+  canceladoEn?: string | null
   pin?: string | null
   /** Llave de la vista pública (ADR-0025). Solo llega en la respuesta de POST /pedidos. */
   seguimiento?: string
@@ -202,7 +204,7 @@ export function listarPedidosTienda(): Promise<PedidoTienda[]> {
   return request<PedidoTienda[]>("/tienda/pedidos", SIN_CACHE)
 }
 
-function accionTienda(pedidoId: string, accion: "pago" | "listo" | "entrega", cuerpo?: object) {
+function accionTienda(pedidoId: string, accion: "pago" | "listo" | "entrega" | "cancelar", cuerpo?: object) {
   return request<PedidoTienda>(`/tienda/pedidos/${encodeURIComponent(pedidoId)}/${accion}`, {
     method: "POST",
     headers: cuerpo ? { "content-type": "application/json" } : undefined,
@@ -213,6 +215,7 @@ function accionTienda(pedidoId: string, accion: "pago" | "listo" | "entrega", cu
 export const confirmarPagoTienda = (pedidoId: string) => accionTienda(pedidoId, "pago")
 export const marcarListoTienda = (pedidoId: string) => accionTienda(pedidoId, "listo")
 export const entregarConPin = (pedidoId: string, pin: string) => accionTienda(pedidoId, "entrega", { pin })
+export const eliminarPedidoTienda = (pedidoId: string) => accionTienda(pedidoId, "cancelar")
 
 export function listarMenuTienda(): Promise<ProductoTienda[]> {
   return request<ProductoTienda[]>("/tienda/productos", SIN_CACHE)

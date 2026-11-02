@@ -1359,3 +1359,37 @@ Listo y entrega con un PIN. Queda probarlo en producción.
 | Un pedido por tienda | Comprar en dos tiendas: «Mis pedidos» muestra 2 pedidos, no uno por producto |
 | Recuadro del panel | La tarjeta muestra «Pedido de …», sus productos y el total |
 | Un solo PIN | En «Listos para entregar», un PIN entrega todo el pedido |
+
+
+---
+
+## Eliminar pedidos y pedidos actuales del estudiante (02/11/2026)
+
+Pedido del equipo: los pedidos de prueba sin PIN se quedaban en el panel para siempre, y en el celular
+no se distinguía qué pedidos eran los de ahora. Decisión en
+[ADR-0033](docs/adr/0033-eliminar-pedidos-sin-borrar-la-fila.md), en estado propuesto.
+
+| Pieza | Antes | Ahora |
+|---|---|---|
+| Panel | Un pedido solo salía con su PIN | El `admin` lo elimina con confirmación; la caja no ve el botón |
+| Base de datos | — | Columna `cancelado_en`; la fila se conserva |
+| Mis pedidos | Una sola lista | Recuadro «Tus pedidos de ahora» y «Pedidos anteriores» plegados |
+| Pedidos viejos sin terminar | Parecían actuales | Van a anteriores como «No completado» |
+| Pedidos eliminados | — | El cliente los ve como «Cancelado» |
+| Tiempo en el panel | «hace 14401 min» | «hace 10 días» |
+
+«Actual» es un pedido de hoy (hora de Colombia), sin entregar y sin cancelar. Los Listos van primero.
+
+Verificación: `npm test` 162 pruebas y 0 fallos, con y sin PostgreSQL local; contrato 34/34; tipos,
+lint y build del frontend. En local, con pedidos viejos sembrados en la base: la caja no ve el botón;
+el `admin` eliminó un pedido sin PIN y quedó marcado en la base y en la bitácora con su `usuarioId`; el
+estudiante, a 375 px, vio sus pedidos de hoy aparte y el eliminado como Cancelado. Queda probarlo en
+producción.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Solo el `admin` elimina | Con una cuenta `caja` no aparece el botón; con `admin` sí |
+| Queda el registro | `SELECT pedido_id, cancelado_en FROM pedidos WHERE cancelado_en IS NOT NULL` |
+| Pedidos actuales | En el celular, «Tus pedidos de ahora» solo trae pedidos de hoy sin entregar |

@@ -36,7 +36,7 @@ function sonarAviso() {
   }
 }
 
-export function PanelPedidos({ nombres }: { nombres: Map<string, string> }) {
+export function PanelPedidos({ nombres, esAdmin }: { nombres: Map<string, string>; esAdmin: boolean }) {
   const [pedidos, setPedidos] = useState<PedidoTienda[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [nuevos, setNuevos] = useState<Set<string>>(new Set())
@@ -132,6 +132,7 @@ export function PanelPedidos({ nombres }: { nombres: Map<string, string> }) {
                   productos={productosDe(p, nombres)}
                   ahora={ahora}
                   nuevo={nuevos.has(p.id)}
+                  esAdmin={esAdmin}
                   alCambiar={consultar}
                 />
               ))}

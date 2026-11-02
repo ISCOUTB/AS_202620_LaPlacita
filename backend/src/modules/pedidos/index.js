@@ -53,7 +53,7 @@ function siguienteId(tiendaId) {
 function siguienteCodigo(tiendaId, creadoEn) {
   const ocupados = new Set();
   for (const pedido of repoTienda(tiendaId).values()) {
-    if (pedido.codigo && pedido.estado !== 'Entregado') {
+    if (pedido.codigo && pedido.estado !== 'Entregado' && !pedido.canceladoEn) {
       ocupados.add(pedido.codigo);
     }
   }
@@ -133,6 +133,7 @@ function crearPedido(datos) {
     items,
     total: items.reduce((suma, item) => suma + item.precioUnitario * item.cantidad, 0),
     estado: 'Recibido',
+    canceladoEn: null,
     pin: null,
     // ADR-0025: llave de la vista pública. 128 bits al azar: los `pedidoId`
     // son consecutivos y se pueden adivinar; este token no.
@@ -230,6 +231,9 @@ function descartarPedido(pedidoId, tiendaId) {
 
 function cambiarEstado(pedidoId, tiendaId, nuevoEstado) {
   const pedido = pedidoMutable(pedidoId, tiendaId);
+  if (pedido.canceladoEn) {
+    throw new Error('Este pedido fue cancelado por la tienda');
+  }
   const indiceActual = ESTADOS.indexOf(pedido.estado);
   const indiceNuevo = ESTADOS.indexOf(nuevoEstado);
 
@@ -245,6 +249,28 @@ function cambiarEstado(pedidoId, tiendaId, nuevoEstado) {
   if (nuevoEstado === 'En preparación') contar('pagosConfirmados');
   if (nuevoEstado === 'Listo') contar('pedidosListos');
   if (nuevoEstado === 'Entregado') contar('entregasValidadas');
+  return instantanea(pedido);
+}
+
+// ADR-0033: el administrador de la tienda retira un pedido sin necesitar su PIN.
+// La fila se conserva marcada: es la trazabilidad, y un borrado real competiría
+// con los mensajes de escritura pendientes de ese pedido (ADR-0026).
+function cancelarPedido(pedidoId, tiendaId, rol) {
+  if (rol !== 'admin') {
+    const e = new Error('Solo el administrador de la tienda puede eliminar pedidos');
+    e.estado = 403;
+    throw e;
+  }
+  const pedido = pedidoMutable(pedidoId, tiendaId);
+  if (pedido.estado === 'Entregado') {
+    const e = new Error('Un pedido entregado no se puede eliminar');
+    e.estado = 409;
+    throw e;
+  }
+  if (!pedido.canceladoEn) {
+    pedido.canceladoEn = new Date().toISOString();
+    escribirPedido(pedido);
+  }
   return instantanea(pedido);
 }
 
@@ -272,7 +298,7 @@ function pinParaDueno(pedidoId, tiendaId, usuarioId) {
     e.estado = 404;
     throw e;
   }
-  if (pedido.estado !== 'Listo' || !pedido.pin) {
+  if (pedido.estado !== 'Listo' || !pedido.pin || pedido.canceladoEn) {
     const e = new Error('El PIN aparece cuando tu pedido está Listo');
     e.estado = 409;
     throw e;
@@ -299,6 +325,7 @@ function pedidosDeCliente(usuarioId) {
 function pedidosDeTienda(tiendaId, { hoy = fechaColombia() } = {}) {
   const lista = [];
   for (const pedido of repoTienda(tiendaId).values()) {
+    if (pedido.canceladoEn) continue;
     const deHoy = pedido.creadoEn && fechaColombia(new Date(pedido.creadoEn)) === hoy;
     if (pedido.estado !== 'Entregado' || deHoy) lista.push(vistaPublica(pedido.id, tiendaId));
   }
@@ -312,7 +339,7 @@ function resumenDelDia(tiendaId, { hoy = fechaColombia() } = {}) {
   let pedidosHoy = 0;
   let ventas = 0;
   for (const pedido of repoTienda(tiendaId).values()) {
-    if (!pedido.creadoEn || fechaColombia(new Date(pedido.creadoEn)) !== hoy) continue;
+    if (pedido.canceladoEn || !pedido.creadoEn || fechaColombia(new Date(pedido.creadoEn)) !== hoy) continue;
     pedidosHoy += 1;
     porEstado[pedido.estado] += 1;
     if (pedido.estado !== 'Recibido') ventas += pedido.total;
@@ -369,6 +396,7 @@ function restaurarEstadoDesde(registros) {
       ],
       total: fila.total,
       estado: fila.estado,
+      canceladoEn: fila.canceladoEn ?? null,
       pin: fila.pin ?? null,
       seguimiento: fila.seguimiento ?? null,
     };
@@ -408,6 +436,7 @@ export {
   pedidosDeTienda,
   resumenDelDia,
   cambiarEstado,
+  cancelarPedido,
   asignarPin,
   confirmarPago,
   marcarListo,

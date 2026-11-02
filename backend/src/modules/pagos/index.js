@@ -11,6 +11,9 @@ import { estadoCompartido } from '../../estado-compartido.js';
 const pagosConfirmados = estadoCompartido('pagosConfirmados', () => new Map());
 
 function registrarPago(pedido, tiendaId) {
+  if (pedido.canceladoEn) {
+    throw new Error('Este pedido fue cancelado por la tienda');
+  }
   if (pedido.estado !== 'Recibido') {
     throw new Error(`No se puede pagar un pedido en estado ${pedido.estado}`);
   }
