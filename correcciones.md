@@ -1300,3 +1300,31 @@ pago sin dueño. No se corrigió; quedó declarado en el README.
 |---|---|
 | Los comandos del README funcionan | Seguir «Cómo ejecutar en local» en un clon limpio |
 | El panel abre con la cuenta de ejemplo | Crear `backend/.env.local` como indica el README y entrar a `/panel` |
+
+---
+
+## Atención de pedidos desde el panel (02/11/2026)
+
+Prueba del equipo en producción: compra de un estudiante desde el celular y atención con una cuenta
+de tienda desde el computador.
+
+| # | Hallazgo | Causa | Corrección |
+|---|---|---|---|
+| 1 | El personal veía la app de los estudiantes y no encontraba los pedidos | Quien ingresaba por `/cuenta` quedaba en la app del cliente; el panel solo se abría escribiendo `/panel` | `GuardaPersonal` lleva a toda cuenta de tienda a `/panel`, salvo en `/privacidad` |
+| 2 | «Confirmar pago» respondía 403 en el panel desde el 25/10 | ADR-0029 pidió el dueño en `pagos.confirmarPago` y la ruta del panel siguió llamándola sin él, de modo que ningún pedido pasaba de Recibido | `pagos.confirmarPagoEnTienda` para la ruta `/tienda`, con cuenta de tienda y `tiendaId` del token. El camino del cliente sigue exigiendo al dueño |
+
+Por qué no se detectó: `next/server` no carga bajo `node:test`, así que las rutas HTTP no se ejecutan en
+las pruebas, y las de módulo pasaban el dueño. La verificación de §7.7 de evidencias-s13 probó `listo`,
+no `pago`. Se agregan pruebas del flujo de tienda y de la llamada de la ruta: 3 fallan sin el arreglo.
+
+Verificación: `npm test` 140 pruebas y 0 fallos (134 pasan y 6 se omiten sin base), contrato 34/34, y
+en local, por las rutas reales, cuenta de caja entrando por `/cuenta` → pedido visible → pago → Listo →
+entrega con PIN. Queda probarlo en producción con el backend y el frontend desplegados.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| El personal llega al panel | Ingresar con una cuenta de tienda en `/cuenta`: debe abrir `/panel` |
+| La tienda atiende el pedido | Comprar en una tienda con una cuenta de estudiante y atenderlo con una cuenta de esa misma tienda |
+

@@ -3,6 +3,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 delete process.env.DATABASE_URL;
 process.env.CUENTAS_TIENDA =
@@ -90,4 +91,28 @@ test('el resumen del día cuenta por estado y suma solo pedidos pagados', () => 
     .reduce((s, p) => s + p.total, 0);
   assert.equal(resumen.ventas, pagados);
   assert.equal(pedidos.resumenDelDia('tienda-01', { hoy: '2099-01-01' }).pedidos, 0);
+});
+
+// Defecto del 02/11/2026: ADR-0029 pidió el dueño en `confirmarPago` y la ruta del
+// panel siguió llamándola sin él, así que ninguna tienda podía confirmar un pago.
+test('la tienda atiende el pedido de un cliente: pago, listo y entrega con PIN', () => {
+  const { id } = pedidos.crearPedido({ productoId: 'prod-001', cantidad: 1, clienteId: 'c-flujo', tiendaId: 'tienda-01' });
+  assert.equal(pagos.confirmarPagoEnTienda(id, 'tienda-01').estado, 'En preparación');
+  entrega.marcarListo(id, 'tienda-01');
+  const { pin } = pedidos.obtenerPedido(id, 'tienda-01');
+  entrega.validarPin(id, 'tienda-01', pin);
+  assert.equal(pedidos.obtenerPedido(id, 'tienda-01').estado, 'Entregado');
+});
+
+test('otra tienda no confirma un pago ajeno y el camino del cliente sigue exigiendo al dueño', () => {
+  const { id } = pedidos.crearPedido({ productoId: 'prod-001', cantidad: 1, clienteId: 'c-ajeno', tiendaId: 'tienda-01' });
+  assert.throws(() => pagos.confirmarPagoEnTienda(id, 'tienda-02'), /no encontrado/i, 'ESC-02');
+  assert.throws(() => pagos.confirmarPago(id, 'tienda-01', undefined), /dueño/);
+  assert.equal(pedidos.obtenerPedido(id, 'tienda-01').estado, 'Recibido');
+});
+
+test('la ruta del panel confirma el pago como tienda, con la tienda del token', () => {
+  const ruta = readFileSync(new URL('../app/api/v1/tienda/pedidos/[pedidoId]/pago/route.js', import.meta.url), 'utf8');
+  assert.ok(ruta.includes('cuentaDeTienda(request)'));
+  assert.ok(ruta.includes('pagos.confirmarPagoEnTienda(pedidoId, cuenta.tiendaId)'));
 });

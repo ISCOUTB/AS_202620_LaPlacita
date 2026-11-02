@@ -10,6 +10,21 @@ import { estadoCompartido } from '../../estado-compartido.js';
 
 const pagosConfirmados = estadoCompartido('pagosConfirmados', () => new Map());
 
+function registrarPago(pedido, tiendaId) {
+  if (pedido.estado !== 'Recibido') {
+    throw new Error(`No se puede pagar un pedido en estado ${pedido.estado}`);
+  }
+
+  pagosConfirmados.set(`${tiendaId}:${pedido.id}`, {
+    pedidoId: pedido.id,
+    tiendaId,
+    monto: pedido.total,
+    confirmadoEn: new Date().toISOString(),
+  });
+
+  return confirmarPagoPedido(pedido.id, tiendaId);
+}
+
 function confirmarPago(pedidoId, tiendaId, clienteId) {
   const pedido = obtenerPedido(pedidoId, tiendaId);
 
@@ -22,18 +37,14 @@ function confirmarPago(pedidoId, tiendaId, clienteId) {
     throw e;
   }
 
-  if (pedido.estado !== 'Recibido') {
-    throw new Error(`No se puede pagar un pedido en estado ${pedido.estado}`);
-  }
-
-  pagosConfirmados.set(`${tiendaId}:${pedidoId}`, {
-    pedidoId,
-    tiendaId,
-    monto: pedido.total,
-    confirmadoEn: new Date().toISOString(),
-  });
-
-  return confirmarPagoPedido(pedidoId, tiendaId);
+  return registrarPago(pedido, tiendaId);
 }
 
-export { confirmarPago };
+// ADR-0023: la tienda confirma el pago que recibió en mostrador. No compara el
+// dueño: quien llama ya comprobó la cuenta de tienda y el `tiendaId` sale de su
+// token, así que solo alcanza pedidos de su propia tienda (RES-05).
+function confirmarPagoEnTienda(pedidoId, tiendaId) {
+  return registrarPago(obtenerPedido(pedidoId, tiendaId), tiendaId);
+}
+
+export { confirmarPago, confirmarPagoEnTienda };
