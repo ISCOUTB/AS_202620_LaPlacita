@@ -26,6 +26,14 @@ export interface Product {
 
 export type EstadoPedido = "Recibido" | "En preparación" | "Listo" | "Entregado"
 
+/** Producto dentro de un pedido (ADR-0032). `nombre` es null en pedidos anteriores. */
+export interface ItemPedido {
+  productoId: string
+  nombre?: string | null
+  cantidad: number
+  precioUnitario?: number
+}
+
 export interface Pedido {
   id: string
   /** Código corto para el mostrador (A01 … Z99, por tienda y por día). Null en pedidos viejos. */
@@ -33,8 +41,10 @@ export interface Pedido {
   creadoEn?: string | null
   clienteId: string
   tiendaId: string
+  /** Primer producto y unidades totales (contrato v1). El detalle está en `items`. */
   productoId: string
   cantidad: number
+  items?: ItemPedido[]
   total: number
   estado: EstadoPedido
   pin?: string | null
@@ -100,10 +110,9 @@ export async function obtenerProductos(tiendaId: string): Promise<Product[]> {
   }))
 }
 
-/** POST /pedidos — el contrato v1 crea pedidos de UN producto. */
+/** POST /pedidos — un pedido por tienda, con uno o varios productos (ADR-0032). */
 export function crearPedido(entrada: {
-  productoId: string
-  cantidad: number
+  items: { productoId: string; cantidad: number }[]
   clienteId: string
   tiendaId: string
 }): Promise<Pedido> {

@@ -1328,3 +1328,34 @@ entrega con PIN. Queda probarlo en producción con el backend y el frontend desp
 | El personal llega al panel | Ingresar con una cuenta de tienda en `/cuenta`: debe abrir `/panel` |
 | La tienda atiende el pedido | Comprar en una tienda con una cuenta de estudiante y atenderlo con una cuenta de esa misma tienda |
 
+
+---
+
+## Un pedido por tienda con varios productos (02/11/2026)
+
+Pedido del equipo tras la prueba con celular y panel: quien compra varias cosas dictaba un código y un
+PIN por producto, y la tienda no veía que todo era de una sola persona. Decisión en
+[ADR-0032](docs/adr/0032-un-pedido-por-tienda-con-varios-productos.md), en estado propuesto.
+
+| Pieza | Antes | Ahora |
+|---|---|---|
+| Carrito | Un `POST /pedidos` por línea | Un `POST /pedidos` por tienda, con `items[]` |
+| Código y PIN | Uno por producto | Uno por tienda |
+| Panel | Una tarjeta por producto | Un recuadro con el cliente, sus productos, el total y un solo PIN |
+| Seguimiento y Mis pedidos | Un producto | Todos los productos del pedido |
+| Contrato | Solo `productoId` y `cantidad` | También `items[]`; el formato anterior sigue siendo válido |
+| Base de datos | Sin detalle | Columna `pedidos.items` (`JSONB`); las filas anteriores se conservan |
+
+Verificación: `npm test` 151 pruebas y 0 fallos (150 pasan y 1 se omite con PostgreSQL local, 144 y 7
+sin base), contrato 34/34, lint, tipos y build del frontend. La migración se probó sobre una tabla con
+el esquema anterior y un pedido viejo. En local, por la app y el panel: carrito con 3 productos de
+El Mesón y 2 de El Asa'o → 2 pedidos con su código → la caja de El Mesón ve solo su recuadro → pago,
+Listo y entrega con un PIN. Queda probarlo en producción.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Un pedido por tienda | Comprar en dos tiendas: «Mis pedidos» muestra 2 pedidos, no uno por producto |
+| Recuadro del panel | La tarjeta muestra «Pedido de …», sus productos y el total |
+| Un solo PIN | En «Listos para entregar», un PIN entrega todo el pedido |

@@ -129,6 +129,24 @@ test('alCargar invoca de inmediato cuando la carga de arranque ya terminó', asy
   assert.ok(recibido.length <= filas.length);
 });
 
+test('con persistencia, los productos del pedido sobreviven al reinicio (ADR-0032)', async (t) => {
+  if (!CON_BASE) {
+    t.skip('requiere DATABASE_URL (service container de PostgreSQL en CI)');
+    return;
+  }
+  const items = [
+    { productoId: 'prod-001', cantidad: 2 },
+    { productoId: 'prod-004', cantidad: 1 },
+  ];
+  const creado = pedidos.crearPedido({ items, clienteId: 'cliente-items', tiendaId: 'tienda-01' });
+  await persistencia.confirmacionDe('tienda-01', creado.id);
+
+  pedidos.restaurarEstadoDesde(await persistencia.cargarTodo());
+  const leido = pedidos.obtenerPedido(creado.id, 'tienda-01');
+  assert.deepEqual(leido.items, creado.items);
+  assert.equal(leido.total, creado.total);
+});
+
 test('con persistencia, las cuentas sobreviven al reinicio (ADR-0021)', async (t) => {
   if (!CON_BASE) {
     t.skip('requiere DATABASE_URL (service container de PostgreSQL en CI)');

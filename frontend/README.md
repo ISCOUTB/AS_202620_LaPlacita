@@ -54,7 +54,7 @@ no hace falta definirla.
 | `/` | Inicio: saludo según la hora, tiendas (abiertas primero, hora de Colombia) y «Cómo funciona» | — (hueco `GET /catalogo/tiendas` documentado en ADR-0017) |
 | `/tiendas` | Las 5 tiendas con estado abierta/cerrada, ubicación y descripción | — (contenido estático, `lib/stores.ts`) |
 | `/tiendas/[slug]` | Menú con filtro por categoría, carrito y checkout | `GET /catalogo/tiendas/{tiendaId}/productos` |
-| Carrito (drawer) | Multi-item agrupado por tienda; "Hacer pedido" crea **un POST por línea** (contrato v1) | `POST /pedidos` |
+| Carrito (drawer) | Multi-item agrupado por tienda; "Hacer pedido" crea **un pedido por tienda** con todos sus productos (ADR-0032) | `POST /pedidos` |
 | `/pedidos/[pedidoId]` | Seguimiento en vivo (polling 3 s): estado, línea de tiempo, código del pedido, historial y **PIN de retiro** cuando está Listo (solo el dueño, con sesión) | `GET /pedidos/{id}`, `GET /notificaciones/{id}` |
 | `/mis-pedidos` | Con sesión: pedidos de la cuenta en cualquier dispositivo; sin sesión: los del equipo | `GET /pedidos` (sesión) o localStorage + `GET /pedidos/{id}` |
 | `/panel` | **Panel de tienda** (personal): pedidos en vivo por columnas con aviso sonoro, confirmar pago, marcar listo, entregar con PIN; menú (agotados; precios solo admin) y resumen del día | `/tienda/*` con sesión de tienda (ADR-0023) |

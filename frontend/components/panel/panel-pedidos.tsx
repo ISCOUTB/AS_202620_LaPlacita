@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Bell, BellOff } from "lucide-react"
 import { TarjetaPedido } from "@/components/panel/tarjeta-pedido"
 import { listarPedidosTienda, type EstadoPedido, type PedidoTienda } from "@/lib/api"
+import { productosDe, resumenDeProductos } from "@/lib/pedido-items"
 import { useMinuto } from "@/lib/use-minuto"
 import { cn } from "@/lib/utils"
 
@@ -128,7 +129,7 @@ export function PanelPedidos({ nombres }: { nombres: Map<string, string> }) {
                 <TarjetaPedido
                   key={p.id}
                   pedido={p}
-                  producto={nombres.get(p.productoId) ?? p.productoId}
+                  productos={productosDe(p, nombres)}
                   ahora={ahora}
                   nuevo={nuevos.has(p.id)}
                   alCambiar={consultar}
@@ -147,7 +148,7 @@ export function PanelPedidos({ nombres }: { nombres: Map<string, string> }) {
           <ul className="mt-3 flex flex-wrap gap-2">
             {entregadosHoy.map((p) => (
               <li key={p.id} className="rounded-xl bg-entregado-fondo px-3 py-1.5 text-sm text-entregado-texto">
-                {p.codigo ?? p.id} · {nombres.get(p.productoId) ?? p.productoId} × {p.cantidad}
+                {p.codigo ?? p.id} · {resumenDeProductos(productosDe(p, nombres))}
               </li>
             ))}
           </ul>

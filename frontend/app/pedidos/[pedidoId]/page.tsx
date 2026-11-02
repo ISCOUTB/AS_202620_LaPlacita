@@ -9,6 +9,7 @@ import { CodigoPedido } from "@/components/utb/codigo-pedido"
 import { EstadoChip } from "@/components/utb/estado-chip"
 import { ErrorApi, obtenerNotificaciones, obtenerPedido, obtenerPin, type EstadoPedido, type Notificacion } from "@/lib/api"
 import { ESTADOS, INFO_ESTADO, indiceEstado } from "@/lib/estados"
+import { productosDe, type ProductoDelPedido } from "@/lib/pedido-items"
 import { useSesion } from "@/lib/sesion"
 import { getStoreByTiendaId } from "@/lib/stores"
 import { cn } from "@/lib/utils"
@@ -33,6 +34,7 @@ export default function SeguimientoPage({
   const [seguimiento, setSeguimiento] = useState<string | null>(null)
   const [estado, setEstado] = useState<EstadoPedido | null>(null)
   const [codigo, setCodigo] = useState<string | null>(null)
+  const [productos, setProductos] = useState<ProductoDelPedido[]>([])
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([])
   const [error, setError] = useState<string | null>(null)
   const [pin, setPin] = useState<string | null>(null)
@@ -61,6 +63,7 @@ export default function SeguimientoPage({
       const pedido = await obtenerPedido(pedidoId, tiendaId, seguimiento)
       setEstado(pedido.estado)
       setCodigo(pedido.codigo ?? null)
+      setProductos(productosDe(pedido))
       setError(null)
       if (pedido.estado === "Entregado" && temporizador.current) {
         clearInterval(temporizador.current)
@@ -214,6 +217,20 @@ export default function SeguimientoPage({
               {codigo && (
                 <p className={cn("font-mono text-xs", tarjetaAzul ? "text-white/60" : "text-tenue")}>Referencia: {pedidoId}</p>
               )}
+            </section>
+
+            <section aria-labelledby="productos-titulo" className="rounded-2xl bg-superficie p-5 shadow-tarjeta">
+              <h2 id="productos-titulo" className="mb-2 font-display text-lg font-bold text-noche">
+                Productos
+              </h2>
+              <ul className="divide-y divide-borde">
+                {productos.map((p) => (
+                  <li key={p.productoId} className="flex items-baseline justify-between gap-3 py-2">
+                    <span className="text-tinta">{p.nombre}</span>
+                    <span className="shrink-0 font-bold text-noche">× {p.cantidad}</span>
+                  </li>
+                ))}
+              </ul>
             </section>
 
             <section aria-labelledby="progreso-titulo" className="rounded-2xl bg-superficie p-5 shadow-tarjeta">

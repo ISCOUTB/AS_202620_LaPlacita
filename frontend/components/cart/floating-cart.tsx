@@ -8,6 +8,7 @@ import { useCart, type CartItem } from "@/components/cart/cart-provider"
 import { Boton } from "@/components/utb/boton"
 import { crearPedido } from "@/lib/api"
 import { formatCOP } from "@/lib/format"
+import { resumenDeProductos } from "@/lib/pedido-items"
 import { registrarPedidoLocal } from "@/lib/pedidos-locales"
 import { useSesion } from "@/lib/sesion"
 import { getStoreByTiendaId } from "@/lib/stores"
@@ -85,8 +86,8 @@ export function FloatingCart() {
   const [pidiendo, setPidiendo] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // El contrato v1 crea pedidos de UN producto: "Hacer pedido" emite un POST
-  // /pedidos por línea, agrupado por tienda. Cada pedido creado se registra en
+  // ADR-0032: "Hacer pedido" emite un POST /pedidos por tienda, con todos sus
+  // productos: un código y un PIN por tienda. Cada pedido creado se registra en
   // el dispositivo; si uno falla, los anteriores quedan y el carrito conserva
   // el resto — sin perdidas silenciosas.
   // ADR-0021: pedir exige sesión; el backend toma al dueño del token (el
@@ -100,16 +101,18 @@ export function FloatingCart() {
     setPidiendo(true)
     setError(null)
     const cliente = usuario.id
-    for (const item of items) {
+    for (const { tiendaId, items: lineas } of groupByStore(items)) {
       try {
         const pedido = await crearPedido({
-          productoId: item.productId,
-          cantidad: item.quantity,
+          items: lineas.map((item) => ({ productoId: item.productId, cantidad: item.quantity })),
           clienteId: cliente,
-          tiendaId: item.storeSlug,
+          tiendaId,
         })
-        registrarPedidoLocal(pedido, item.name)
-        removeItem(item.productId)
+        registrarPedidoLocal(
+          pedido,
+          resumenDeProductos(lineas.map((item) => ({ nombre: item.name, cantidad: item.quantity }))),
+        )
+        lineas.forEach((item) => removeItem(item.productId))
       } catch (e) {
         setError((e as Error).message)
         setPidiendo(false)
@@ -156,7 +159,7 @@ export function FloatingCart() {
           <SheetTitle className="font-display text-2xl font-extrabold text-white">Tu pedido</SheetTitle>
           <SheetDescription className="text-white/80">
             {itemCount} {itemCount === 1 ? "producto" : "productos"} de {groups.length}{" "}
-            {groups.length === 1 ? "tienda" : "tiendas"}. Cada tienda prepara su parte.
+            {groups.length === 1 ? "tienda" : "tiendas"}. Cada tienda prepara su parte y te da un código.
           </SheetDescription>
         </SheetHeader>
 
@@ -184,7 +187,7 @@ export function FloatingCart() {
             <span className="font-display text-2xl font-extrabold text-noche">{formatCOP(total)}</span>
           </div>
           <Boton disabled={pidiendo} onClick={hacerPedidos} className="w-full py-4 text-lg">
-            {pidiendo ? "Creando pedidos…" : usuario ? "Hacer pedido" : "Ingresa para hacer el pedido"}
+            {pidiendo ? "Creando tu pedido…" : usuario ? "Hacer pedido" : "Ingresa para hacer el pedido"}
           </Boton>
           <p className="text-center text-xs text-tenue">
             Pagas por transferencia o en efectivo; la tienda confirma el pago y empieza a prepararlo.
