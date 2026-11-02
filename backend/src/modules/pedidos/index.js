@@ -19,6 +19,9 @@ import { escribirPedido, alCargar } from '../../persistencia/index.js';
 import { asignarCodigo, fechaColombia, indiceDesdeCodigo, TOTAL_CODIGOS } from './codigo.js';
 
 const ESTADOS = ['Recibido', 'En preparación', 'Listo', 'Entregado'];
+// ADR-0032: tope de productos distintos en un pedido, para acotar el trabajo de
+// una sola petición y el tamaño de la fila.
+const MAX_LINEAS = 20;
 
 import { estadoCompartido } from '../../estado-compartido.js';
 
@@ -70,12 +73,36 @@ function pedidoMutable(pedidoId, tiendaId) {
   return pedido;
 }
 
-function instantanea(pedido) {
-  return Object.freeze({ ...pedido });
+function copiaItems(items) {
+  return Object.freeze(items.map((item) => Object.freeze({ ...item })));
 }
 
-function crearPedido({ productoId, cantidad, clienteId, tiendaId }) {
-  if (!cantidad || cantidad <= 0) {
+function instantanea(pedido) {
+  return Object.freeze({ ...pedido, items: copiaItems(pedido.items) });
+}
+
+// ADR-0032: líneas del pedido. Acepta `items[]` o el formato de un producto del
+// contrato v1; un producto repetido se suma en una sola línea.
+function lineasDe({ productoId, cantidad, items }) {
+  if (items === undefined) return [{ productoId, cantidad }];
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new Error('items debe traer al menos un producto');
+  }
+  if (items.length > MAX_LINEAS) {
+    throw new Error(`Un pedido admite hasta ${MAX_LINEAS} productos distintos`);
+  }
+  const porProducto = new Map();
+  for (const item of items) {
+    const previo = porProducto.get(item?.productoId) ?? 0;
+    porProducto.set(item?.productoId, previo + item?.cantidad);
+  }
+  return [...porProducto].map(([id, unidades]) => ({ productoId: id, cantidad: unidades }));
+}
+
+function crearPedido(datos) {
+  const { clienteId, tiendaId } = datos;
+  const lineas = lineasDe(datos);
+  if (lineas.some(({ cantidad }) => !Number.isInteger(cantidad) || cantidad <= 0)) {
     throw new Error('La cantidad debe ser mayor a 0');
   }
   if (!clienteId) {
@@ -85,7 +112,13 @@ function crearPedido({ productoId, cantidad, clienteId, tiendaId }) {
     throw new Error('tiendaId es obligatorio');
   }
 
-  const producto = obtenerProducto(productoId, tiendaId);
+  // Se validan todos los productos ANTES de crear nada: uno de otra tienda o
+  // agotado rechaza el pedido completo (RES-05). Nombre y precio quedan fijados
+  // al crear: un cambio posterior del menú no altera lo que se compró.
+  const items = lineas.map(({ productoId, cantidad }) => {
+    const producto = obtenerProducto(productoId, tiendaId);
+    return { productoId: producto.id, nombre: producto.nombre, cantidad, precioUnitario: producto.precio };
+  });
   const creadoEn = new Date();
 
   const pedido = {
@@ -93,10 +126,12 @@ function crearPedido({ productoId, cantidad, clienteId, tiendaId }) {
     codigo: siguienteCodigo(tiendaId, creadoEn),
     creadoEn: creadoEn.toISOString(),
     clienteId,
-    tiendaId: producto.tiendaId,
-    productoId: producto.id,
-    cantidad,
-    total: producto.precio * cantidad,
+    tiendaId,
+    // Contrato v1: primer producto y unidades totales. El detalle está en `items`.
+    productoId: items[0].productoId,
+    cantidad: items.reduce((suma, item) => suma + item.cantidad, 0),
+    items,
+    total: items.reduce((suma, item) => suma + item.precioUnitario * item.cantidad, 0),
     estado: 'Recibido',
     pin: null,
     // ADR-0025: llave de la vista pública. 128 bits al azar: los `pedidoId`
@@ -110,8 +145,8 @@ function crearPedido({ productoId, cantidad, clienteId, tiendaId }) {
   return instantanea(pedido);
 }
 
-function huella({ productoId, cantidad, clienteId }) {
-  return JSON.stringify([productoId, cantidad, clienteId]);
+function huella(datos) {
+  return JSON.stringify([lineasDe(datos), datos.clienteId]);
 }
 
 // Sin clave se comporta como `crearPedido` (la cabecera es opcional en v1).
@@ -153,7 +188,7 @@ function obtenerPedido(pedidoId, tiendaId) {
 // legítimamente: `entrega.validarPin` lee el `pin` para compararlo. Lo que
 // cambia es quién puede verlo desde fuera, no quién puede usarlo dentro.
 function vistaPublica(pedidoId, tiendaId) {
-  const publico = { ...pedidoMutable(pedidoId, tiendaId) };
+  const publico = { ...instantanea(pedidoMutable(pedidoId, tiendaId)) };
   delete publico.pin;
   // ADR-0025: el token de seguimiento solo se entrega una vez, al crear.
   delete publico.seguimiento;
@@ -323,6 +358,15 @@ function restaurarEstadoDesde(registros) {
       tiendaId: fila.tiendaId,
       productoId: fila.productoId,
       cantidad: fila.cantidad,
+      // Filas anteriores a ADR-0032: un producto, sin el nombre fijado.
+      items: fila.items ?? [
+        {
+          productoId: fila.productoId,
+          nombre: null,
+          cantidad: fila.cantidad,
+          precioUnitario: fila.total / fila.cantidad,
+        },
+      ],
       total: fila.total,
       estado: fila.estado,
       pin: fila.pin ?? null,

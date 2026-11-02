@@ -14,6 +14,8 @@ export interface PedidoGuardado {
   seguimiento?: string | null
   productoId: string
   productoNombre: string
+  /** Productos del pedido en texto (ADR-0032); ausente en pedidos guardados antes. */
+  resumen?: string
   cantidad: number
   total: number
   creadoEn: string
@@ -35,7 +37,7 @@ export function listarPedidosLocales(): PedidoGuardado[] {
   return leer().sort((a, b) => b.creadoEn.localeCompare(a.creadoEn))
 }
 
-export function registrarPedidoLocal(pedido: Pedido, productoNombre: string): void {
+export function registrarPedidoLocal(pedido: Pedido, resumen: string): void {
   const todos = leer().filter((p) => p.pedidoId !== pedido.id)
   todos.push({
     pedidoId: pedido.id,
@@ -43,7 +45,8 @@ export function registrarPedidoLocal(pedido: Pedido, productoNombre: string): vo
     tiendaId: pedido.tiendaId,
     seguimiento: pedido.seguimiento ?? null,
     productoId: pedido.productoId,
-    productoNombre,
+    productoNombre: resumen,
+    resumen,
     cantidad: pedido.cantidad,
     total: pedido.total,
     creadoEn: new Date().toISOString(),

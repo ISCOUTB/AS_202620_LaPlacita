@@ -66,15 +66,16 @@ personal de cada tienda.
   Los productos agotados aparecen en gris.
 - Permite crear una cuenta con correo institucional, tras aceptar el
   [aviso de privacidad](https://laplacita-app.iscoutb.dev/privacidad).
-- Permite armar un carrito y hacer el pedido. Cada línea del carrito crea un pedido del contrato v1.
+- Permite armar un carrito con productos de varias tiendas. Cada tienda recibe un solo pedido, con
+  sus productos, un código y un PIN ([ADR-0032](docs/adr/0032-un-pedido-por-tienda-con-varios-productos.md)).
 - Muestra el seguimiento del pedido, actualizado cada 3 segundos, con código corto (A01 a Z99).
 - Muestra el PIN de retiro solo a su dueño y solo cuando el pedido está Listo.
 - Guarda el historial en «Mis pedidos». Se instala como PWA.
 
 **En el panel de cada tienda (`/panel`):**
 
-- Pedidos en vivo con aviso sonoro: confirmar pago, marcar Listo y entregar con el PIN que dicta
-  el cliente.
+- Pedidos en vivo con aviso sonoro. Cada pedido es un recuadro con el nombre del cliente y sus
+  productos: confirmar pago, marcar Listo y entregar con el PIN que dicta el cliente.
 - Menú: el rol `trabajador` marca agotados; el rol `admin` además cambia precios y fotos.
 - Resumen del día.
 

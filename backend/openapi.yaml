@@ -1100,9 +1100,16 @@ components:
           type: string
         productoId:
           type: string
+          description: Primer producto del pedido. El detalle completo está en `items`.
         cantidad:
           type: integer
           minimum: 1
+          description: Unidades totales del pedido.
+        items:
+          type: array
+          description: Productos del pedido, con el nombre y el precio del momento de la compra (ADR-0032).
+          items:
+            $ref: '#/components/schemas/ItemPedido'
         total:
           type: number
           minimum: 0
@@ -1117,6 +1124,25 @@ components:
         - cantidad
         - total
         - estado
+
+    ItemPedido:
+      type: object
+      properties:
+        productoId:
+          type: string
+        nombre:
+          type: [string, 'null']
+          description: Nombre al comprar. Null en pedidos anteriores a ADR-0032.
+        cantidad:
+          type: integer
+          minimum: 1
+        precioUnitario:
+          type: number
+          minimum: 0
+      required:
+        - productoId
+        - cantidad
+        - precioUnitario
 
     PedidoCreado:
       type: object
@@ -1137,7 +1163,26 @@ components:
 
     CrearPedidoRequest:
       type: object
+      description: >-
+        Un pedido agrupa los productos de UNA tienda, con un solo código y un
+        solo PIN (ADR-0032). Se envía `items`, o `productoId` y `cantidad` para
+        un producto (formato original de v1).
       properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items:
+            type: object
+            properties:
+              productoId:
+                type: string
+              cantidad:
+                type: integer
+                minimum: 1
+            required:
+              - productoId
+              - cantidad
         productoId:
           type: string
         cantidad:
@@ -1148,10 +1193,14 @@ components:
         tiendaId:
           type: string
       required:
-        - productoId
-        - cantidad
         - clienteId
         - tiendaId
+      oneOf:
+        - required:
+            - items
+        - required:
+            - productoId
+            - cantidad
 
     ValidarPinRequest:
       type: object

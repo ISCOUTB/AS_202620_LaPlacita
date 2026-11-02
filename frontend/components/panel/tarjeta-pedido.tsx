@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react"
 import { CodigoPedido } from "@/components/utb/codigo-pedido"
 import { Boton } from "@/components/utb/boton"
 import { confirmarPagoTienda, entregarConPin, marcarListoTienda, type PedidoTienda } from "@/lib/api"
+import type { ProductoDelPedido } from "@/lib/pedido-items"
 import { formatCOP } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
@@ -24,19 +25,20 @@ function haceCuanto(creadoEn: string | null | undefined, ahora: number | null) {
 // backend). Tras cada acción, `alCambiar` refresca la cola.
 export function TarjetaPedido({
   pedido,
-  producto,
+  productos,
   ahora,
   nuevo,
   alCambiar,
 }: {
   pedido: PedidoTienda
-  producto: string
+  productos: ProductoDelPedido[]
   ahora: number | null
   nuevo: boolean
   alCambiar: () => void
 }) {
   const [ocupado, setOcupado] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const cliente = pedido.clienteNombre ?? "Cliente"
 
   async function ejecutar(accion: () => Promise<unknown>) {
     setOcupado(true)
@@ -68,19 +70,32 @@ export function TarjetaPedido({
       <div className="flex items-start justify-between gap-3">
         <div>
           <CodigoPedido codigo={pedido.codigo} pedidoId={pedido.id} className="text-3xl text-noche" />
-          <p className="text-sm text-tenue">
-            {pedido.clienteNombre ?? "Cliente"} · {haceCuanto(pedido.creadoEn, ahora) ?? ""}
-          </p>
+          <p className="text-sm text-tenue">{haceCuanto(pedido.creadoEn, ahora) ?? ""}</p>
         </div>
         {nuevo && <span className="rounded-full bg-celeste px-2.5 py-0.5 text-xs font-bold text-noche">Nuevo</span>}
       </div>
 
-      <div className="flex items-baseline justify-between gap-3 border-t border-borde pt-3">
-        <p className="font-medium text-tinta">
-          {producto} <span className="text-suave">× {pedido.cantidad}</span>
+      {/* ADR-0032: todo lo que pidió una persona en esta tienda, junto. */}
+      <section aria-label={`Pedido de ${cliente}`} className="rounded-xl border-2 border-azul/25 bg-fondo p-3">
+        <p className="flex items-baseline justify-between gap-3 text-sm">
+          <span className="font-bold text-noche">Pedido de {cliente}</span>
+          <span className="shrink-0 text-suave">
+            {productos.length} {productos.length === 1 ? "producto" : "productos"}
+          </span>
         </p>
-        <p className="font-display text-lg font-extrabold text-azul">{formatCOP(pedido.total)}</p>
-      </div>
+        <ul className="mt-2 divide-y divide-borde">
+          {productos.map((p) => (
+            <li key={p.productoId} className="flex items-baseline justify-between gap-3 py-1.5">
+              <span className="font-medium text-tinta">{p.nombre}</span>
+              <span className="shrink-0 font-bold text-noche">× {p.cantidad}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-2 flex items-baseline justify-between gap-3 border-t-2 border-azul/25 pt-2">
+          <span className="text-sm text-suave">Total</span>
+          <span className="font-display text-lg font-extrabold text-azul">{formatCOP(pedido.total)}</span>
+        </p>
+      </section>
 
       {pedido.estado === "Recibido" && (
         <Boton variante="principal" disabled={ocupado} onClick={() => ejecutar(() => confirmarPagoTienda(pedido.id))}>
@@ -91,6 +106,9 @@ export function TarjetaPedido({
         <Boton variante="azul" disabled={ocupado} onClick={() => ejecutar(() => marcarListoTienda(pedido.id))}>
           Marcar listo
         </Boton>
+      )}
+      {pedido.estado === "Listo" && productos.length > 1 && (
+        <p className="text-sm text-suave">Un solo PIN entrega todo el pedido.</p>
       )}
       {pedido.estado === "Listo" && (
         <form onSubmit={entregar} className="flex gap-2">

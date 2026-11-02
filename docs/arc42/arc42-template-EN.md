@@ -527,6 +527,7 @@ Esta sección registra el historial de decisiones arquitectónicas significativa
 | ADR-0029 | Superficie pública mínima: retiro de rutas v1 de entrega y pago solo del dueño | Aceptado | 2026-10-25 | ESC-02, S13 | [0029-superficie-publica-minima.md](../adr/0029-superficie-publica-minima.md) |
 | ADR-0030 | `POST /notificaciones` exige la sesión de la tienda y ninguna ruta de escritura queda sin sesión (completa ADR-0029) | Aceptado | 2026-10-28 | ESC-02, ESC-03, S13 | [0030-escrituras-con-sesion-y-notificaciones.md](../adr/0030-escrituras-con-sesion-y-notificaciones.md) |
 | ADR-0031 | Sin ETag ni LISTEN/NOTIFY mientras haya una sola instancia (decisión formal de los entregables S12 no implementados) | Aceptado | 2026-10-28 | ESC-01, S12, S13 | [0031-sin-etag-ni-listen-notify.md](../adr/0031-sin-etag-ni-listen-notify.md) |
+| ADR-0032 | Un pedido por tienda con varios productos, un código y un PIN (precisa ADR-0017 en el carrito) | Propuesto | 2026-11-02 | ESC-05, ESC-02, ESC-03 | [0032-un-pedido-por-tienda-con-varios-productos.md](../adr/0032-un-pedido-por-tienda-con-varios-productos.md) |
  
 **Relación con los bloques de construcción:**
 - ADR-0001 y ADR-0002 determinan la estructura: un único proceso con módulos de dominio separados.

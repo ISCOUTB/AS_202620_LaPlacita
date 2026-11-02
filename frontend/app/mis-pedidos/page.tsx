@@ -9,6 +9,7 @@ import { CodigoPedido } from "@/components/utb/codigo-pedido"
 import { EstadoChip } from "@/components/utb/estado-chip"
 import { obtenerMisPedidos, obtenerPedido, obtenerProductos, type EstadoPedido } from "@/lib/api"
 import { formatCOP } from "@/lib/format"
+import { productosDe, resumenDeProductos } from "@/lib/pedido-items"
 import { listarPedidosLocales } from "@/lib/pedidos-locales"
 import { useSesion } from "@/lib/sesion"
 import { getStoreByTiendaId } from "@/lib/stores"
@@ -20,8 +21,8 @@ type Fila = {
   seguimiento?: string | null
   codigo: string | null
   estado: EstadoPedido | null
-  nombre: string
-  cantidad: number
+  /** Productos del pedido en texto: «Arepa de huevo × 2, Jugo de mango × 1». */
+  resumen: string
   total: number
 }
 
@@ -30,7 +31,7 @@ type Fila = {
 // estado consultado en vivo contra el contrato.
 async function filasDeLaCuenta(): Promise<Fila[]> {
   const pedidos = await obtenerMisPedidos()
-  // El pedido trae el productoId; el nombre sale del catálogo de cada tienda.
+  // ADR-0032: el pedido trae los nombres; el catálogo cubre los pedidos anteriores.
   const tiendas = Array.from(new Set(pedidos.map((p) => p.tiendaId)))
   const nombres = new Map<string, string>()
   await Promise.all(
@@ -45,8 +46,7 @@ async function filasDeLaCuenta(): Promise<Fila[]> {
     tiendaId: p.tiendaId,
     codigo: p.codigo ?? null,
     estado: p.estado,
-    nombre: nombres.get(p.productoId) ?? p.productoId,
-    cantidad: p.cantidad,
+    resumen: resumenDeProductos(productosDe(p, nombres)),
     total: p.total,
   }))
 }
@@ -63,8 +63,7 @@ async function filasDelEquipo(): Promise<Fila[]> {
           seguimiento: p.seguimiento ?? null,
           codigo,
           estado,
-          nombre: p.productoNombre,
-          cantidad: p.cantidad,
+          resumen: p.resumen ?? `${p.productoNombre} × ${p.cantidad}`,
           total: p.total,
         })),
     ),
@@ -159,9 +158,7 @@ export default function MisPedidosPage() {
                   </span>
                 )}
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  <p className="font-medium text-tinta">
-                    {p.nombre} × {p.cantidad}
-                  </p>
+                  <p className="font-medium text-tinta">{p.resumen}</p>
                   <p className="text-sm text-tenue">
                     {getStoreByTiendaId(p.tiendaId)?.name ?? p.tiendaId}
                     {!p.codigo && (
