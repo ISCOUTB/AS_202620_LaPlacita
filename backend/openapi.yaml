@@ -517,6 +517,51 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /tienda/pedidos/{pedidoId}/cancelar:
+    post:
+      tags: [tienda]
+      summary: Eliminar un pedido de la cola de la tienda, sin PIN (solo admin, ADR-0033)
+      operationId: cancelarEnTienda
+      security:
+        - sesion: []
+      parameters:
+        - name: pedidoId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Pedido cancelado; deja de aparecer en la cola
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoTienda'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es del administrador de una tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: El pedido no es de esta tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: El pedido ya fue entregado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /tienda/pedidos/{pedidoId}/listo:
     post:
       tags: [tienda]
@@ -1116,6 +1161,10 @@ components:
         estado:
           type: string
           enum: [Recibido, En preparación, Listo, Entregado]
+        canceladoEn:
+          type: [string, 'null']
+          format: date-time
+          description: Momento en que la tienda eliminó el pedido (ADR-0033). Null si sigue vigente.
       required:
         - id
         - clienteId

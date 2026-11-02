@@ -70,7 +70,8 @@ personal de cada tienda.
   sus productos, un código y un PIN ([ADR-0032](docs/adr/0032-un-pedido-por-tienda-con-varios-productos.md)).
 - Muestra el seguimiento del pedido, actualizado cada 3 segundos, con código corto (A01 a Z99).
 - Muestra el PIN de retiro solo a su dueño y solo cuando el pedido está Listo.
-- Guarda el historial en «Mis pedidos». Se instala como PWA.
+- En «Mis pedidos» muestra arriba, en un recuadro, los pedidos de hoy que siguen en curso, y deja
+  plegados los anteriores. Se instala como PWA.
 
 **En el panel de cada tienda (`/panel`):**
 
@@ -78,6 +79,8 @@ personal de cada tienda.
   productos: confirmar pago, marcar Listo y entregar con el PIN que dicta el cliente.
 - Menú: el rol `trabajador` marca agotados; el rol `admin` además cambia precios y fotos.
 - Resumen del día.
+- El `admin` puede eliminar un pedido que nadie va a recoger, sin su PIN
+  ([ADR-0033](docs/adr/0033-eliminar-pedidos-sin-borrar-la-fila.md)).
 
 **Estados del pedido:** Recibido → En preparación → Listo → Entregado.
 

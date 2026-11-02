@@ -4,12 +4,15 @@ import { cn } from "@/lib/utils"
 
 export function EstadoChip({
   estado,
+  etiqueta,
   className,
 }: {
   estado: EstadoPedido | null | undefined
+  /** Reemplaza al estado cuando el pedido ya no sigue su curso (cancelado, sin completar). */
+  etiqueta?: string
   className?: string
 }) {
-  const clases = estado ? INFO_ESTADO[estado].clases : "bg-entregado-fondo text-entregado-texto"
+  const clases = estado && !etiqueta ? INFO_ESTADO[estado].clases : "bg-entregado-fondo text-entregado-texto"
   return (
     <span
       className={cn(
@@ -18,7 +21,7 @@ export function EstadoChip({
         className,
       )}
     >
-      {estado ?? "Sin estado"}
+      {etiqueta ?? estado ?? "Sin estado"}
     </span>
   )
 }

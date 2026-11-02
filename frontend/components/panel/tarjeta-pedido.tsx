@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, type FormEvent } from "react"
+import { Trash2 } from "lucide-react"
 import { CodigoPedido } from "@/components/utb/codigo-pedido"
 import { Boton } from "@/components/utb/boton"
-import { confirmarPagoTienda, entregarConPin, marcarListoTienda, type PedidoTienda } from "@/lib/api"
+import { confirmarPagoTienda, eliminarPedidoTienda, entregarConPin, marcarListoTienda, type PedidoTienda } from "@/lib/api"
 import type { ProductoDelPedido } from "@/lib/pedido-items"
 import { formatCOP } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -18,7 +19,12 @@ const BORDE: Record<string, string> = {
 function haceCuanto(creadoEn: string | null | undefined, ahora: number | null) {
   if (!creadoEn || ahora === null) return null
   const minutos = Math.max(0, Math.floor((ahora - new Date(creadoEn).getTime()) / 60_000))
-  return minutos < 1 ? "recién llegado" : `hace ${minutos} min`
+  if (minutos < 1) return "recién llegado"
+  if (minutos < 60) return `hace ${minutos} min`
+  const horas = Math.floor(minutos / 60)
+  if (horas < 24) return `hace ${horas} h`
+  const dias = Math.floor(horas / 24)
+  return `hace ${dias} ${dias === 1 ? "día" : "días"}`
 }
 
 // Una tarjeta por pedido: la acción depende del estado (máquina de estados del
@@ -28,16 +34,19 @@ export function TarjetaPedido({
   productos,
   ahora,
   nuevo,
+  esAdmin,
   alCambiar,
 }: {
   pedido: PedidoTienda
   productos: ProductoDelPedido[]
   ahora: number | null
   nuevo: boolean
+  esAdmin: boolean
   alCambiar: () => void
 }) {
   const [ocupado, setOcupado] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [confirmando, setConfirmando] = useState(false)
   const cliente = pedido.clienteNombre ?? "Cliente"
 
   async function ejecutar(accion: () => Promise<unknown>) {
@@ -136,6 +145,38 @@ export function TarjetaPedido({
         <p role="alert" className="rounded-xl bg-error-fondo px-3 py-2 text-sm text-error-texto">
           {error}
         </p>
+      )}
+
+      {/* ADR-0033: para pedidos que nadie va a recoger; no necesita el PIN. */}
+      {esAdmin && !confirmando && (
+        <button
+          type="button"
+          onClick={() => setConfirmando(true)}
+          className="inline-flex items-center gap-1.5 self-start rounded-lg py-1 text-sm font-medium text-error-texto hover:underline"
+        >
+          <Trash2 aria-hidden="true" className="size-4" />
+          Eliminar pedido
+        </button>
+      )}
+      {esAdmin && confirmando && (
+        <div className="flex flex-col gap-2 rounded-xl bg-error-fondo p-3">
+          <p className="text-sm text-error-texto">
+            ¿Eliminar el pedido de {cliente}? Sale del panel y no se puede deshacer.
+          </p>
+          <div className="flex gap-2">
+            <Boton variante="contorno" disabled={ocupado} onClick={() => setConfirmando(false)} className="flex-1 py-2">
+              No
+            </Boton>
+            <button
+              type="button"
+              disabled={ocupado}
+              onClick={() => ejecutar(() => eliminarPedidoTienda(pedido.id))}
+              className="flex-1 rounded-xl bg-error-texto px-4 py-2 font-medium text-white disabled:opacity-60"
+            >
+              Sí, eliminar
+            </button>
+          </div>
+        </div>
       )}
     </article>
   )

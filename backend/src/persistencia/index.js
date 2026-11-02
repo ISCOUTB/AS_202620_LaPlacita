@@ -56,6 +56,8 @@ ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS seguimiento TEXT;
 -- Productos del pedido con nombre y precio del momento (ADR-0032). NULL en las
 -- filas anteriores, que tienen un solo producto en producto_id y cantidad.
 ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS items JSONB;
+-- Pedido retirado por el administrador de la tienda (ADR-0033).
+ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS cancelado_en TIMESTAMPTZ;
 -- Cuentas (ADR-0021). La contraseña se guarda solo como derivada scrypt.
 CREATE TABLE IF NOT EXISTS usuarios (
   usuario_id TEXT        PRIMARY KEY,
@@ -95,7 +97,7 @@ CREATE TABLE IF NOT EXISTS tiendas (
 );
 `;
 
-const COLUMNAS = 'tienda_id, pedido_id, cliente_id, producto_id, cantidad, total, estado, pin, codigo, creado_en, seguimiento, items';
+const COLUMNAS = 'tienda_id, pedido_id, cliente_id, producto_id, cantidad, total, estado, pin, codigo, creado_en, seguimiento, items, cancelado_en';
 // Llave de advisory lock para el DDL: node --test levanta un proceso por
 // archivo en paralelo y todos importan este módulo; sin la llave, dos
 // `CREATE TABLE IF NOT EXISTS` simultáneos chocan en el catálogo de PostgreSQL.
@@ -135,6 +137,7 @@ function filaAPedido(fila) {
     creadoEn: fila.creado_en ? new Date(fila.creado_en).toISOString() : null,
     seguimiento: fila.seguimiento ?? null,
     items: fila.items ?? null,
+    canceladoEn: fila.cancelado_en ? new Date(fila.cancelado_en).toISOString() : null,
   };
 }
 
@@ -374,7 +377,7 @@ export async function aplicarMensaje(mensaje) {
   const d = mensaje.datos;
   const { rowCount } = await pool.query({
     text: `INSERT INTO pedidos (${COLUMNAS}, secuencia)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
      ON CONFLICT (tienda_id, pedido_id) DO UPDATE
      SET cliente_id = EXCLUDED.cliente_id,
          producto_id = EXCLUDED.producto_id,
@@ -386,6 +389,7 @@ export async function aplicarMensaje(mensaje) {
          creado_en = EXCLUDED.creado_en,
          seguimiento = EXCLUDED.seguimiento,
          items = EXCLUDED.items,
+         cancelado_en = EXCLUDED.cancelado_en,
          secuencia = EXCLUDED.secuencia,
          actualizado_en = now()
      WHERE pedidos.secuencia IS NULL OR pedidos.secuencia < EXCLUDED.secuencia`,
@@ -402,6 +406,7 @@ export async function aplicarMensaje(mensaje) {
       d.creadoEn,
       d.seguimiento,
       d.items ? JSON.stringify(d.items) : null,
+      d.canceladoEn,
       mensaje.secuencia,
     ],
     query_timeout: TIMEOUT_ESCRITURA_MS,
@@ -453,6 +458,7 @@ export function escribirPedido(pedido) {
       creadoEn: pedido.creadoEn ?? null,
       seguimiento: pedido.seguimiento ?? null,
       items: pedido.items ?? null,
+      canceladoEn: pedido.canceladoEn ?? null,
     }),
   );
   // El rechazo (mensaje en la DLQ) ya quedó registrado por el despachador.
