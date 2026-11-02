@@ -3,6 +3,7 @@ import localFont from "next/font/local"
 import { Suspense } from "react"
 import { CartProvider } from "@/components/cart/cart-provider"
 import { FloatingCart } from "@/components/cart/floating-cart"
+import { GuardaPersonal } from "@/components/panel/guarda-personal"
 import { RegistroSw } from "@/components/registro-sw"
 import { SesionProvider } from "@/lib/sesion"
 import { BarraInferior, BarraInferiorVista } from "@/components/utb/barra-inferior"
@@ -61,6 +62,9 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <SesionProvider>
         <CartProvider>
+          <Suspense fallback={null}>
+            <GuardaPersonal />
+          </Suspense>
           <Suspense fallback={<EncabezadoVista ruta="" />}>
             <Encabezado />
           </Suspense>
