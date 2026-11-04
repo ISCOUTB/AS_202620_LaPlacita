@@ -33,7 +33,7 @@ export function TarjetaTienda({ store, imagenId }: { store: Store; imagenId?: st
   return (
     <Link
       href={`/tiendas/${store.slug}`}
-      className="group flex items-center gap-4 rounded-2xl bg-superficie p-4 shadow-tarjeta transition-transform hover:-translate-y-0.5"
+      className="group flex min-w-0 max-w-full items-center gap-3 overflow-hidden rounded-2xl bg-superficie p-3 shadow-tarjeta transition-transform hover:-translate-y-0.5 sm:gap-4 sm:p-4"
     >
       {imagenSrc ? (
         // La tarjeta reutiliza la referencia del estado de atención de la ficha.

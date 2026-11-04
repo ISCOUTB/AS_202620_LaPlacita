@@ -10,7 +10,7 @@ export function StoreHero({ store }: { store: Store }) {
   return (
     <section
       aria-labelledby="tienda-titulo"
-      className="relative isolate min-h-[560px] overflow-hidden rounded-b-[2rem] bg-noche text-white md:mx-auto md:mt-6 md:min-h-[520px] md:max-w-6xl md:rounded-3xl"
+      className="relative isolate mx-4 mt-4 min-h-[560px] max-w-full overflow-hidden rounded-3xl bg-noche text-white sm:mx-5 md:mx-auto md:mt-6 md:min-h-[520px] md:max-w-6xl"
     >
       <StoreStatusImage store={store} />
       <div aria-hidden="true" className="absolute inset-0 z-10 bg-black/25" />
@@ -32,25 +32,25 @@ export function StoreHero({ store }: { store: Store }) {
           Todas las tiendas
         </Link>
 
-        <div className="max-w-2xl">
+        <div className="w-full min-w-0 max-w-2xl">
           <p className="text-sm font-bold tracking-[0.24em] text-white/80 uppercase">
             UTB · {store.category}
           </p>
           <h1 id="tienda-titulo" className="mt-2 font-display text-5xl leading-[0.98] font-extrabold tracking-tight drop-shadow-lg md:text-7xl">
             {store.name}
           </h1>
-          <p className="mt-5 max-w-xl text-base leading-relaxed text-white/95 drop-shadow-md md:text-lg">
+          <p className="mt-5 w-full max-w-xl break-words text-base leading-relaxed text-white/95 drop-shadow-md [overflow-wrap:anywhere] md:text-lg">
             {store.description}
           </p>
         </div>
 
-        <div className="flex max-w-3xl flex-col gap-3 text-sm text-white drop-shadow-md sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-5">
+        <div className="flex w-full min-w-0 max-w-3xl flex-col gap-3 text-sm text-white drop-shadow-md sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-5">
           <EstadoApertura store={store} />
-          <span className="inline-flex items-center gap-1.5">
+          <span className="inline-flex min-w-0 items-center gap-1.5 break-words [overflow-wrap:anywhere]">
             <MapPin aria-hidden="true" className="size-4 shrink-0" />
             {store.location}
           </span>
-          <span className="inline-flex items-start gap-1.5">
+          <span className="inline-flex min-w-0 items-start gap-1.5 break-words [overflow-wrap:anywhere]">
             <Clock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
             {store.schedule.map((franja) => `${franja.days} ${franja.time}`).join(" · ")}
           </span>
