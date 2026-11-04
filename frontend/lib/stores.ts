@@ -25,6 +25,12 @@ export type Store = {
   schedule: StoreSchedule[]
   /** El mismo horario, estructurado para calcular si está abierta ahora. */
   franjas: Franja[]
+  /** Foto de la fachada para el banner de la tienda. Si la tienda sube una
+   * imagen desde el panel (ADR-0035), esa tiene prioridad. */
+  fachada: string
+  /** Encuadre de la foto (clase object-position) cuando el letrero no queda
+   * arriba con el encuadre centrado. */
+  encuadreFachada?: string
 }
 
 const LUN_VIE = [1, 2, 3, 4, 5]
@@ -36,6 +42,8 @@ const SAB = [6]
 export const stores: Store[] = [
   {
     slug: "el-meson",
+    fachada: "/imagenes/tiendas/el-meson.webp",
+    encuadreFachada: "object-[center_40%] md:object-[center_90%]",
     tiendaId: "tienda-01",
     name: "El Mesón",
     category: "Desayunos",
@@ -53,6 +61,7 @@ export const stores: Store[] = [
   },
   {
     slug: "el-asao",
+    fachada: "/imagenes/tiendas/el-asao.webp",
     tiendaId: "tienda-02",
     name: "El Asa'o",
     category: "Asados",
@@ -70,6 +79,7 @@ export const stores: Store[] = [
   },
   {
     slug: "punto-fit",
+    fachada: "/imagenes/tiendas/punto-fit.webp",
     tiendaId: "tienda-03",
     name: "Punto Fit",
     category: "Saludable",
@@ -87,6 +97,7 @@ export const stores: Store[] = [
   },
   {
     slug: "alegria",
+    fachada: "/imagenes/tiendas/alegria.webp",
     tiendaId: "tienda-04",
     name: "Alegría",
     category: "Dulce y salado",
@@ -104,6 +115,7 @@ export const stores: Store[] = [
   },
   {
     slug: "antojos",
+    fachada: "/imagenes/tiendas/antojos.webp",
     tiendaId: "tienda-05",
     name: "Antojos",
     category: "Snacks",

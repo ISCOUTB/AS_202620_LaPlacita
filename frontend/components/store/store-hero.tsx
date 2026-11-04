@@ -5,33 +5,46 @@ import { StoreStatusImage } from "@/components/store/store-status-image"
 import { EstadoApertura } from "@/components/tiendas/tarjeta-tienda"
 import type { Store } from "@/lib/stores"
 
-/** Presentación de la tienda sobre la misma imagen de Garage que usa su tarjeta. */
+/**
+ * Presentación de la tienda sobre la foto de su fachada, nítida, como el
+ * banner de la portada. En pantalla ancha la foto cubre todo y el texto va
+ * abajo a la izquierda, sobre una capa oscura que se abre hacia arriba y a la
+ * derecha, para que el letrero de la tienda (arriba al centro) quede libre.
+ * En el celular la foto va como franja arriba y el texto debajo.
+ */
 export function StoreHero({ store }: { store: Store }) {
   return (
     <section
       aria-labelledby="tienda-titulo"
-      className="relative isolate mx-4 mt-4 min-h-[560px] max-w-full overflow-hidden rounded-3xl bg-noche text-white sm:mx-5 md:mx-auto md:mt-6 md:min-h-[520px] md:max-w-6xl"
+      className="relative isolate mx-4 mt-4 max-w-full overflow-hidden rounded-3xl bg-noche text-white sm:mx-5 md:mx-auto md:mt-6 md:min-h-[560px] md:max-w-6xl"
     >
-      <StoreStatusImage store={store} />
-      <div aria-hidden="true" className="absolute inset-0 z-10 bg-black/25" />
       <div
         aria-hidden="true"
-        className="absolute inset-0 z-10 bg-gradient-to-r from-[#06132e]/95 via-[#06132e]/75 to-[#06132e]/25"
+        className="pointer-events-none absolute inset-x-0 top-0 z-0 aspect-[12/5] [mask-image:linear-gradient(to_bottom,black_65%,transparent)] md:inset-0 md:aspect-auto md:[mask-image:none]"
+      >
+        <StoreStatusImage store={store} />
+      </div>
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 z-10 hidden bg-linear-to-r from-noche/80 from-5% via-noche/30 via-35% to-transparent to-55% md:block"
       />
       <div
         aria-hidden="true"
-        className="absolute inset-0 z-10 bg-gradient-to-t from-black/55 via-transparent to-black/15"
+        className="absolute inset-0 z-10 hidden bg-linear-to-t from-noche/75 via-transparent via-40% to-transparent md:block"
       />
 
-      <div className="relative z-20 mx-auto flex min-h-[560px] max-w-6xl flex-col justify-center gap-6 px-5 py-8 md:min-h-[520px] md:px-10 md:py-12">
-        <Link
-          href="/tiendas"
-          className="inline-flex w-fit items-center gap-2 rounded-full border border-white/25 bg-black/20 px-4 py-2 text-sm font-medium text-white backdrop-blur-md transition-colors hover:bg-black/35"
-        >
-          <ArrowLeft aria-hidden="true" className="size-4" />
-          Todas las tiendas
-        </Link>
+      <Link
+        href="/tiendas"
+        aria-label="Todas las tiendas"
+        className="absolute top-3 left-3 z-30 inline-flex w-fit items-center gap-2 rounded-full border border-white/25 bg-black/30 p-2.5 text-sm font-medium text-white backdrop-blur-md transition-colors hover:bg-black/45 md:top-6 md:left-10 md:px-4 md:py-2"
+      >
+        <ArrowLeft aria-hidden="true" className="size-4" />
+        <span className="hidden md:inline">Todas las tiendas</span>
+      </Link>
 
+      {/* En el celular el texto arranca donde termina la franja de la foto
+          (ancho de la tarjeta ÷ 2,4, la proporción de las fotos); en pantalla ancha va abajo. */}
+      <div className="relative z-20 mx-auto flex max-w-6xl flex-col gap-6 px-5 pt-[calc(42vw-1.5rem)] pb-6 [text-shadow:0_2px_14px_rgb(0_0_0/0.5)] md:min-h-[560px] md:justify-end md:px-10 md:pt-24 md:pb-10">
         <div className="w-full min-w-0 max-w-2xl">
           <p className="text-sm font-bold tracking-[0.24em] text-white/80 uppercase">
             UTB · {store.category}
