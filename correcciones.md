@@ -1423,3 +1423,40 @@ reconcilia IDs visibles antes/después con la cuenta autenticada y toma deltas d
 umbral sigue siendo manual hasta acordar el denominador y el tratamiento de 429. **No se ejecutaron
 pruebas ni llamadas a producción** durante esta revisión. Si se cambia el límite Traefik para una
 prueba autorizada, documentar y revertir ese ajuste.
+
+---
+
+## Despliegue automático del backend y del frontend (04/11/2026)
+
+El frontend ya no necesita el botón **Deploy** en Dokploy. `.github/workflows/deploy-dokploy.yml`
+ahora tiene tres jobs:
+
+1. `cambios` mira qué carpetas tocó el push (`backend/`, `frontend/`). Una ejecución manual o un
+   cambio del propio workflow despliega las dos apps.
+2. `backend` corre pruebas con PostgreSQL y contrato, dispara el webhook de Dokploy y espera hasta
+   10 minutos a que `/api/v1/health` devuelva la huella del commit.
+3. `frontend` corre después del backend (o solo, si el backend no cambió), pasa lint y build,
+   dispara su webhook (secret `DOKPLOY_FRONTEND_WEBHOOK`) y espera a que `/api/version` devuelva
+   la huella del commit.
+
+La huella es un SHA-256 de los archivos del paquete que entran a la imagen
+(`scripts/huella.mjs`, igual en backend y frontend). El Dockerfile la calcula antes del build y la
+deja en `huella.txt`; el workflow la calcula sobre el checkout. Esto corrige un hueco del job
+anterior: el health check aceptaba el 200 del contenedor viejo mientras Dokploy construía el nuevo,
+así que no probaba qué versión estaba sirviendo.
+
+`GET /api/v1/health` responde `{ status: "ok", huella }` (contrato actualizado). Fuera de Docker la
+huella vale `local`.
+
+Verificación local: `npm test` 162 pasan, 7 omitidas sin PostgreSQL y 0 fallos; contrato 34/34;
+frontend `npm run lint` y `npm run build` sin errores. La huella da el mismo valor sobre una copia
+tipo checkout y sobre una copia tipo contexto Docker (sin `Dockerfile`, `.dockerignore`, PDF ni
+`.env`): backend `66944213d8da92ab`, frontend `99f8d1464948c117` en el árbol de este cambio.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| El frontend se despliega solo | Tras un push que toque `frontend/`, el run de *Deploy Dokploy* termina con «Frontend desplegado: huella …» y Dokploy muestra un despliegue nuevo sin haber pulsado Deploy |
+| El orden backend → frontend | En un push que toque las dos carpetas, el job `frontend` empieza cuando `backend` terminó en verde |
+| La versión servida es la del commit | `curl https://laplacita-test.iscoutb.dev/api/v1/health` y `curl https://laplacita-app.iscoutb.dev/api/version` devuelven la misma huella que imprime el run |

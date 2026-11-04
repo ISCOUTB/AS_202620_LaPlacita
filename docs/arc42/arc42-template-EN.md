@@ -381,7 +381,7 @@ flowchart TB
     CLI["Cliente móvil / navegador<br/>(PWA en el dominio del frontend)"]
 
     DEV -->|push a master| GH
-    GH -->|gate + webhook de redeploy| DK
+    GH -->|gate + webhook de redeploy (backend, luego frontend) + huella servida| DK
     GH -->|análisis estático| SC
     DK ---|TCP / pg, sin firewall| DB
     CLI -->|HTTPS: PWA + contrato /api/v1 (BFF)| DK
@@ -391,6 +391,7 @@ flowchart TB
 |---|---|---|
 | API Next.js standalone | Dokploy (servidor del laboratorio de la U), contenedor Docker (`PORT=3000`, `NODE_ENV=production`), dominio `laplacita-test.iscoutb.dev` | `backend/Dockerfile`, `.github/workflows/deploy-dokploy.yml`, ADR-0018 |
 | PWA de usuario (Next.js standalone) | Dokploy, contenedor Docker, dominio `laplacita-app.iscoutb.dev`; su BFF proxyea `/api/v1` al backend | `frontend/Dockerfile`, `frontend/app/api/v1/[...path]/route.js`, ADR-0017 |
+| Despliegue continuo | GitHub Actions: un push a `master` despliega solo lo que cambió (backend antes que frontend), tras su gate, y da el despliegue por terminado cuando `/api/v1/health` o `/api/version` devuelven la huella SHA-256 del código de ese commit (`scripts/huella.mjs`) | `.github/workflows/deploy-dokploy.yml`, `backend/src/health.js`, `frontend/app/api/version/route.ts` |
 | Rutas `/api/v1/*` + dominio `backend/src/modules/*` | Dentro del contenedor del backend (mismo proceso, ESM síncrono) | `backend/app/api/v1/**/route.js`, ADR-0001/0006 |
 | Pipeline `test` + `contract-test` + `frontend` | GitHub Actions runners `ubuntu-latest` + Node 22 en cada push/PR a `master` | `.github/workflows/ci.yml` |
 | Análisis estático + Quality Gate | SonarCloud, organización `isco-utb`, proyecto `ISCOUTB_AS_202620_LaPlacita` | `sonar-project.properties`, ADR-0016 |

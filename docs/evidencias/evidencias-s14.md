@@ -28,7 +28,7 @@ La evidencia S14 debe cerrar las dos mediciones del plan:
 | Revisar STRIDE y las decisiones propuestas ADR-0032–0036 | Fecha, asistentes, acuerdos y cambios de estado acordados por el equipo | Pendiente de registrar la reunión del 03/11 |
 | Aplicar rate limit y límite de cuerpo en Traefik (P-1) | Valores efectivos en ambos dominios, respuestas de borde y flujo normal/subida de imagen | Pendiente; seguir [`guía P-1`](../despliegue-rate-limit-traefik.md) |
 | Ensayar rotación de `JWT_SECRET` (P-4) | Hora, procedimiento, invalidación de sesión anterior y login nuevo verificado | Pendiente; el procedimiento escrito no acredita el ensayo |
-| Identificar las versiones desplegadas | SHA de backend y frontend confirmado en Dokploy; guardar el run y el log del despliegue | Pendiente de evidencia funcional |
+| Identificar las versiones desplegadas | SHA de backend y frontend confirmado en Dokploy; guardar el run y el log del despliegue | Mecanismo implementado el 04/11: `deploy-dokploy.yml` despliega backend y frontend y espera a que `/api/v1/health` y `/api/version` devuelvan la huella del commit. Falta enlazar aquí el primer run en verde |
 
 El workflow comprueba que el webhook de Dokploy responda HTTP 200 y luego consulta `/api/v1/health`.
 Ese health check solo devuelve `{"status":"ok"}`; por sí solo no identifica el SHA que está

@@ -1065,6 +1065,14 @@ components:
         status:
           type: string
           enum: [ok]
+        huella:
+          type: string
+          description: >-
+            Huella SHA-256 (16 caracteres) del código que sirve el contenedor,
+            calculada al construir la imagen con scripts/huella.mjs. El workflow
+            de despliegue la compara con la del commit para confirmar que Dokploy
+            ya sirve la versión nueva. Fuera de Docker vale «local».
+          example: 3f9a1c0b7d2e4a51
       required:
         - status
 

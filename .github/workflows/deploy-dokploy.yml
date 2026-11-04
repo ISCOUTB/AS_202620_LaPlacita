@@ -1,32 +1,84 @@
 name: Deploy Dokploy (laboratorio de la U)
 
-# Despliegue del backend en Dokploy — el servidor del laboratorio de la
-# universidad (ADR-0018: retiro de Azure). El app de Dokploy observa la rama
-# `master`; este workflow valida en un gate (pruebas con PostgreSQL + contrato)
-# y dispara el webhook de redeploy. La PWA del frontend vive en la misma
-# plataforma (app separada que observa master).
+# Despliegue automático en Dokploy, el servidor del laboratorio de la
+# universidad (ADR-0018: retiro de Azure). Cada push a master que toque
+# backend/ o frontend/ redespliega lo que cambió, sin entrar a Dokploy:
+#
+#   cambios  → mira qué carpetas tocó el push.
+#   backend  → gate (pruebas con PostgreSQL + contrato), webhook de Dokploy y
+#              espera a que /api/v1/health devuelva la huella de este commit.
+#   frontend → gate (lint + build), webhook de Dokploy y espera a que
+#              /api/version devuelva la huella de este commit. Corre DESPUÉS
+#              del backend: la PWA nueva nunca sale antes que la API que usa.
+#
+# La huella (scripts/huella.mjs) se calcula igual en la imagen y en el
+# checkout. Un health 200 a secas no basta: el contenedor anterior también
+# responde 200 mientras Dokploy construye el nuevo.
+#
+# Cada despliegue reinicia el proceso y vacía lo que vive en memoria (cola de
+# escrituras, DLQ, claves de idempotencia, /metricas): no unir PR a master
+# durante una demo ni durante una medición.
+#
+# Para forzar un despliegue de las dos apps: Actions → este workflow →
+# «Run workflow».
 
 on:
   push:
     branches: [master]
     paths:
       - "backend/**"
+      - "frontend/**"
       - ".github/workflows/deploy-dokploy.yml"
   workflow_dispatch:
 
+# Los despliegues van en fila, nunca dos a la vez sobre el mismo servidor.
 concurrency:
-  group: deploy-dokploy-backend
+  group: deploy-dokploy
   cancel-in-progress: false
 
 permissions:
   contents: read
 
 env:
-  DATABASE_URL: postgresql://laplacita:laplacita_ci@localhost:5432/laplacita
+  FRONTEND_URL: https://laplacita-app.iscoutb.dev
 
 jobs:
-  deploy:
+  cambios:
     runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.detectar.outputs.backend }}
+      frontend: ${{ steps.detectar.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Detectar qué cambió
+        id: detectar
+        run: |
+          antes="${{ github.event.before }}"
+          if [ "${{ github.event_name }}" != "push" ] \
+             || ! git cat-file -e "$antes^{commit}" 2>/dev/null \
+             || git diff --name-only "$antes" "$GITHUB_SHA" | grep -q '^\.github/workflows/deploy-dokploy\.yml$'; then
+            # Ejecución manual, primer push o cambio de este workflow: las dos apps.
+            echo "backend=true" >> "$GITHUB_OUTPUT"
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
+          else
+            archivos=$(git diff --name-only "$antes" "$GITHUB_SHA")
+            if echo "$archivos" | grep -q '^backend/'; then b=true; else b=false; fi
+            if echo "$archivos" | grep -q '^frontend/'; then f=true; else f=false; fi
+            echo "backend=$b" >> "$GITHUB_OUTPUT"
+            echo "frontend=$f" >> "$GITHUB_OUTPUT"
+          fi
+          cat "$GITHUB_OUTPUT"
+
+  backend:
+    needs: cambios
+    if: needs.cambios.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      DATABASE_URL: postgresql://laplacita:laplacita_ci@localhost:5432/laplacita
     services:
       postgres:
         image: postgres:16
@@ -51,6 +103,10 @@ jobs:
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
 
+      - name: Huella esperada del backend
+        id: huella
+        run: echo "valor=$(node backend/scripts/huella.mjs backend)" >> "$GITHUB_OUTPUT"
+
       - name: Instalar dependencias
         run: npm ci
         working-directory: backend
@@ -65,27 +121,100 @@ jobs:
 
       # Dokploy solo despliega si el webhook dice la rama como un push de GitHub
       # (cabecera X-GitHub-Event y `ref` en el cuerpo). Sin eso responde 301
-      # «Branch Not Match» sin desplegar, y curl -f no falla con un 3xx: el paso
-      # salía en verde y el health check validaba la versión anterior. Por eso
-      # aquí se exige un 200.
-      - name: Redesplegar en Dokploy
+      # «Branch Not Match» sin desplegar, y curl -f no falla con un 3xx: por
+      # eso aquí se exige un 200.
+      - name: Redesplegar el backend en Dokploy
         run: |
-          echo "Disparando redeploy del backend ($GITHUB_SHA) en el laboratorio de la U..."
+          echo "Disparando redeploy del backend ($GITHUB_SHA)..."
           cuerpo=$(printf '{"ref":"refs/heads/master","after":"%s","head_commit":{"id":"%s","message":"CI %s"}}' "$GITHUB_SHA" "$GITHUB_SHA" "$GITHUB_SHA")
-          codigo=$(curl -sS --max-time 30 -o respuesta.txt -w '%{http_code}' -X POST             -H 'Content-Type: application/json' -H 'X-GitHub-Event: push'             -d "$cuerpo" "$DOKPLOY_TEST_WEBHOOK")
+          codigo=$(curl -sS --max-time 30 -o respuesta.txt -w '%{http_code}' -X POST \
+            -H 'Content-Type: application/json' -H 'X-GitHub-Event: push' \
+            -d "$cuerpo" "$DOKPLOY_TEST_WEBHOOK")
           echo "Dokploy respondió $codigo: $(cat respuesta.txt)"
           test "$codigo" = "200"
         env:
           DOKPLOY_TEST_WEBHOOK: ${{ secrets.DOKPLOY_TEST_WEBHOOK }}
 
-      - name: Health check
+      - name: Esperar a que Dokploy sirva este commit
         run: |
           base="${{ secrets.DOKPLOY_TEST_URL }}"
-          echo "Verificando $base/api/v1/health"
-          for i in $(seq 1 15); do
-            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$base/api/v1/health" || true)
-            if [ "$code" = "200" ]; then echo "health=200 (intento $i)"; exit 0; fi
-            echo "intento $i: http=$code"; sleep 10
+          esperada="${{ steps.huella.outputs.valor }}"
+          echo "Esperando huella $esperada en $base/api/v1/health"
+          for i in $(seq 1 40); do
+            servida=$(curl -s --max-time 10 "$base/api/v1/health" \
+              | node -e 'let t="";process.stdin.on("data",d=>t+=d).on("end",()=>{try{process.stdout.write(JSON.parse(t).huella||"sin-huella")}catch{process.stdout.write("sin-respuesta")}})')
+            if [ "$servida" = "$esperada" ]; then
+              echo "Backend desplegado: huella $servida, commit $GITHUB_SHA (intento $i)"
+              exit 0
+            fi
+            echo "intento $i: sirve $servida"; sleep 15
           done
-          echo "health check agotado: la app del laboratorio no responde tras el redeploy"
+          echo "Dokploy no sirvió este commit en 10 minutos: revisar el log del despliegue en Dokploy."
+          exit 1
+
+  frontend:
+    needs: [cambios, backend]
+    # Corre aunque el backend no haya cambiado (skipped), pero no si falló.
+    if: >-
+      !cancelled() && needs.cambios.outputs.frontend == 'true'
+      && (needs.backend.result == 'success' || needs.backend.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Huella esperada del frontend
+        id: huella
+        run: echo "valor=$(node frontend/scripts/huella.mjs frontend)" >> "$GITHUB_OUTPUT"
+
+      - name: Instalar dependencias
+        run: npm ci
+        working-directory: frontend
+
+      - name: Gate — lint
+        run: npm run lint
+        working-directory: frontend
+
+      - name: Gate — build de producción
+        run: npm run build
+        working-directory: frontend
+
+      - name: Redesplegar el frontend en Dokploy
+        run: |
+          if [ -z "$DOKPLOY_FRONTEND_WEBHOOK" ]; then
+            echo "Falta el secret DOKPLOY_FRONTEND_WEBHOOK (Settings → Secrets and variables → Actions)."
+            echo "Se copia de Dokploy: app del frontend → Deployments → Webhook URL."
+            exit 1
+          fi
+          echo "Disparando redeploy del frontend ($GITHUB_SHA)..."
+          cuerpo=$(printf '{"ref":"refs/heads/master","after":"%s","head_commit":{"id":"%s","message":"CI %s"}}' "$GITHUB_SHA" "$GITHUB_SHA" "$GITHUB_SHA")
+          codigo=$(curl -sS --max-time 30 -o respuesta.txt -w '%{http_code}' -X POST \
+            -H 'Content-Type: application/json' -H 'X-GitHub-Event: push' \
+            -d "$cuerpo" "$DOKPLOY_FRONTEND_WEBHOOK")
+          echo "Dokploy respondió $codigo: $(cat respuesta.txt)"
+          test "$codigo" = "200"
+        env:
+          DOKPLOY_FRONTEND_WEBHOOK: ${{ secrets.DOKPLOY_FRONTEND_WEBHOOK }}
+
+      - name: Esperar a que Dokploy sirva este commit
+        run: |
+          esperada="${{ steps.huella.outputs.valor }}"
+          echo "Esperando huella $esperada en $FRONTEND_URL/api/version"
+          for i in $(seq 1 40); do
+            servida=$(curl -s --max-time 10 "$FRONTEND_URL/api/version" \
+              | node -e 'let t="";process.stdin.on("data",d=>t+=d).on("end",()=>{try{process.stdout.write(JSON.parse(t).huella||"sin-huella")}catch{process.stdout.write("sin-respuesta")}})')
+            if [ "$servida" = "$esperada" ]; then
+              echo "Frontend desplegado: huella $servida, commit $GITHUB_SHA (intento $i)"
+              exit 0
+            fi
+            echo "intento $i: sirve $servida"; sleep 15
+          done
+          echo "Dokploy no sirvió este commit en 10 minutos: revisar el log del despliegue en Dokploy."
           exit 1

@@ -107,7 +107,8 @@ carpeta temporal de compilación para instalarlas de nuevo en la ubicación nuev
 | App | branch `master`, Dockerfile `frontend/Dockerfile`, contexto `frontend` |
 | Dominio | `https://laplacita-app.iscoutb.dev` (HTTPS vía Traefik/Let's Encrypt — habilita la instalación de la PWA) |
 | `BACKEND_URL` | URL del backend de pruebas (env de runtime; el BFF la lee por petición) |
-| Redespliegue automático | El repositorio describe el despliegue del frontend como manual; confirmar cualquier cambio de automatización con el equipo antes de documentarlo como activo |
+| Redespliegue automático | Cada push a `master` que toque `frontend/**` pasa lint y build y dispara el webhook de Dokploy (secret `DOKPLOY_FRONTEND_WEBHOOK`) desde `.github/workflows/deploy-dokploy.yml`, después del backend si los dos cambiaron |
+| Versión servida | `GET /api/version` → `{ status, huella }`; la huella la calcula `scripts/huella.mjs` al construir la imagen y el workflow la compara con la del commit |
 
 Nota: el `service worker` solo se registra en builds de producción
 (`components/registro-sw.tsx`), así que en desarrollo no interfiere con el HMR.
