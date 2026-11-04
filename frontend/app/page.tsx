@@ -1,4 +1,4 @@
-import { ArrowRight, Clock, Coffee, ReceiptText, ShoppingBag, Store } from "lucide-react"
+import { ArrowRight, Clock, ReceiptText, ShoppingBag, Store } from "lucide-react"
 import { BotonEnlace } from "@/components/utb/boton"
 import { Saludo } from "@/components/inicio/saludo"
 import { ListaTiendas } from "@/components/tiendas/lista-tiendas"
@@ -45,28 +45,14 @@ export default function Inicio() {
             </div>
           </div>
 
-          <div aria-label="La Placita UTB: tu pausa entre clases" className="flex justify-center">
-            <div className="relative isolate flex min-h-60 w-full max-w-md flex-col justify-between overflow-hidden rounded-[2rem] border border-white/20 bg-gradient-to-br from-white via-celeste to-[#b8d2ff] p-6 text-noche shadow-flotante md:min-h-72 md:p-7">
-              <div aria-hidden="true" className="absolute -top-16 -right-10 -z-10 size-56 rounded-full bg-azul/10" />
-              <div aria-hidden="true" className="absolute -right-6 -bottom-16 -z-10 size-52 rounded-full border-[28px] border-white/40" />
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs font-bold tracking-[0.2em] text-azul uppercase">Campus UTB</p>
-                  <p className="mt-2 font-display text-4xl font-extrabold tracking-tight">La Placita</p>
-                </div>
-                <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-azul text-white shadow-lg">
-                  <Coffee aria-hidden="true" className="size-7" />
-                </span>
-              </div>
-              <div>
-                <p className="max-w-xs font-display text-2xl font-bold leading-tight">Tu pausa entre clases sabe mejor.</p>
-                <p className="mt-3 text-sm text-noche/75">Desayunos, asados, opciones ligeras y antojos en un solo lugar.</p>
-                <div className="mt-5 flex flex-wrap gap-2 text-xs font-semibold">
-                  {["El Mesón", "El Asa'o", "Punto Fit", "Alegría", "Antojos"].map((tienda) => (
-                    <span key={tienda} className="rounded-full border border-white/80 bg-white/65 px-3 py-1.5">{tienda}</span>
-                  ))}
-                </div>
-              </div>
+          <div aria-hidden="true" className="hidden justify-center md:flex">
+            <div className="w-72 rotate-2 rounded-3xl bg-superficie p-6 text-tinta shadow-flotante">
+              <p className="text-xs font-medium tracking-widest text-tenue uppercase">Pedido 14 · El Mesón</p>
+              <p className="mt-3 inline-flex rounded-full bg-listo-fondo px-3 py-1 text-sm font-medium text-listo-texto">
+                Listo
+              </p>
+              <p className="mt-4 font-display text-2xl font-extrabold text-noche">Pasa por el mostrador</p>
+              <p className="mt-2 text-sm text-suave">Arepa de huevo × 2 · $9.000</p>
             </div>
           </div>
         </div>

@@ -127,10 +127,25 @@
     padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
   }
 
+  .animacion-imagen-estado {
+    animation: imagen-estado-entrada 500ms ease-out both;
+  }
+
   @media (min-width: 768px) {
     .espacio-barra {
       padding-bottom: 3rem;
     }
+  }
+}
+
+@keyframes imagen-estado-entrada {
+  from {
+    opacity: 0.55;
+    transform: translateX(0.75rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
   }
 }
 
