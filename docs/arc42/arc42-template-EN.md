@@ -532,7 +532,7 @@ Esta sección registra el historial de decisiones arquitectónicas significativa
 | ADR-0032 | Un pedido por tienda con varios productos, un código y un PIN (precisa ADR-0017 en el carrito) | Ratificado por ADR-0036 | 2026-11-02 | ESC-05, ESC-02, ESC-03 | [0032-un-pedido-por-tienda-con-varios-productos.md](../adr/0032-un-pedido-por-tienda-con-varios-productos.md) |
 | ADR-0033 | El administrador elimina pedidos del panel sin borrar la fila | Ratificado por ADR-0036 | 2026-11-02 | ESC-05, ESC-02, ESC-03 | [0033-eliminar-pedidos-sin-borrar-la-fila.md](../adr/0033-eliminar-pedidos-sin-borrar-la-fila.md) |
 | ADR-0034 | El dueño puede cancelar su pedido antes de que esté Listo; se conserva en el historial | Ratificado por ADR-0036 | 2026-11-03 | ESC-02, ESC-03, ESC-05 | [0034-cancelacion-del-pedido-por-su-dueno.md](../adr/0034-cancelacion-del-pedido-por-su-dueno.md) |
-| ADR-0035 | Imágenes de presentación por estado de atención, almacenadas en Garage | Implementado en frontend; ratificación pendiente de revisión del equipo | 2026-11-03 | ESC-02, ESC-05 | [0035-imagenes-de-presentacion-por-estado-de-tienda.md](../adr/0035-imagenes-de-presentacion-por-estado-de-tienda.md) |
+| ADR-0035 | Imágenes de presentación por estado de atención, almacenadas en Garage | Aceptado | 2026-11-04 | ESC-02, ESC-05 | [0035-imagenes-de-presentacion-por-estado-de-tienda.md](../adr/0035-imagenes-de-presentacion-por-estado-de-tienda.md) |
  
 **Relación con los bloques de construcción:**
 - ADR-0001 y ADR-0002 determinan la estructura: un único proceso con módulos de dominio separados.

@@ -1,7 +1,7 @@
 # 0035 — Imágenes de presentación por estado de atención de la tienda
 
-- **Estado:** propuesto (implementado en el repositorio; pendiente de validación del equipo)
-- **Fecha:** 2026-11-03
+- **Estado:** Aceptado
+- **Fecha:** 2026-11-04
 - **Decide:** Equipo LaPlacita
 - **Escenarios relacionados:** ESC-02 (aislamiento por tienda), ESC-05 (compra rápida)
 - **ADR relacionados:** [ADR-0023](0023-panel-de-tienda.md) (panel y catálogo editable), [ADR-0028](0028-almacen-imagenes-garage-dokploy.md) (almacén de imágenes)
