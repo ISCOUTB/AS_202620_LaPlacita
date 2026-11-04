@@ -195,46 +195,6 @@ export default function SeguimientoPage({
           />
         )}
 
-        {puedeCancelar && !confirmandoCancelacion && (
-          <div className="rounded-2xl border border-error-texto/20 bg-superficie p-4 shadow-tarjeta">
-            <p className="mb-3 text-sm text-suave">
-              Puedes cancelar mientras el pedido no esté listo para recoger.
-            </p>
-            <Boton
-              variante="contorno"
-              className="border-error-texto text-error-texto hover:bg-error-fondo"
-              onClick={() => setConfirmandoCancelacion(true)}
-            >
-              Cancelar pedido
-            </Boton>
-          </div>
-        )}
-
-        {puedeCancelar && confirmandoCancelacion && (
-          <section
-            aria-label="Confirmar cancelación del pedido"
-            className="rounded-2xl border border-error-texto/30 bg-error-fondo p-4"
-          >
-            <h2 className="font-display font-bold text-error-texto">¿Cancelar este pedido?</h2>
-            <p className="mt-1 text-sm text-error-texto">
-              La tienda dejará de prepararlo. Si ya pagaste, comunícate con el establecimiento para revisar el reembolso.
-            </p>
-            {errorCancelacion && <p role="alert" className="mt-3 text-sm font-medium text-error-texto">{errorCancelacion}</p>}
-            <div className="mt-4 flex flex-wrap gap-3">
-              <Boton variante="contorno" disabled={cancelando} onClick={() => setConfirmandoCancelacion(false)}>
-                Volver
-              </Boton>
-              <Boton
-                disabled={cancelando}
-                className="bg-error-texto text-white hover:bg-error-texto/90"
-                onClick={cancelarPedido}
-              >
-                {cancelando ? "Cancelando…" : "Sí, cancelar pedido"}
-              </Boton>
-            </div>
-          </section>
-        )}
-
         {pinVisible && (
           <section
             aria-label="PIN de retiro"
@@ -377,6 +337,46 @@ export default function SeguimientoPage({
                 </li>
               ))}
             </ul>
+          </section>
+        )}
+
+        {puedeCancelar && !confirmandoCancelacion && (
+          <section aria-label="Opciones del pedido" className="rounded-2xl border border-error-texto/20 bg-superficie p-4 shadow-tarjeta">
+            <p className="mb-3 text-sm text-suave">
+              Puedes cancelar mientras el pedido no esté listo para recoger.
+            </p>
+            <Boton
+              variante="contorno"
+              className="border-error-texto text-error-texto hover:bg-error-fondo"
+              onClick={() => setConfirmandoCancelacion(true)}
+            >
+              Cancelar pedido
+            </Boton>
+          </section>
+        )}
+
+        {puedeCancelar && confirmandoCancelacion && (
+          <section
+            aria-label="Confirmar cancelación del pedido"
+            className="rounded-2xl border border-error-texto/30 bg-error-fondo p-4"
+          >
+            <h2 className="font-display font-bold text-error-texto">¿Cancelar este pedido?</h2>
+            <p className="mt-1 text-sm text-error-texto">
+              La tienda dejará de prepararlo. Si ya pagaste, comunícate con el establecimiento para revisar el reembolso.
+            </p>
+            {errorCancelacion && <p role="alert" className="mt-3 text-sm font-medium text-error-texto">{errorCancelacion}</p>}
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Boton variante="contorno" disabled={cancelando} onClick={() => setConfirmandoCancelacion(false)}>
+                Volver
+              </Boton>
+              <Boton
+                disabled={cancelando}
+                className="bg-error-texto text-white hover:bg-error-texto/90"
+                onClick={cancelarPedido}
+              >
+                {cancelando ? "Cancelando…" : "Sí, cancelar pedido"}
+              </Boton>
+            </div>
           </section>
         )}
       </div>
