@@ -63,9 +63,15 @@ async function forward(request, { params }) {
       cache: "no-store",
       signal: AbortSignal.timeout(TIMEOUT_MS),
     })
+    // fetch ya descomprimió el cuerpo: si se reenvían Content-Encoding y
+    // Content-Length del backend, el navegador intenta descomprimir de nuevo
+    // y la petición falla (ERR_CONTENT_DECODING_FAILED).
+    const salida = new Headers(respuesta.headers)
+    salida.delete("content-encoding")
+    salida.delete("content-length")
     return new Response(respuesta.body, {
       status: respuesta.status,
-      headers: respuesta.headers,
+      headers: salida,
     })
   } catch (e) {
     // Diagnóstico en los logs del contenedor; mensaje genérico al cliente.

@@ -32,10 +32,10 @@ export default function Inicio() {
             árboles y el vidrio; su borde izquierdo se funde con el azul. La capa
             de color es más oscura donde va el texto y se abre hacia el letrero.
             En el celular el texto ocupa todo el ancho, así que la foto va como
-            franja debajo de los botones y se funde hacia arriba con el azul. */}
+            franja arriba y se funde hacia abajo con el azul del texto. */}
         <div
           aria-hidden="true"
-          className="absolute inset-x-0 bottom-0 -z-20 h-48 [mask-image:linear-gradient(to_bottom,transparent,black_40%)] md:inset-y-0 md:right-[-25%] md:left-[25%] md:h-auto md:[mask-image:linear-gradient(to_right,transparent,black_25%)]"
+          className="absolute inset-x-0 top-0 -z-20 h-48 [mask-image:linear-gradient(to_bottom,black_60%,transparent)] md:inset-y-0 md:right-[-25%] md:left-[25%] md:h-auto md:[mask-image:linear-gradient(to_right,transparent,black_25%)]"
         >
           <Image
             src="/imagenes/placita-utb.webp"
@@ -50,7 +50,7 @@ export default function Inicio() {
           aria-hidden="true"
           className="absolute inset-0 -z-10 hidden md:block md:bg-linear-to-r md:from-azul/40 md:from-30% md:via-noche/35 md:via-45% md:to-transparent md:to-65%"
         />
-        <div className="mx-auto max-w-6xl px-5 pt-8 pb-48 [text-shadow:0_2px_16px_rgb(0_0_0/0.45)] md:px-10 md:py-16">
+        <div className="mx-auto max-w-6xl px-5 pt-48 pb-10 [text-shadow:0_2px_16px_rgb(0_0_0/0.45)] md:px-10 md:py-16">
           <div className="flex max-w-xl flex-col gap-4">
             <Saludo />
             <h1 className="font-display text-4xl leading-tight font-extrabold text-balance md:text-5xl">
