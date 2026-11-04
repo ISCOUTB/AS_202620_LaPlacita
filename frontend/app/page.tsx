@@ -1,3 +1,4 @@
+import Image from "next/image"
 import { ArrowRight, Clock, ReceiptText, ShoppingBag, Store } from "lucide-react"
 import { BotonEnlace } from "@/components/utb/boton"
 import { Saludo } from "@/components/inicio/saludo"
@@ -24,9 +25,27 @@ const PASOS = [
 export default function Inicio() {
   return (
     <>
-      <section className="degradado-utb rounded-b-[2rem] text-white md:mx-auto md:mt-6 md:max-w-6xl md:rounded-3xl">
-        <div className="mx-auto grid max-w-6xl gap-8 px-5 pt-8 pb-10 md:grid-cols-[1.3fr_1fr] md:items-center md:px-10 md:py-14">
-          <div className="flex flex-col gap-4">
+      <section className="degradado-utb relative isolate overflow-hidden rounded-b-[2rem] text-white md:mx-auto md:mt-6 md:max-w-6xl md:rounded-3xl">
+        {/* Fachada de La Placita de fondo, algo difuminada. En pantalla ancha
+            ocupa la parte derecha y se desvanece hacia el texto, para que el
+            letrero no quede detrás del título. En el celular cubre todo y una
+            capa azul pareja mantiene legible el texto. */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 -z-20 md:left-auto md:w-[68%] md:[mask-image:linear-gradient(to_right,transparent,black_40%)]"
+        >
+          <Image
+            src="/imagenes/placita-utb.webp"
+            alt=""
+            fill
+            priority
+            unoptimized
+            className="scale-105 object-cover object-[15%_center] blur-[2px]"
+          />
+        </div>
+        <div aria-hidden="true" className="absolute inset-0 -z-10 bg-azul/80 md:bg-noche/30" />
+        <div className="mx-auto max-w-6xl px-5 pt-8 pb-10 md:px-10 md:py-16">
+          <div className="flex max-w-xl flex-col gap-4">
             <Saludo />
             <h1 className="font-display text-4xl leading-tight font-extrabold text-balance md:text-5xl">
               ¿Qué se te antoja hoy?
@@ -42,17 +61,6 @@ export default function Inicio() {
               <BotonEnlace href="#como-funciona" variante="claro">
                 Cómo funciona
               </BotonEnlace>
-            </div>
-          </div>
-
-          <div aria-hidden="true" className="hidden justify-center md:flex">
-            <div className="w-72 rotate-2 rounded-3xl bg-superficie p-6 text-tinta shadow-flotante">
-              <p className="text-xs font-medium tracking-widest text-tenue uppercase">Pedido 14 · El Mesón</p>
-              <p className="mt-3 inline-flex rounded-full bg-listo-fondo px-3 py-1 text-sm font-medium text-listo-texto">
-                Listo
-              </p>
-              <p className="mt-4 font-display text-2xl font-extrabold text-noche">Pasa por el mostrador</p>
-              <p className="mt-2 text-sm text-suave">Arepa de huevo × 2 · $9.000</p>
             </div>
           </div>
         </div>
