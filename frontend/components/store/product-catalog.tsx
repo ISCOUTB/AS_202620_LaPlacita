@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { UtensilsCrossed } from "lucide-react"
+import { Search, UtensilsCrossed, X } from "lucide-react"
 import { ProductCard } from "@/components/store/product-card"
 import { Boton } from "@/components/utb/boton"
 import { Aviso } from "@/components/utb/aviso"
@@ -9,6 +9,11 @@ import { obtenerProductos, type Product } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 const ALL = "Todo"
+
+/** Minúsculas y sin tildes: «limon» encuentra «Limonada», «cafe» encuentra «Café». */
+function normalizar(texto: string) {
+  return texto.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase()
+}
 
 function Contenedor({ children, contador }: { children: React.ReactNode; contador?: string }) {
   return (
@@ -36,6 +41,7 @@ export function ProductCatalog({ tiendaId, storeName }: { tiendaId: string; stor
   const [error, setError] = useState<string | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
   const [activeCategory, setActiveCategory] = useState(ALL)
+  const [busqueda, setBusqueda] = useState("")
 
   // Sin setState sincrono en el efecto: todo ocurre tras el await (React 19).
   useEffect(() => {
@@ -101,11 +107,35 @@ export function ProductCatalog({ tiendaId, storeName }: { tiendaId: string; stor
   // Disponibles primero; los agotados quedan al final, en gris.
   const ordenados = [...products].sort((a, b) => Number(a.disponible === false) - Number(b.disponible === false))
   const categories = [ALL, ...Array.from(new Set(products.map((p) => p.category ?? "Menú")))]
-  const visibles =
-    activeCategory === ALL ? ordenados : ordenados.filter((p) => (p.category ?? "Menú") === activeCategory)
+  const termino = normalizar(busqueda.trim())
+  const visibles = ordenados
+    .filter((p) => activeCategory === ALL || (p.category ?? "Menú") === activeCategory)
+    .filter((p) => !termino || normalizar(`${p.name} ${p.description ?? ""}`).includes(termino))
 
   return (
     <Contenedor contador={`${visibles.length} ${visibles.length === 1 ? "producto" : "productos"}`}>
+      <label className="relative mb-4 block">
+        <span className="sr-only">Buscar en el menú de {storeName}</span>
+        <Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-tenue" />
+        <input
+          type="search"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          placeholder="Buscar en el menú"
+          enterKeyHint="search"
+          className="w-full rounded-2xl border border-borde bg-superficie py-3 pr-12 pl-12 text-base text-tinta shadow-tarjeta outline-none transition-colors placeholder:text-tenue focus:border-azul focus:ring-2 focus:ring-azul/20 [&::-webkit-search-cancel-button]:hidden"
+        />
+        {busqueda && (
+          <button
+            type="button"
+            onClick={() => setBusqueda("")}
+            aria-label="Borrar la búsqueda"
+            className="absolute top-1/2 right-2 grid size-9 -translate-y-1/2 place-items-center rounded-lg text-tenue hover:text-azul"
+          >
+            <X aria-hidden="true" className="size-5" />
+          </button>
+        )}
+      </label>
       {categories.length > 2 && (
         <div role="group" aria-label="Filtrar por categoría" className="mb-4 flex gap-2 overflow-x-auto pb-1">
           {categories.map((category) => (
@@ -124,11 +154,23 @@ export function ProductCatalog({ tiendaId, storeName }: { tiendaId: string; stor
           ))}
         </div>
       )}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        {visibles.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
-      </div>
+      {visibles.length === 0 ? (
+        <Aviso
+          icono={Search}
+          titulo="No encontramos ese producto"
+          texto={`Revisa cómo lo escribiste o mira todo el menú de ${storeName}.`}
+        >
+          <Boton variante="azul" onClick={() => setBusqueda("")}>
+            Ver todo el menú
+          </Boton>
+        </Aviso>
+      ) : (
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          {visibles.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      )}
     </Contenedor>
   )
 }

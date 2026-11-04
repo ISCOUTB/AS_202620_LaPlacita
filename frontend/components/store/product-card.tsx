@@ -44,7 +44,7 @@ export function ProductCard({ product }: { product: Product }) {
 
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <h3 className="font-medium text-tinta">{product.name}</h3>
-        {product.description && <p className="truncate text-sm text-suave">{product.description}</p>}
+        {product.description && <p className="line-clamp-2 text-sm text-suave">{product.description}</p>}
         {agotado ? (
           <p className="text-sm font-medium text-tenue">Agotado</p>
         ) : (

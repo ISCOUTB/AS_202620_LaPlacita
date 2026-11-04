@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
@@ -12,6 +12,9 @@ import { resumenDeProductos } from "@/lib/pedido-items"
 import { registrarPedidoLocal } from "@/lib/pedidos-locales"
 import { useSesion } from "@/lib/sesion"
 import { getStoreByTiendaId } from "@/lib/stores"
+
+/** Evento con el que la página de cuenta pide reabrir el carrito tras ingresar. */
+export const EVENTO_ABRIR_CARRITO = "laplacita:abrir-carrito"
 
 function groupByStore(items: CartItem[]) {
   // item.storeSlug ES el tiendaId canónico del backend (viene del catálogo).
@@ -87,6 +90,14 @@ export function FloatingCart() {
   const [error, setError] = useState<string | null>(null)
   const [carritoAbierto, setCarritoAbierto] = useState(false)
 
+  // Quien inicia sesión desde el carrito vuelve a la tienda con el carrito
+  // abierto, listo para confirmar (ver app/cuenta/page.tsx).
+  useEffect(() => {
+    const abrir = () => setCarritoAbierto(true)
+    window.addEventListener(EVENTO_ABRIR_CARRITO, abrir)
+    return () => window.removeEventListener(EVENTO_ABRIR_CARRITO, abrir)
+  }, [])
+
   // ADR-0032: "Hacer pedido" emite un POST /pedidos por tienda, con todos sus
   // productos: un código y un PIN por tienda. Cada pedido creado se registra en
   // el dispositivo; si uno falla, los anteriores quedan y el carrito conserva
@@ -98,7 +109,7 @@ export function FloatingCart() {
       // Cierra el panel antes de navegar. El carrito vive en el layout y
       // conserva sus productos mientras la persona inicia sesión.
       setCarritoAbierto(false)
-      router.push(`/cuenta?volver=${encodeURIComponent(window.location.pathname)}`)
+      router.push(`/cuenta?volver=${encodeURIComponent(window.location.pathname)}&carrito=1`)
       return
     }
     setPidiendo(true)
@@ -193,7 +204,9 @@ export function FloatingCart() {
             {pidiendo ? "Creando tu pedido…" : usuario ? "Hacer pedido" : "Ingresa para hacer el pedido"}
           </Boton>
           <p className="text-center text-xs text-tenue">
-            Pagas por transferencia o en efectivo; la tienda confirma el pago y empieza a prepararlo.
+            {usuario
+              ? "Pagas por transferencia o en efectivo; la tienda confirma el pago y empieza a prepararlo."
+              : "Para pedir necesitas tu cuenta con correo de la UTB. Tu carrito queda guardado y vuelve a abrirse al ingresar."}
           </p>
         </div>
       </SheetContent>

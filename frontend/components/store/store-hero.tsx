@@ -58,7 +58,7 @@ export function StoreHero({ store }: { store: Store }) {
         </div>
 
         <div className="flex w-full min-w-0 max-w-3xl flex-col gap-3 text-sm text-white drop-shadow-md sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-5">
-          <EstadoApertura store={store} />
+          <EstadoApertura store={store} className="w-fit" />
           <span className="inline-flex min-w-0 items-center gap-1.5 break-words [overflow-wrap:anywhere]">
             <MapPin aria-hidden="true" className="size-4 shrink-0" />
             {store.location}

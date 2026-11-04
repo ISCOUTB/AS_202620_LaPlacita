@@ -3,8 +3,10 @@
 import { useEffect, useState, type FormEvent } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { LogOut, ReceiptText } from "lucide-react"
+import { LogOut, ReceiptText, ShoppingBag } from "lucide-react"
+import { EVENTO_ABRIR_CARRITO } from "@/components/cart/floating-cart"
 import { Boton, BotonEnlace } from "@/components/utb/boton"
+import { CampoContrasena } from "@/components/utb/campo-contrasena"
 import { useSesion } from "@/lib/sesion"
 import { cn } from "@/lib/utils"
 
@@ -18,10 +20,11 @@ function rutaSegura(valor: string | undefined) {
 const CAMPO =
   "w-full rounded-xl border border-borde bg-superficie px-4 py-3 text-base text-tinta outline-none transition-colors placeholder:text-tenue focus:border-azul focus:ring-2 focus:ring-azul/20"
 
-export default function CuentaPage({ searchParams }: { searchParams: Promise<{ volver?: string }> }) {
+export default function CuentaPage({ searchParams }: { searchParams: Promise<{ volver?: string; carrito?: string }> }) {
   const { usuario, cargando, ingresar, registrar, salir } = useSesion()
   const router = useRouter()
   const [volver, setVolver] = useState("/mis-pedidos")
+  const [desdeCarrito, setDesdeCarrito] = useState(false)
   const [modo, setModo] = useState<Modo>("ingresar")
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -29,7 +32,9 @@ export default function CuentaPage({ searchParams }: { searchParams: Promise<{ v
   useEffect(() => {
     let vigente = true
     searchParams.then((s) => {
-      if (vigente) setVolver(rutaSegura(s.volver))
+      if (!vigente) return
+      setVolver(rutaSegura(s.volver))
+      setDesdeCarrito(s.carrito === "1")
     })
     return () => {
       vigente = false
@@ -50,6 +55,7 @@ export default function CuentaPage({ searchParams }: { searchParams: Promise<{ v
         await ingresar(correo, contrasena)
       }
       router.replace(volver)
+      if (desdeCarrito) window.dispatchEvent(new Event(EVENTO_ABRIR_CARRITO))
     } catch (e) {
       setError((e as Error).message)
       setEnviando(false)
@@ -97,6 +103,14 @@ export default function CuentaPage({ searchParams }: { searchParams: Promise<{ v
           </div>
         )}
 
+        {!cargando && !usuario && desdeCarrito && (
+          <p className="mb-4 flex items-start gap-3 rounded-2xl bg-azul/10 px-4 py-3 text-sm text-noche">
+            <ShoppingBag aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-azul" />
+            Ingresa o crea tu cuenta para terminar el pedido. Tu carrito está guardado y se abre de nuevo al
+            entrar.
+          </p>
+        )}
+
         {!cargando && !usuario && (
           <div className="rounded-2xl bg-superficie p-5 shadow-tarjeta">
             <div role="tablist" aria-label="Ingresar o crear cuenta" className="mb-5 grid grid-cols-2 gap-1 rounded-xl bg-fondo p-1">
@@ -141,9 +155,8 @@ export default function CuentaPage({ searchParams }: { searchParams: Promise<{ v
               </label>
               <label className="flex flex-col gap-1.5">
                 <span className="text-sm font-medium text-suave">Contraseña</span>
-                <input
+                <CampoContrasena
                   name="contrasena"
-                  type="password"
                   required
                   minLength={modo === "registrar" ? 8 : undefined}
                   autoComplete={modo === "registrar" ? "new-password" : "current-password"}
@@ -151,6 +164,15 @@ export default function CuentaPage({ searchParams }: { searchParams: Promise<{ v
                 />
                 {modo === "registrar" && <span className="text-xs text-tenue">Mínimo 8 caracteres.</span>}
               </label>
+              {modo === "ingresar" && (
+                <p className="-mt-1 text-sm text-suave">
+                  ¿Olvidaste tu contraseña? Escribe desde tu correo de la UTB a{" "}
+                  <a href="mailto:misaza@utb.edu.co?subject=LaPlacita%20-%20Olvid%C3%A9%20mi%20contrase%C3%B1a" className="font-medium text-azul underline">
+                    misaza@utb.edu.co
+                  </a>{" "}
+                  y te ayudamos a recuperar el acceso.
+                </p>
+              )}
 
               {/* S13 · autorización previa e informada (Ley 1581 de 2012, art. 9). */}
               {modo === "registrar" && (

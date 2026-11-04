@@ -111,7 +111,15 @@ export async function obtenerProductos(tiendaId: string): Promise<Product[]> {
   // (name/price/storeSlug). El mapeo vive aquí — TypeScript no valida el
   // contenido de la respuesta, solo lo que declaramos.
   const crudos = await request<
-    Array<{ id: string; tiendaId: string; nombre: string; precio: number; disponible: boolean }>
+    Array<{
+      id: string
+      tiendaId: string
+      nombre: string
+      precio: number
+      disponible: boolean
+      imagenId?: string | null
+      descripcion?: string | null
+    }>
   >(`/catalogo/tiendas/${encodeURIComponent(tiendaId)}/productos`)
   return crudos.map((p) => ({
     id: p.id,
@@ -119,7 +127,8 @@ export async function obtenerProductos(tiendaId: string): Promise<Product[]> {
     name: p.nombre,
     price: p.precio,
     disponible: p.disponible,
-    imagenId: (p as { imagenId?: string | null }).imagenId ?? null,
+    imagenId: p.imagenId ?? null,
+    description: p.descripcion?.trim() || undefined,
   }))
 }
 

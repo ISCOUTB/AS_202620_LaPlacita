@@ -1460,3 +1460,44 @@ tipo checkout y sobre una copia tipo contexto Docker (sin `Dockerfile`, `.docker
 | El frontend se despliega solo | Tras un push que toque `frontend/`, el run de *Deploy Dokploy* termina con «Frontend desplegado: huella …» y Dokploy muestra un despliegue nuevo sin haber pulsado Deploy |
 | El orden backend → frontend | En un push que toque las dos carpetas, el job `frontend` empieza cuando `backend` terminó en verde |
 | La versión servida es la del commit | `curl https://laplacita-test.iscoutb.dev/api/v1/health` y `curl https://laplacita-app.iscoutb.dev/api/version` devuelven la misma huella que imprime el run |
+
+---
+
+## Banners con fotos y mejoras de la app en el celular (04/11/2026)
+
+Revisión de toda la PWA en 375 px y cambios hechos el mismo día:
+
+- **Portada:** la fachada de La Placita va nítida de fondo. En el celular va arriba como franja
+  y el texto azul debajo; en pantalla ancha, a la derecha con el texto encima.
+- **Ficha de cada tienda:** foto de su fachada en el banner (`frontend/public/imagenes/tiendas/`,
+  campo `fachada` en `lib/stores.ts`). La imagen que la tienda sube desde el panel (ADR-0035)
+  sigue teniendo prioridad. El letrero queda arriba y el texto abajo; El Mesón tiene encuadre
+  propio porque su foto es 4:3.
+- **Tarjetas de tiendas:** miniatura de la fachada en vez del ícono y descripción en dos líneas.
+- **Etiqueta «Abierta/Cerrada»** del banner con su ancho natural, no de lado a lado.
+- **Títulos de pestaña** propios en Cuenta, Mis pedidos, Panel, Seguimiento del pedido y la
+  página 404 (`layout.tsx` por ruta, porque esas páginas son componentes de cliente).
+- **Contraseña:** botón para mostrarla en Cuenta y Panel (`components/utb/campo-contrasena.tsx`)
+  y texto de a quién acudir si se olvida. No hay servicio de correo para restablecerla sola.
+- **Carrito sin sesión:** avisa que hace falta la cuenta; la página de cuenta muestra que el
+  carrito está guardado y, al ingresar, vuelve a la tienda con el carrito abierto.
+- **Menú:** buscador por nombre y descripción, sin importar tildes ni mayúsculas, con mensaje
+  cuando no hay resultados. La descripción del producto ahora llega del backend
+  (`descripcion`), que antes no se copiaba en `lib/api.ts`.
+- **Proxy `/api/v1`:** ya no reenvía `Content-Encoding` ni `Content-Length`. `fetch` entrega el
+  cuerpo descomprimido y el navegador fallaba al intentar descomprimirlo otra vez
+  (`ERR_CONTENT_DECODING_FAILED`), lo que dejaba el menú sin cargar.
+
+Verificación: recorrido en 375 px y en escritorio contra la API de producción, solo con
+lecturas (sin pedidos ni inicio de sesión); buscador con «limon» y con un término inexistente;
+botón de la contraseña y reapertura del carrito probados en el navegador. `npm run lint` y
+`npm run build` sin errores.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Fotos en los banners y tarjetas | Abrir `/`, `/tiendas` y cada `/tiendas/<slug>` en el celular: se ve la fachada y el letrero completo |
+| Volver al carrito tras ingresar | Sin sesión, agregar un producto, «Ingresa para hacer el pedido», ingresar: vuelve a la tienda con el carrito abierto |
+| Buscador del menú | En una tienda, escribir «limon»: aparece «Limonada natural» |
+| Descripción de productos | Un producto con descripción en el panel la muestra bajo su nombre en el menú |

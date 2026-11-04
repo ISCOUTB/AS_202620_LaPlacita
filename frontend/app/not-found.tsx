@@ -1,6 +1,9 @@
+import type { Metadata } from "next"
 import { SearchX } from "lucide-react"
 import { Aviso } from "@/components/utb/aviso"
 import { BotonEnlace } from "@/components/utb/boton"
+
+export const metadata: Metadata = { title: "Página no encontrada - LaPlacita" }
 
 export default function NotFound() {
   return (

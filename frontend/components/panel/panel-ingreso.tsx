@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react"
 import { Store } from "lucide-react"
 import { Boton } from "@/components/utb/boton"
+import { CampoContrasena } from "@/components/utb/campo-contrasena"
 import { Marca } from "@/components/utb/marca"
 import { useSesion } from "@/lib/sesion"
 
@@ -61,8 +62,12 @@ export function PanelIngreso() {
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-suave">Contraseña</span>
-            <input name="contrasena" type="password" required autoComplete="current-password" className={CAMPO} />
+            <CampoContrasena name="contrasena" required autoComplete="current-password" className={CAMPO} />
           </label>
+          <p className="-mt-1 text-sm text-suave">
+            ¿Olvidaste la contraseña? Pídela al administrador de tu tienda; las cuentas del personal las
+            asigna el equipo de LaPlacita.
+          </p>
           {error && (
             <p role="alert" className="rounded-xl bg-error-fondo px-4 py-3 text-sm text-error-texto">
               {error}
