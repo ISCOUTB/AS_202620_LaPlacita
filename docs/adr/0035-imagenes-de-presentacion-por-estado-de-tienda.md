@@ -1,6 +1,6 @@
 # 0035 — Imágenes de presentación por estado de atención de la tienda
 
-- **Estado:** propuesto (implementación preparada; pendiente de validación del equipo)
+- **Estado:** propuesto (implementado en el repositorio; pendiente de validación del equipo)
 - **Fecha:** 2026-11-03
 - **Decide:** Equipo LaPlacita
 - **Escenarios relacionados:** ESC-02 (aislamiento por tienda), ESC-05 (compra rápida)
@@ -13,26 +13,10 @@ si el punto está atendiendo o cerrado. Los productos ya tienen un flujo complet
 la tienda las sube desde el panel, el navegador las reescala, el backend valida y almacena los bytes
 en Garage, PostgreSQL guarda un UUID y la PWA lee los bytes desde `/api/v1/imagenes/{id}`.
 
-Duplicar archivos en `frontend/public` o servirlos desde otro proveedor crearía un segundo mecanismo
-de carga, persistencia y entrega. Las fotos de las tiendas también son contenido público del catálogo;
-la autorización debe limitar la subida a las cuentas de la tienda propietaria.
-
-## Alternativas consideradas
-
-### A. Mantener imágenes estáticas en `frontend/public`
-
-Es simple para contenido fijo, pero cada cambio requiere editar el repositorio y desplegar el frontend.
-Además, no permite que cada tienda actualice sus imágenes desde el panel.
-
-### B. Crear un mecanismo de almacenamiento independiente para las tiendas
-
-Permitiría separar el contenido por tipo, pero duplicaría carga, validación, entrega y configuración
-que ya están resueltas por ADR-0028.
-
-### C. Reutilizar el flujo de imágenes de producto y guardar una referencia por estado (elegida)
-
-Mantiene Garage como almacén único, limita la subida a la sesión de la tienda y permite que el perfil
-seleccione una imagen con el horario ya configurado.
+El ADR-0028 ya evaluó las alternativas de almacenamiento de imágenes y decidió utilizar Garage S3,
+PostgreSQL para las referencias y la API del backend para servir los bytes. Este ADR no vuelve a
+comparar ni reemplaza esa decisión: la extiende al perfil de cada tienda para que use imágenes
+distintas según el horario. Las tiendas solo pueden cargar imágenes para su propia cuenta.
 
 ## Decisión
 
