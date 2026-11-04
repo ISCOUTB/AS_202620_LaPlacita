@@ -118,5 +118,5 @@ posponer), responsable y vínculo a la evidencia. No borrar hallazgos por no cor
 | ESC-05 medido con cinco personas | Pendiente |
 | Prueba funcional backend/frontend con SHA identificado | Pendiente |
 | Hallazgos de revisión entre pares incorporados en arc42 §11 | Pendiente |
-| Ratificación de ADR-0032, ADR-0033 y ADR-0034 por el equipo (ADR-0036) | Pendiente de aprobación del equipo |
+| Ratificación de ADR-0032, ADR-0033 y ADR-0034 (ADR-0036) | Aceptada; registrada en ADR-0036 el 2026-11-04 |
 
