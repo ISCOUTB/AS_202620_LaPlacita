@@ -109,7 +109,7 @@ export const stores: Store[] = [
     category: "Snacks",
     description: "Cafetería con fritos, empanadas, mecato, bebidas, dulces y golosinas.",
     icon: "cookie",
-    location: "La Placita UTB y segundo punto en los edificios A3–A4",
+    location: "La Placita UTB",
     schedule: [
       { days: "Lun – Vie", time: "7:00 a. m. – 8:00 p. m." },
       { days: "Sáb", time: "8:00 a. m. – 2:00 p. m." },
