@@ -25,7 +25,7 @@ La evidencia S14 debe cerrar las dos mediciones del plan:
 | Puerta | Evidencia que se debe adjuntar | Estado al 03/11 |
 |---|---|---|
 | Retirar o mitigar el despliegue Azure legado (P-7) | Acción desde la cuenta Azure y comprobación externa de que la URL antigua deja de servir | Pendiente según feedback diario |
-| Validar STRIDE y ADR-0030–0033 | Fecha, asistentes, acuerdos y cambios de estado acordados por el equipo | Pendiente de registrar la reunión del 03/11 |
+| Revisar STRIDE y las decisiones propuestas ADR-0032–0036 | Fecha, asistentes, acuerdos y cambios de estado acordados por el equipo | Pendiente de registrar la reunión del 03/11 |
 | Aplicar rate limit y límite de cuerpo en Traefik (P-1) | Valores efectivos en ambos dominios, respuestas de borde y flujo normal/subida de imagen | Pendiente; seguir [`guía P-1`](../despliegue-rate-limit-traefik.md) |
 | Ensayar rotación de `JWT_SECRET` (P-4) | Hora, procedimiento, invalidación de sesión anterior y login nuevo verificado | Pendiente; el procedimiento escrito no acredita el ensayo |
 | Identificar las versiones desplegadas | SHA de backend y frontend confirmado en Dokploy; guardar el run y el log del despliegue | Pendiente de evidencia funcional |
