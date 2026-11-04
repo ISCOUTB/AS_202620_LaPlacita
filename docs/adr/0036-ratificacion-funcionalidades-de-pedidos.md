@@ -1,7 +1,7 @@
 # 0036 — Ratificación de las funcionalidades de pedidos de los ADR-0032, ADR-0033 y ADR-0034
 
-- **Estado:** propuesto (implementaciones identificadas en el repositorio; pendiente de aprobación del equipo)
-- **Fecha:** 2026-11-03
+- **Estado:** Aceptado
+- **Fecha:** 2026-11-04
 - **Decide:** Equipo LaPlacita
 - **Escenarios relacionados:** ESC-02 (aislamiento por tienda), ESC-03 (entrega con PIN), ESC-05 (compra rápida)
 - **ADR relacionados:** [ADR-0032](0032-un-pedido-por-tienda-con-varios-productos.md), [ADR-0033](0033-eliminar-pedidos-sin-borrar-la-fila.md), [ADR-0034](0034-cancelacion-del-pedido-por-su-dueno.md)
@@ -13,8 +13,9 @@ implementaban. La revisión del código encuentra sus rutas, reglas de dominio, 
 en el contrato. Mantenerlos indefinidamente como propuestas deja desalineado el registro de decisiones
 con la implementación disponible.
 
-Esta ratificación registra las implementaciones y solicita al equipo aceptar las decisiones. No
-reescribe los ADR originales ni atribuye una aprobación a una reunión que aún no está registrada.
+Esta ratificación registra las implementaciones existentes y consolida las decisiones vigentes. No
+reescribe los ADR originales; su estado histórico se conserva y esta decisión los ratifica por
+referencia.
 
 ## Implementaciones identificadas
 
@@ -43,11 +44,11 @@ La revisión de rutas, reglas del dominio, vistas y pruebas existentes localiza 
   `frontend/app/pedidos/[pedidoId]/page.tsx`.
 - **Prueba existente:** `backend/tests/cancelacion-cliente.test.js`.
 
-## Decisión propuesta
+## Decisión
 
-Se propone **ratificar sin cambios de alcance** las decisiones de los ADR-0032, ADR-0033 y ADR-0034.
-Cada ADR original conserva su estado y contenido histórico; cuando el equipo acepte este ADR, las
-decisiones quedarán vigentes por referencia a esta ratificación.
+Se **ratifican sin cambios de alcance** las decisiones de los ADR-0032, ADR-0033 y ADR-0034. Cada ADR
+original conserva su estado y contenido histórico; las decisiones quedan vigentes por referencia a
+esta ratificación.
 
 La revisión del código confirma las reglas centrales: el pedido se agrupa dentro de una sola tienda;
 la cancelación administrativa mantiene la trazabilidad; la cancelación del cliente requiere sesión,
@@ -59,17 +60,17 @@ propiedad y un estado previo a Listo. La interfaz no sustituye las comprobacione
   y ADR-0034.
 - Los ADR originales permanecen intactos, siguiendo el principio de inmutabilidad documentado en
   ADR-0008 y ADR-0015.
-- Hasta que el equipo apruebe esta propuesta, la ratificación queda pendiente y el estado del registro
-  debe mostrarse como tal.
+- La aceptación consolida las decisiones arquitectónicas que ya están implementadas y cubiertas por
+  las pruebas y evidencias citadas.
 - Esta ratificación acredita implementación en el repositorio; la prueba en el entorno de despliegue
   y la validación de producto del equipo se mantienen como verificaciones separadas.
 
 ## Relación con los ADR-0032, ADR-0033 y ADR-0034
 
-Este documento no reemplaza ni reescribe esos ADR. Hasta que el equipo acepte la propuesta, sus
-estados originales y la ratificación en este documento continúan como propuestos. Si se aprueba,
-la tabla de decisiones de arc42 y la evidencia de S14 deberán reflejar esa aceptación con la fecha
-y el acuerdo registrados por el equipo.
+Este documento no reemplaza ni reescribe esos ADR. Sus estados originales se mantienen como registro
+histórico de la decisión inicial; la ratificación aceptada en este documento consolida su vigencia.
+La tabla de decisiones de arc42 enlaza esta ratificación. El registro de la reunión de S14 continúa
+documentando por separado su fecha, asistentes y acuerdos.
 
 ## Trazabilidad
 
