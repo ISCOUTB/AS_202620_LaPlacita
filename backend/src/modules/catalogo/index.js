@@ -39,9 +39,9 @@ const productos = estadoCompartido('productos', () => new Map([
   ['prod-018', { id: 'prod-018', tiendaId: 'tienda-05', nombre: 'Gaseosa 400 ml', precio: 2500, disponible: true, descripcion: 'Gaseosa personal bien fría.' }],
 ]));
 
-// Establecimientos (S14): lista canónica espejada del frontend (lib/stores.ts).
-// La imagen del encabezado vive en Garage (ADR-0028) y su REFERENCIA en la
-// tabla `tiendas`; este Map es su caché write-through.
+// Establecimientos: lista canónica espejada del frontend (lib/stores.ts).
+// Las referencias de imagen viven en PostgreSQL y los bytes en Garage
+// (ADR-0028/0035); este Map es su caché write-through.
 const TIENDAS = [
   { id: 'tienda-01', nombre: 'El Mesón' },
   { id: 'tienda-02', nombre: "El Asa'o" },
@@ -141,26 +141,50 @@ async function asignarImagen(productoId, tiendaId, imagenId) {
  * solo puede subir para sí misma (el `tiendaId` llega del token en la ruta).
  * Write-through como en el producto: la base confirma y después la caché.
  */
-async function asignarImagenTienda(tiendaId, imagenId) {
+async function asignarImagenTienda(tiendaId, imagenId, estado = 'general') {
   const tienda = TIENDAS.find((t) => t.id === tiendaId);
   if (!tienda) {
     throw errorCon(`Tienda ${tiendaId} no reconocida`, 404);
   }
-  await guardarImagenTienda(tiendaId, imagenId);
-  imagenesPorTienda.set(tiendaId, imagenId);
-  return { id: tiendaId, imagenId };
+  if (!['general', 'abierta', 'cerrada'].includes(estado)) {
+    throw errorCon('El estado de la imagen debe ser general, abierta o cerrada', 400);
+  }
+  await guardarImagenTienda(tiendaId, imagenId, estado);
+  const anterior = imagenesPorTienda.get(tiendaId) ?? {
+    imagenId: null,
+    imagenAbiertaId: null,
+    imagenCerradaId: null,
+  };
+  const campo = {
+    general: 'imagenId',
+    abierta: 'imagenAbiertaId',
+    cerrada: 'imagenCerradaId',
+  }[estado];
+  const nuevasImagenes = { ...anterior, [campo]: imagenId };
+  imagenesPorTienda.set(tiendaId, nuevasImagenes);
+  return { id: tiendaId, nombre: tienda.nombre, ...nuevasImagenes };
 }
 
 /** Catálogo público de establecimientos (S14): el encabezado de la tienda en
- * la PWA necesita nombre + imagenId. Sin imagen, imagenId es null. */
+ * la PWA necesita nombre + referencias de imagen. Los campos específicos de
+ * estado prevalecen; imagenId se conserva como fallback de instalaciones viejas. */
 function listarTiendas() {
-  return TIENDAS.map((t) => ({ id: t.id, nombre: t.nombre, imagenId: imagenesPorTienda.get(t.id) ?? null }));
+  return TIENDAS.map((tienda) => ({
+    ...tienda,
+    imagenId: imagenesPorTienda.get(tienda.id)?.imagenId ?? null,
+    imagenAbiertaId: imagenesPorTienda.get(tienda.id)?.imagenAbiertaId ?? null,
+    imagenCerradaId: imagenesPorTienda.get(tienda.id)?.imagenCerradaId ?? null,
+  }));
 }
 
 // Rehidratación de las imágenes de tiendas (tabla `tiendas`).
 function restaurarTiendasDesde(filas) {
   for (const fila of filas) {
-    if (fila.imagenId) imagenesPorTienda.set(fila.id, fila.imagenId);
+    imagenesPorTienda.set(fila.id, {
+      imagenId: fila.imagenId ?? null,
+      imagenAbiertaId: fila.imagenAbiertaId ?? null,
+      imagenCerradaId: fila.imagenCerradaId ?? null,
+    });
   }
 }
 

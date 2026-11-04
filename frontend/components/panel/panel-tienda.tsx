@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { BarChart3, ClipboardList, LogOut, UtensilsCrossed } from "lucide-react"
 import { Marca } from "@/components/utb/marca"
 import { PanelMenu } from "@/components/panel/panel-menu"
+import { PanelImagenesTienda } from "@/components/panel/panel-imagenes-tienda"
 import { PanelPedidos } from "@/components/panel/panel-pedidos"
 import { PanelResumen } from "@/components/panel/panel-resumen"
 import { listarMenuTienda, type ProductoTienda } from "@/lib/api"
@@ -91,7 +92,12 @@ export function PanelTienda({ usuario, alSalir }: { usuario: Usuario; alSalir: (
 
       <main className="mx-auto max-w-7xl px-4 py-6 md:px-6">
         {pestana === "pedidos" && <PanelPedidos nombres={nombres} esAdmin={esAdmin} />}
-        {pestana === "menu" && <PanelMenu menu={menu} esAdmin={esAdmin} alActualizar={actualizarEnMenu} />}
+        {pestana === "menu" && (
+          <>
+            {tienda && <PanelImagenesTienda tiendaId={tienda.tiendaId} />}
+            <PanelMenu menu={menu} esAdmin={esAdmin} alActualizar={actualizarEnMenu} />
+          </>
+        )}
         {pestana === "resumen" && <PanelResumen />}
       </main>
     </div>

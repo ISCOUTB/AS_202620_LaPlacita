@@ -146,13 +146,14 @@ paths:
   /catalogo/tiendas:
     get:
       tags: [catalogo]
-      summary: Establecimientos del catálogo (nombre e imagen del encabezado)
+      summary: Establecimientos del catálogo e imágenes de presentación
       operationId: listarTiendas
       security: []
       description: >-
-        S14. Contenido público (como el nombre de un producto). imagenId es
-        la referencia uuid del banner en el almacén (ADR-0028); los bytes
-        los sirve /api/v1/imagenes/{id}.
+        Contenido público del catálogo. imagenAbiertaId e imagenCerradaId
+        son referencias uuid de Garage para el estado de atención (ADR-0035).
+        imagenId conserva compatibilidad con banners anteriores. Los bytes
+        los sirve /api/v1/imagenes/{id} (ADR-0028).
       responses:
         '200':
           description: Establecimientos con su imagen si la tienen
@@ -813,15 +814,24 @@ paths:
   /tienda/imagen:
     post:
       tags: [tienda]
-      summary: Subir/actualizar la imagen del encabezado de la TIENDA (panel)
+      summary: Subir/actualizar una imagen de presentación de la tienda (panel)
       operationId: subirImagenTienda
       security:
         - sesion: []
       description: >-
-        S14 · ADR-0028. multipart con el campo imagen; mismas defensas que
-        la imagen de producto (sniffing del MIME, límite real). La tienda
-        solo puede subir para sí misma: el tiendaId sale del token, la
-        ruta no lo recibe (ESC-02).
+        ADR-0028/0035. multipart con el campo imagen y estado general,
+        abierta o cerrada; mismas defensas y almacenamiento que las imágenes
+        de producto. La tienda solo sube para sí misma: tiendaId sale del
+        token (ESC-02).
+      parameters:
+        - name: estado
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [general, abierta, cerrada]
+            default: general
+          description: Estado de apertura asociado a la imagen.
       requestBody:
         required: true
         content:
@@ -1112,15 +1122,21 @@ components:
     Tienda:
       type: object
       description: >-
-        Establecimiento del catálogo (S14). imagenId es la referencia uuid
-        del banner en el almacén de imágenes (ADR-0028); null si aún no
-        tiene.
+        Establecimiento del catálogo. imagenAbiertaId e imagenCerradaId son
+        referencias uuid en Garage (ADR-0035); imagenId es la referencia
+        anterior genérica que se conserva por compatibilidad (ADR-0028).
       properties:
         id:
           type: string
         nombre:
           type: string
         imagenId:
+          type: string
+          nullable: true
+        imagenAbiertaId:
+          type: string
+          nullable: true
+        imagenCerradaId:
           type: string
           nullable: true
       required:

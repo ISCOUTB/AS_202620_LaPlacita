@@ -21,9 +21,6 @@ export type Store = {
   description: string
   icon: StoreIcon
   location: string
-  /** Rutas opcionales en frontend/public para los estados de atención. */
-  openImage: string | null
-  closedImage: string | null
   /** Texto del horario para mostrar. */
   schedule: StoreSchedule[]
   /** El mismo horario, estructurado para calcular si está abierta ahora. */
@@ -44,8 +41,6 @@ export const stores: Store[] = [
     category: "Desayunos",
     description: "Desayunos y menú del día para la comunidad UTB y visitantes, con opciones de sopa, proteínas, arroz, granos, ensaladas y jugos.",
     icon: "coffee",
-    openImage: null,
-    closedImage: null,
     location: "Ala derecha del proyecto Alcatraz",
     schedule: [
       { days: "Lun – Vie", time: "6:30 a. m. – 3:00 p. m." },
@@ -63,8 +58,6 @@ export const stores: Store[] = [
     category: "Asados",
     description: "Pollo y cerdo a la plancha con acompañamientos, además de hamburguesas, perros y salchipapas.",
     icon: "flame",
-    openImage: null,
-    closedImage: null,
     location: "La Placita UTB",
     schedule: [
       { days: "Lun – Vie", time: "11:00 a. m. – 8:00 p. m." },
@@ -82,8 +75,6 @@ export const stores: Store[] = [
     category: "Saludable",
     description: "Preparaciones y snacks ligeros: ensaladas, batidos, mecatería especial y bebidas bajas en azúcar.",
     icon: "salad",
-    openImage: null,
-    closedImage: null,
     location: "La Placita UTB",
     schedule: [
       { days: "Lun – Vie", time: "7:00 a. m. – 6:00 p. m." },
@@ -101,8 +92,6 @@ export const stores: Store[] = [
     category: "Dulce y salado",
     description: "Opciones para mecatear y picar: sándwiches, crispetas, waffles, paletas y helados.",
     icon: "ice-cream",
-    openImage: null,
-    closedImage: null,
     location: "La Placita UTB",
     schedule: [
       { days: "Lun – Vie", time: "8:00 a. m. – 7:00 p. m." },
@@ -120,8 +109,6 @@ export const stores: Store[] = [
     category: "Snacks",
     description: "Cafetería con fritos, empanadas, mecato, bebidas, dulces y golosinas.",
     icon: "cookie",
-    openImage: null,
-    closedImage: null,
     location: "La Placita UTB y segundo punto en los edificios A3–A4",
     schedule: [
       { days: "Lun – Vie", time: "7:00 a. m. – 8:00 p. m." },

@@ -88,7 +88,7 @@ carpeta temporal de compilación para instalarlas de nuevo en la ubicación nuev
 
 | Ruta | Qué hace | Contrato |
 |---|---|---|
-| `/` | Inicio: saludo, pedido de ejemplo listo, tiendas (abiertas primero) y «Cómo funciona» | — (hueco `GET /catalogo/tiendas` documentado en ADR-0017) |
+| `/` | Inicio: saludo, pedido de ejemplo listo, tiendas (abiertas primero) y «Cómo funciona» | `GET /catalogo/tiendas` |
 | `/tiendas` | Las 5 tiendas con estado abierta/cerrada, ubicación y descripción | — (contenido estático, `lib/stores.ts`) |
 | `/tiendas/[slug]` | Menú con filtro por categoría, carrito y checkout | `GET /catalogo/tiendas/{tiendaId}/productos` |
 | Carrito (drawer) | Multi-item agrupado por tienda; "Hacer pedido" crea **un pedido por tienda** con todos sus productos (ADR-0032) | `POST /pedidos` |
@@ -118,9 +118,9 @@ Nota: el `service worker` solo se registra en builds de producción
   ubicación de tiendas se mantienen en `lib/stores.ts`; el carrito agrupa productos en un pedido
   por tienda (ADR-0032), y el PIN aparece al dueño cuando el pedido está Listo (ADR-0022).
 - El pago es una confirmación simulada; no hay pasarela externa integrada.
-- Cada perfil de tienda cambia la imagen de presentación entre sus estados abierta y cerrada,
-  según `franjas` en `lib/stores.ts`. Las rutas de ambas imágenes se organizan en
-  `public/images/tiendas/` (ver su README para nombres y tamaños recomendados).
+- Cada perfil de tienda obtiene del backend las imágenes de estado abierta/cerrada. Se suben
+  desde la pestaña Menú del panel y usan el mismo reescalado, API y almacén Garage que las fotos
+  de producto (ADR-0028/0035). `franjas` en `lib/stores.ts` decide cuál mostrar.
 - Sesión (ADR-0021): el token vive en la cookie httpOnly `lp_sesion`, la maneja `/api/sesion`
   y el proxy `/api/v1` la convierte en `Authorization: Bearer`. El navegador nunca ve el token.
 - Pedir exige sesión: el dueño del pedido es la cuenta, y solo ella ve el PIN (ADR-0022).

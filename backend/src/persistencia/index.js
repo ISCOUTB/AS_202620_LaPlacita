@@ -88,13 +88,17 @@ ALTER TABLE productos ADD COLUMN IF NOT EXISTS imagen_id UUID;
 -- Descripción larga del producto (S14, detalle en la PWA): opcional, texto
 -- corto editado por la tienda desde el panel. NULL para la semilla vieja.
 ALTER TABLE productos ADD COLUMN IF NOT EXISTS descripcion TEXT;
--- Datos propios de cada establecimiento (S14): hoy solo la imagen del
--- encabezado de la tienda (ADR-0028: la referencia uuid; bytes en Garage).
+-- Referencias de imagen por estado de atención (ADR-0035); los bytes siguen
+-- en Garage y la columna imagen_id se conserva como imagen genérica anterior.
 CREATE TABLE IF NOT EXISTS tiendas (
-  tienda_id      TEXT        PRIMARY KEY,
-  imagen_id      UUID,
-  actualizado_en TIMESTAMPTZ NOT NULL DEFAULT now()
+  tienda_id          TEXT        PRIMARY KEY,
+  imagen_id          UUID,
+  imagen_abierta_id  UUID,
+  imagen_cerrada_id  UUID,
+  actualizado_en     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE tiendas ADD COLUMN IF NOT EXISTS imagen_abierta_id UUID;
+ALTER TABLE tiendas ADD COLUMN IF NOT EXISTS imagen_cerrada_id UUID;
 `;
 
 const COLUMNAS = 'tienda_id, pedido_id, cliente_id, producto_id, cantidad, total, estado, pin, codigo, creado_en, seguimiento, items, cancelado_en';
@@ -208,8 +212,15 @@ async function arrancar() {
   usuariosCargados = cuentas.rows.map(filaAUsuario);
   const menu = await pool.query('SELECT producto_id, tienda_id, nombre, precio, disponible, imagen_id, descripcion FROM productos');
   productosCargados = menu.rows.map(filaAProducto);
-  const tiendas = await pool.query('SELECT tienda_id, imagen_id FROM tiendas');
-  tiendasCargadas = tiendas.rows.map((fila) => ({ id: fila.tienda_id, imagenId: fila.imagen_id ?? null }));
+  const tiendas = await pool.query(
+    'SELECT tienda_id, imagen_id, imagen_abierta_id, imagen_cerrada_id FROM tiendas',
+  );
+  tiendasCargadas = tiendas.rows.map((fila) => ({
+    id: fila.tienda_id,
+    imagenId: fila.imagen_id ?? null,
+    imagenAbiertaId: fila.imagen_abierta_id ?? null,
+    imagenCerradaId: fila.imagen_cerrada_id ?? null,
+  }));
   for (const [oyentes, filas] of [
     [oyentesDeCarga, registrosCargados],
     [oyentesDeUsuarios, usuariosCargados],
@@ -287,16 +298,27 @@ export function alCargarTiendas(oyente) {
   oyentesDeTiendas.push(oyente);
 }
 
-// Referencia de la imagen del encabezado de una tienda (ADR-0028): la misma
-// convención del catálogo — la base confirma ANTES de tocar la caché.
-export async function guardarImagenTienda(tiendaId, imagenId) {
+// Referencia de la imagen de tienda (ADR-0028/0035): la base confirma ANTES
+// de tocar la caché. El nombre de columna solo puede proceder de esta lista.
+export async function guardarImagenTienda(tiendaId, imagenId, estado = 'general') {
   if (!activa()) {
     return;
   }
+  const columnas = {
+    general: 'imagen_id',
+    abierta: 'imagen_abierta_id',
+    cerrada: 'imagen_cerrada_id',
+  };
+  const columna = columnas[estado];
+  if (!columna) {
+    const error = new Error('El estado de la imagen debe ser general, abierta o cerrada');
+    error.estado = 400;
+    throw error;
+  }
   await iniciar();
   await pool.query(
-    `INSERT INTO tiendas (tienda_id, imagen_id) VALUES ($1, $2)
-     ON CONFLICT (tienda_id) DO UPDATE SET imagen_id = EXCLUDED.imagen_id, actualizado_en = now()`,
+    `INSERT INTO tiendas (tienda_id, ${columna}) VALUES ($1, $2)
+     ON CONFLICT (tienda_id) DO UPDATE SET ${columna} = EXCLUDED.${columna}, actualizado_en = now()`,
     [tiendaId, imagenId],
   );
 }

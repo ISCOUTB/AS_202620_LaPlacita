@@ -67,6 +67,17 @@ export interface Notificacion {
   enviadaEn?: string
 }
 
+/** Referencias públicas de imágenes por estado de atención (ADR-0035). */
+export interface ImagenesTienda {
+  id: string
+  nombre: string
+  imagenId?: string | null
+  imagenAbiertaId?: string | null
+  imagenCerradaId?: string | null
+}
+
+export type EstadoImagenTienda = "abierta" | "cerrada"
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -110,6 +121,11 @@ export async function obtenerProductos(tiendaId: string): Promise<Product[]> {
     disponible: p.disponible,
     imagenId: (p as { imagenId?: string | null }).imagenId ?? null,
   }))
+}
+
+/** GET /catalogo/tiendas — las referencias apuntan al mismo Garage que el menú. */
+export function obtenerImagenesTiendas(): Promise<ImagenesTienda[]> {
+  return request<ImagenesTienda[]>("/catalogo/tiendas", { cache: "no-store" })
 }
 
 /** POST /pedidos — un pedido por tienda, con uno o varios productos (ADR-0032). */
@@ -253,6 +269,20 @@ export async function subirImagenProducto(
   return request<ProductoTienda>(
     `/tienda/productos/${encodeURIComponent(productoId)}/imagen`,
     { method: "POST", body: cuerpo }
+  )
+}
+
+/** ADR-0028/0035: guarda la foto del estado abierto/cerrado en el mismo almacén de productos. */
+export async function subirImagenTienda(
+  estado: EstadoImagenTienda,
+  archivo: File,
+): Promise<ImagenesTienda> {
+  const blob = await reescalarImagen(archivo)
+  const cuerpo = new FormData()
+  cuerpo.append("imagen", new File([blob], "imagen.webp", { type: "image/webp" }))
+  return request<ImagenesTienda>(
+    `/tienda/imagen?estado=${encodeURIComponent(estado)}`,
+    { method: "POST", body: cuerpo },
   )
 }
 
