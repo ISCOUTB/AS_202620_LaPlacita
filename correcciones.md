@@ -1393,3 +1393,33 @@ producción.
 | Solo el `admin` elimina | Con una cuenta `caja` no aparece el botón; con `admin` sí |
 | Queda el registro | `SELECT pedido_id, cancelado_en FROM pedidos WHERE cancelado_en IS NOT NULL` |
 | Pedidos actuales | En el celular, «Tus pedidos de ahora» solo trae pedidos de hoy sin entregar |
+
+---
+
+## Seguimiento S14 y revisión diaria (03/11/2026)
+
+Se actualizó la copia local con `git pull --ff-only origin master`; HEAD quedó en `d2fd2cd` y
+alineado con `origin/master`. Se leyó la actualización diaria de
+[`AS_202620_feedback/revisiones/2026-2/AS_202620_LaPlacita/feedback.md`](https://github.com/ISCOUTB/AS_202620_feedback/blob/master/revisiones/2026-2/AS_202620_LaPlacita/feedback.md),
+que registra los PR #34–36 integrados y el estado reportado del CI. Ese reporte no sustituye la
+verificación del despliegue ni la aceptación funcional en producción.
+
+### Hallazgos que requieren acción
+
+| Hallazgo | Estado en el repositorio | Evidencia necesaria para cerrarlo |
+|---|---|---|
+| P-7: el despliegue Azure retirado seguía respondiendo el 01/11 | Pendiente operativo; ADR-0018 solo retira Azure del diseño | Apagar o mitigar el recurso desde Azure y comprobar que la URL vieja deja de responder |
+| P-6: sesión STRIDE reprogramada para el 03/11 | La guía existe; no se encontró registro de la reunión en el repo actualizado | Anotar fecha, asistentes, decisiones y validación de ADR-0030–0033 por el equipo |
+| P-1: rate limit de Traefik | Guía lista; middleware no acreditado como aplicado | Aplicar en ambos dominios y registrar 429 de borde, flujo normal y subida de imagen |
+| P-4: rotación de `JWT_SECRET` | Procedimiento escrito; ensayo real pendiente | Rotar fuera de una demo y comprobar que los tokens anteriores fallan y el login nuevo funciona |
+| SHA de producción | Workflow exige respuesta HTTP 200 y consulta health; `/api/v1/health` responde solo `status: ok` | Registrar en Dokploy el SHA de backend y frontend que sirvieron la prueba |
+| Aceptación de los cambios #34–36 | Hay evidencia local reportada; no se encontró cierre funcional en producción | Probar agrupación por tienda, compatibilidad v1, ciclo con un PIN, autorización de cancelación, historial y aislamiento |
+| Dependabot #28 y #30 | Las ramas actuales solo cambian `package.json`/lockfiles. #28 actualiza Next/React del backend; #30 actualiza Next/React y componentes Radix del frontend. El feedback reporta CI de PR verde en la revisión del 01/11, pero ese run no es el CI de la punta actual ni cubre la revisión visual | Rebasar y exigir checks sobre `d2fd2cd`; después de #30, recorrer compra móvil y panel antes de integrar |
+| Evidencia S14 e instrumental ESC-01 | No existía evidencia S14; el script original descartaba cuerpos y no reconciliaba pedidos persistidos | Se creó `docs/evidencias/evidencias-s14.md`; `medir-carga.js` captura IDs y métricas antes/después. Falta acordar denominador/tratamiento de 429 y completar las mediciones |
+
+La evidencia S14 separa el reporte CI del feedback de las comprobaciones independientes y deja
+campos pendientes, sin inventar resultados. `medir-carga.js` conserva el resultado de cada POST,
+reconcilia IDs visibles antes/después con la cuenta autenticada y toma deltas de métricas y DLQ; el
+umbral sigue siendo manual hasta acordar el denominador y el tratamiento de 429. **No se ejecutaron
+pruebas ni llamadas a producción** durante esta revisión. Si se cambia el límite Traefik para una
+prueba autorizada, documentar y revertir ese ajuste.

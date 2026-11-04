@@ -30,15 +30,18 @@ export type Store = {
 const LUN_VIE = [1, 2, 3, 4, 5]
 const SAB = [6]
 
+// Nombres, descripciones y ubicaciones contrastados con el directorio oficial
+// de servicios de la UTB. Los horarios siguen pendientes de confirmación.
+// Fuente: https://www.utb.edu.co/vida-en-el-campus/servicios/
 export const stores: Store[] = [
   {
     slug: "el-meson",
     tiendaId: "tienda-01",
     name: "El Mesón",
     category: "Desayunos",
-    description: "Desayunos y menú del día.",
+    description: "Desayunos y menú del día para la comunidad UTB y visitantes, con opciones de sopa, proteínas, arroz, granos, ensaladas y jugos.",
     icon: "coffee",
-    location: "Bloque A, primer piso",
+    location: "Ala derecha del proyecto Alcatraz",
     schedule: [
       { days: "Lun – Vie", time: "6:30 a. m. – 3:00 p. m." },
       { days: "Sáb", time: "7:00 a. m. – 12:00 m." },
@@ -53,9 +56,9 @@ export const stores: Store[] = [
     tiendaId: "tienda-02",
     name: "El Asa'o",
     category: "Asados",
-    description: "Pollo y cerdo asado, hamburguesas, perros y salchipapa.",
+    description: "Pollo y cerdo a la plancha con acompañamientos, además de hamburguesas, perros y salchipapas.",
     icon: "flame",
-    location: "Plazoleta central",
+    location: "La Placita UTB",
     schedule: [
       { days: "Lun – Vie", time: "11:00 a. m. – 8:00 p. m." },
       { days: "Sáb", time: "11:00 a. m. – 3:00 p. m." },
@@ -70,9 +73,9 @@ export const stores: Store[] = [
     tiendaId: "tienda-03",
     name: "Punto Fit",
     category: "Saludable",
-    description: "Platos livianos, ensaladas, batidos y bebidas bajas en azúcar.",
+    description: "Preparaciones y snacks ligeros: ensaladas, batidos, mecatería especial y bebidas bajas en azúcar.",
     icon: "salad",
-    location: "Junto al coliseo",
+    location: "La Placita UTB",
     schedule: [
       { days: "Lun – Vie", time: "7:00 a. m. – 6:00 p. m." },
       { days: "Sáb", time: "8:00 a. m. – 1:00 p. m." },
@@ -87,9 +90,9 @@ export const stores: Store[] = [
     tiendaId: "tienda-04",
     name: "Alegría",
     category: "Dulce y salado",
-    description: "Sándwiches, crispetas, waffles, paletas y helados.",
+    description: "Opciones para mecatear y picar: sándwiches, crispetas, waffles, paletas y helados.",
     icon: "ice-cream",
-    location: "Biblioteca, entrada norte",
+    location: "La Placita UTB",
     schedule: [
       { days: "Lun – Vie", time: "8:00 a. m. – 7:00 p. m." },
       { days: "Sáb", time: "9:00 a. m. – 2:00 p. m." },
@@ -104,9 +107,9 @@ export const stores: Store[] = [
     tiendaId: "tienda-05",
     name: "Antojos",
     category: "Snacks",
-    description: "Fritos, empanadas, snacks, bebidas y dulces.",
+    description: "Cafetería con fritos, empanadas, mecato, bebidas, dulces y golosinas.",
     icon: "cookie",
-    location: "Bloque C, zona de estudio",
+    location: "La Placita UTB y segundo punto en los edificios A3–A4",
     schedule: [
       { days: "Lun – Vie", time: "7:00 a. m. – 8:00 p. m." },
       { days: "Sáb", time: "8:00 a. m. – 2:00 p. m." },

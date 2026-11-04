@@ -49,8 +49,8 @@ Por lo anterior, el equipo decide mantener la arquitectura seleccionada y proced
 ## Trazabilidad 
 
 - ADR antecedentes: [ADR-0001](0001-adopcion-monolito-modular.md)
-- Estructura arquitectónica: módulos internos del proyecto bajo la organización [`src/modules/*`](../../src/modules/) 
-- Pruebas: [`tests/health.test.js`](../../tests/health.test.js) 
+- Estructura arquitectónica: módulos internos del proyecto bajo la organización [`backend/src/modules/*`](../../backend/src/modules/)
+- Pruebas: [`backend/tests/health.test.js`](../../backend/tests/health.test.js)
 - Integración continua: [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)
 - Documentación relacionada: [`docs/aspectos.md`](../aspectos.md), [`docs/ia.md`](../ia.md) y documentación [arc42](../arc42/arc42-template-EN.md)/[C4](../c4/contexto.md)
 

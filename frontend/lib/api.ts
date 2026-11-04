@@ -150,6 +150,14 @@ export function obtenerPedido(pedidoId: string, tiendaId: string, seguimiento?: 
   )
 }
 
+/** POST /pedidos/{pedidoId}/cancelar — solo el dueño, antes de que esté Listo. */
+export function cancelarPedidoPropio(pedidoId: string, tiendaId: string): Promise<Pedido> {
+  return request<Pedido>(
+    `/pedidos/${encodeURIComponent(pedidoId)}/cancelar?tiendaId=${encodeURIComponent(tiendaId)}`,
+    { method: "POST" },
+  )
+}
+
 /** POST /pagos/{pedidoId}/confirmar?tiendaId=… — acción del establecimiento. */
 export function confirmarPago(pedidoId: string, tiendaId: string): Promise<Pedido> {
   return request<Pedido>(

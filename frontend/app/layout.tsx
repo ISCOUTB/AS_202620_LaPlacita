@@ -32,6 +32,7 @@ const rubik = localFont({
 
 export const viewport: Viewport = {
   themeColor: "#093ad8",
+  viewportFit: "cover",
 }
 
 export const metadata: Metadata = {

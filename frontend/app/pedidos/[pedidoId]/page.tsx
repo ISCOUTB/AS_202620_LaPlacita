@@ -7,7 +7,15 @@ import { Aviso } from "@/components/utb/aviso"
 import { Boton, BotonEnlace } from "@/components/utb/boton"
 import { CodigoPedido } from "@/components/utb/codigo-pedido"
 import { EstadoChip } from "@/components/utb/estado-chip"
-import { ErrorApi, obtenerNotificaciones, obtenerPedido, obtenerPin, type EstadoPedido, type Notificacion } from "@/lib/api"
+import {
+  cancelarPedidoPropio,
+  ErrorApi,
+  obtenerNotificaciones,
+  obtenerPedido,
+  obtenerPin,
+  type EstadoPedido,
+  type Notificacion,
+} from "@/lib/api"
 import { ESTADOS, INFO_ESTADO, indiceEstado } from "@/lib/estados"
 import { productosDe, type ProductoDelPedido } from "@/lib/pedido-items"
 import { useSesion } from "@/lib/sesion"
@@ -36,6 +44,10 @@ export default function SeguimientoPage({
   const [codigo, setCodigo] = useState<string | null>(null)
   const [productos, setProductos] = useState<ProductoDelPedido[]>([])
   const [cancelado, setCancelado] = useState(false)
+  const [esDueno, setEsDueno] = useState(false)
+  const [confirmandoCancelacion, setConfirmandoCancelacion] = useState(false)
+  const [cancelando, setCancelando] = useState(false)
+  const [errorCancelacion, setErrorCancelacion] = useState<string | null>(null)
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([])
   const [error, setError] = useState<string | null>(null)
   const [pin, setPin] = useState<string | null>(null)
@@ -66,6 +78,7 @@ export default function SeguimientoPage({
       setCodigo(pedido.codigo ?? null)
       setProductos(productosDe(pedido))
       setCancelado(Boolean(pedido.canceladoEn))
+      setEsDueno(Boolean(usuario && pedido.clienteId === usuario.id))
       setError(null)
       if ((pedido.estado === "Entregado" || pedido.canceladoEn) && temporizador.current) {
         clearInterval(temporizador.current)
@@ -77,7 +90,7 @@ export default function SeguimientoPage({
     } catch (e) {
       setError((e as Error).message)
     }
-  }, [pedidoId, tiendaId, seguimiento])
+  }, [pedidoId, tiendaId, seguimiento, usuario])
 
   useEffect(() => {
     if (!pedidoId || !tiendaId) return
@@ -121,8 +134,29 @@ export default function SeguimientoPage({
   const nombreTienda = getStoreByTiendaId(tiendaId)?.name ?? tiendaId
   const listo = estado === "Listo" && !cancelado
   const pinVisible = Boolean(listo && usuario && pin)
+  const puedeCancelar =
+    esDueno && !cancelado && (estado === "Recibido" || estado === "En preparación")
   // Con el PIN en pantalla, la tarjeta azul es la del PIN; la del código pasa a blanca.
   const tarjetaAzul = listo && !pinVisible
+
+  async function cancelarPedido() {
+    setCancelando(true)
+    setErrorCancelacion(null)
+    try {
+      const pedido = await cancelarPedidoPropio(pedidoId, tiendaId)
+      setCancelado(Boolean(pedido.canceladoEn))
+      setEstado(pedido.estado)
+      setConfirmandoCancelacion(false)
+      if (temporizador.current) {
+        clearInterval(temporizador.current)
+        temporizador.current = null
+      }
+    } catch (e) {
+      setErrorCancelacion((e as Error).message)
+    } finally {
+      setCancelando(false)
+    }
+  }
 
   return (
     <>
@@ -156,9 +190,49 @@ export default function SeguimientoPage({
 
         {cancelado && (
           <Aviso
-            titulo="La tienda canceló este pedido"
-            texto={`Ya no se puede recoger. Si pagaste, habla con ${nombreTienda}.`}
+            titulo="Este pedido fue cancelado"
+            texto={`Ya no se puede recoger. Si pagaste, comunícate con ${nombreTienda}.`}
           />
+        )}
+
+        {puedeCancelar && !confirmandoCancelacion && (
+          <div className="rounded-2xl border border-error-texto/20 bg-superficie p-4 shadow-tarjeta">
+            <p className="mb-3 text-sm text-suave">
+              Puedes cancelar mientras el pedido no esté listo para recoger.
+            </p>
+            <Boton
+              variante="contorno"
+              className="border-error-texto text-error-texto hover:bg-error-fondo"
+              onClick={() => setConfirmandoCancelacion(true)}
+            >
+              Cancelar pedido
+            </Boton>
+          </div>
+        )}
+
+        {puedeCancelar && confirmandoCancelacion && (
+          <section
+            aria-label="Confirmar cancelación del pedido"
+            className="rounded-2xl border border-error-texto/30 bg-error-fondo p-4"
+          >
+            <h2 className="font-display font-bold text-error-texto">¿Cancelar este pedido?</h2>
+            <p className="mt-1 text-sm text-error-texto">
+              La tienda dejará de prepararlo. Si ya pagaste, comunícate con el establecimiento para revisar el reembolso.
+            </p>
+            {errorCancelacion && <p role="alert" className="mt-3 text-sm font-medium text-error-texto">{errorCancelacion}</p>}
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Boton variante="contorno" disabled={cancelando} onClick={() => setConfirmandoCancelacion(false)}>
+                Volver
+              </Boton>
+              <Boton
+                disabled={cancelando}
+                className="bg-error-texto text-white hover:bg-error-texto/90"
+                onClick={cancelarPedido}
+              >
+                {cancelando ? "Cancelando…" : "Sí, cancelar pedido"}
+              </Boton>
+            </div>
+          </section>
         )}
 
         {pinVisible && (

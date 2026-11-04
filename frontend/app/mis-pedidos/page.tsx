@@ -232,7 +232,7 @@ export default function MisPedidosPage() {
       )}
 
       {!cargando && !error && anteriores.length > 0 && (
-        <details open={actuales.length === 0} className="group/anteriores">
+        <details open className="group/anteriores">
           <summary className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl bg-superficie px-4 py-3 font-display font-bold text-noche shadow-tarjeta">
             Pedidos anteriores ({anteriores.length})
             <ChevronDown aria-hidden="true" className="size-5 text-tenue transition-transform group-open/anteriores:rotate-180" />

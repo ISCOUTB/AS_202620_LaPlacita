@@ -1,100 +1,94 @@
-# Tutorial · Verificación end-to-end de LaPlacita desplegada
+# Guía local · revisión visual y funcional de LaPlacita
 
-> **Propósito:** procedimiento reproducible para verificar la aplicación completa en los
-> entornos desplegados — del pre-pedido en el teléfono a la validación del PIN en el backend.
-> Escrito para la demo del 14/10/2026; reutilizable como rutina de verificación de cualquier
-> despliegue nuevo.
+> Procedimiento para revisar frontend y backend desde la raíz del repositorio, sin publicar ni
+> desplegar cambios. La base de datos es opcional; sin `DATABASE_URL`, el backend usa memoria y
+> los datos de prueba se pierden al reiniciarlo.
 
-## Entornos
+## Requisitos
 
-| Rol | URL | Nota |
-|---|---|---|
-| **Frontend (PWA del usuario)** | `https://laplacita-app.iscoutb.dev` | Dokploy · HTTPS (habilita la instalación de la PWA) |
-| **Backend de pruebas (con BD real)** | `https://laplacita-test.iscoutb.dev` | Dokploy · PostgreSQL de ADR-0014 · **usar para las operaciones** |
-| **Backend de producción** | `https://laplacita-app.graymoss-fdd72159.canadacentral.azurecontainerapps.io` | Azure · modo memoria hasta que el firewall habilite la BD (pendiente documentado) |
-| **Contrato OpenAPI (Swagger)** | `https://laplacita-test.iscoutb.dev/docs` | Misma especificación que valida la prueba de contrato |
+- Node.js 22 o superior y npm.
+- Dos terminales abiertas en la raíz del repositorio.
+- Navegador actualizado. Para comprobar adaptación móvil, usa el modo de dispositivo de las
+  herramientas de desarrollo del navegador.
 
-## Parte 0 — Preparación (10 min)
+No uses datos personales reales. Para un recorrido de compra con cuenta, registra una cuenta de
+prueba con correo `@utb.edu.co` y una contraseña local. El pago actual es simulado.
 
-**En el celular:**
-1. Abrir `https://laplacita-app.iscoutb.dev` en Chrome (Android) o Safari (iOS).
-2. **Instalar la PWA**: Android → menú ⋮ → *Instalar aplicación*; iOS → Compartir →
-   *Añadir a pantalla de inicio*.
-3. Probar el dominio **desde el WiFi del campus y desde datos móviles** (si el WiFi del
-   campus bloquea el dominio, la demo se hace por hotspot del teléfono).
+## Levantar la aplicación
 
-**En el portátil:**
-4. Abrir el Swagger del backend de pruebas.
-5. Verificar `GET https://laplacita-test.iscoutb.dev/api/v1/health` → `{"status":"ok"}`.
+En PowerShell, primera terminal:
 
-## Parte 1 — El cliente pide (celular)
+```powershell
+Set-Location "C:\ruta\a\AS_202620_LaPlacita\backend"
+npm install
+npm run dev
+```
 
-1. Onboarding: nombre → *Empezar a pedir* (perfil local del dispositivo; el inicio de sesión
-   con credenciales llega con la identidad de tenant, corte 3).
-2. Seleccionar **El Mesón** → el menú se consulta del backend
-   (`GET /api/v1/catalogo/tiendas/tienda-01/productos`).
-3. Elegir un producto, tocar **+** (el contador arranca en 0 por diseño) → el botón muestra el
-   total → **Pedir**. Agregar un segundo producto.
-4. Abrir el **carrito flotante**: productos agrupados por tienda, cantidades y total.
-5. **Hacer pedido** → el contrato v1 crea **un pedido por producto** (`POST /pedidos`) →
-   navegación a *Mis pedidos* con los pedidos creados y su estado.
-6. Entrar al **seguimiento** de un pedido: línea de tiempo de 4 estados, actualización
-   automática cada 3 s, código de retiro (`pedidoId`).
+Espera a que el backend informe que escucha en `http://localhost:3000`. Comprueba en el navegador:
 
-> El PIN no viaja por la lectura de pedido (ADR-0013, A-06): el usuario presenta su
-> `pedidoId` en ventanilla; el PIN lo emite el establecimiento al marcar *Listo*.
+```text
+http://localhost:3000/api/v1/health
+```
 
-## Parte 2 — El establecimiento atiende (Swagger del backend)
+Debe responder `{"status":"ok"}`. Para ver el contrato local, abre `http://localhost:3000/docs`.
 
-Con el `pedidoId` visible en el teléfono:
+En una segunda terminal de PowerShell:
 
-| Paso | Operación (Try it out) | Resultado en el teléfono (≤3 s) |
-|---|---|---|
-| 1 | `POST /pagos/{pedidoId}/confirmar` · `tiendaId: tienda-01` | Estado → **En preparación** 👨‍🍳 |
-| 2 | `POST /entrega/{pedidoId}/listo?tiendaId=tienda-01` — la respuesta entrega el **PIN** de 4 dígitos | Estado → **Listo** 🔔 |
-| 3 | `POST /entrega/{pedidoId}/validar` · body `{"pinIngresado":"1234"}` | Estado → **Entregado** ✅ |
+```powershell
+Set-Location "C:\ruta\a\AS_202620_LaPlacita\frontend"
+npm install
+npm run dev -- -p 3001
+```
 
-**Pruebas negativas (A-06 / ESC-03):**
-- Validar con PIN incorrecto → `PIN incorrecto` + `pinesRechazados` sube en métricas.
-- Revalidar un pedido ya Entregado → rechazo por estado (el PIN no se reutiliza).
-- Consultar con otra tienda → `Pedido … no encontrado en la tienda …` (aislamiento RES-05).
+Abre `http://localhost:3001`. El frontend reenvía las solicitudes al backend local en el puerto
+3000 por defecto. Si cualquiera de los puertos ya está ocupado, cierra el proceso que lo usa o
+elige otro puerto y ajusta la configuración del proxy local.
 
-## Parte 3 — Persistencia ante reinicios (ESC-01 · verificación estrella)
+Detén cada proceso con `Ctrl+C` en su terminal. Esto solo detiene servidores locales; no sube,
+publica ni despliega cambios.
 
-1. Crear 2-3 pedidos desde el celular y dejarlos en `Recibido` (anotar ids en *Mis pedidos*).
-2. Panel de Dokploy → app del **backend de pruebas** → **Restart** (o Redeploy) → esperar ~30 s.
-3. Volver a *Mis pedidos* / seguimiento → los pedidos **sobreviven con su estado**
-   (`GET /pedidos/{id}` sigue respondiendo).
+## Recorrido de revisión visual
 
-**Criterio:** ESC-01 — 0 pedidos perdidos tras el reinicio. Medición documentada con horas en
-[`evidencias-s10.md`](../evidencias/evidencias-s10.md) §6 (3/3 supervivientes).
+1. Revisa la página de inicio en ancho de escritorio y en un ancho móvil de aproximadamente
+   375 px. Observa recortes, desbordamientos, navegación y contraste.
+2. Recorre `/tiendas` y una página de tienda. Comprueba que se muestran los datos y productos
+   disponibles desde el backend, y que las categorías y estados se entienden.
+3. Agrega más de un producto al carrito, revisa cantidades y total, y verifica que el botón y el
+   drawer sigan siendo utilizables en pantalla pequeña.
+4. Visita `/cuenta`, crea una cuenta de prueba e ingresa. Confirma que la sesión persiste al
+   recargar y que puedes cerrarla.
+5. Con la cuenta autenticada, crea pedidos de prueba. El sistema agrupa los productos de cada
+   establecimiento en un pedido por tienda (ADR-0032). No cambies ubicación, banner o catálogo:
+   esos contenidos están pendientes de decisión del grupo.
+6. Revisa `/mis-pedidos` y el detalle de un pedido. Confirma que el estado se actualiza, el historial
+   anterior está visible y el PIN aparece al dueño solo cuando el pedido está Listo. En `Recibido`
+   y `En preparación`, prueba cancelar como dueño y confirma que se muestra como cancelado. Verifica
+   que el servidor rechaza la cancelación después de que el pedido esté Listo.
+7. En el panel de la tienda, recorre la confirmación de pago simulada, preparación, estado Listo
+   y entrega con el PIN. Confirma que los pedidos cancelados por el cliente ya no aparecen activos.
+   El administrador conserva su flujo de cancelación independiente (ADR-0033).
 
-## Parte 4 — Observabilidad y cierre
+## Cuenta local de tienda (opcional)
 
-- `GET /api/v1/metricas` → contadores en vivo: `pedidosCreados`, `pagosConfirmados`,
-  `pedidosListos`, `entregasValidadas`, `pinesRechazados`, `pinesBloqueados`.
-- El Swagger (`/docs`) evidencia el contrato OpenAPI 3.1 versionado (v1) que valida la prueba
-  de contrato en CI.
-- El menú mostrado es el del backend: la app no inventa datos ni endpoints.
+Para revisar el panel, crea `backend/.env.local` (archivo ignorado por Git) con una cuenta
+exclusivamente local y de prueba:
 
-## Solución de problemas
+```text
+CUENTAS_TIENDA=tienda-01|admin|admin@laplacita.test|clave-local-123|Admin Local
+```
 
-| Síntoma | Causa probable | Acción |
-|---|---|---|
-| El menú no carga en el teléfono | Red del campus bloquea el dominio | Datos móviles / hotspot |
-| El carrito se queda en "Creando pedidos…" | `BACKEND_URL` del frontend mal apuntado | Dokploy → frontend → Environment → `https://laplacita-test.iscoutb.dev` → Redeploy |
-| 502 "El backend no respondió" | Backend caído o `BACKEND_URL` incorrecto | Logs del contenedor en Dokploy |
-| "Bucle de proxy: revisa BACKEND_URL" | El frontend se proxyéa a sí mismo (env ausente) | Definir `BACKEND_URL` en Environment y Redeploy |
-| La PWA no instala | Sin HTTPS o SW inactivo | Verificar candado del dominio; el SW solo se registra en builds de producción |
-| Plan B total | Los entornos en la nube fallan en vivo | Demo local: `cd backend && npm run dev` + `cd frontend && npm run dev` (verificada) |
+Reinicia el backend y usa esas credenciales al ingresar a `http://localhost:3001/panel`. No
+reutilices contraseñas ni credenciales de Dokploy. La configuración local no debe copiarse a la
+documentación ni confirmarse en Git.
 
-## Notas de alcance (deudas declaradas)
+## Cierre de la revisión
 
-- **Sin login con credenciales:** el backend no tiene identidad de tenant aún (plan en
-  `correcciones.md` §3, corte 3); el perfil del dispositivo es local y sin fingir seguridad.
-- **Sin fotos de productos:** el contrato no expone `imageUrl` (extensión v2 pendiente); las
-  tarjetas usan placeholders del tema.
-- **Sin panel del establecimiento:** las operaciones de tienda se ejecutan con el contrato
-  (Swagger); un panel es la siguiente iteración.
-- **Notificaciones push:** la emisión de eventos (V-05) es deuda declarada; el seguimiento es
-  por polling.
+- Anota navegador, tamaño de pantalla, ruta, pasos y resultado de cada hallazgo.
+- Captura pantallas sin correos, nombres, tokens, contraseñas ni PIN reales.
+- Distingue errores reproducibles de preferencias de diseño; comparte las propuestas visuales
+  con el grupo antes de cambiar la ubicación de tiendas, el banner o los productos.
+- Detén ambos servidores con `Ctrl+C`. Si usaste datos en memoria, desaparecen al cerrar el
+  backend.
+
+Esta guía describe una revisión manual local. No sustituye las pruebas automatizadas, la
+verificación de persistencia con PostgreSQL ni la aceptación del equipo para cambios de producto.

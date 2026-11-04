@@ -70,8 +70,10 @@ personal de cada tienda.
   sus productos, un código y un PIN ([ADR-0032](docs/adr/0032-un-pedido-por-tienda-con-varios-productos.md)).
 - Muestra el seguimiento del pedido, actualizado cada 3 segundos, con código corto (A01 a Z99).
 - Muestra el PIN de retiro solo a su dueño y solo cuando el pedido está Listo.
+- Permite al dueño cancelar el pedido mientras esté en Recibido o En preparación; al cancelarlo,
+  queda visible en el historial ([ADR-0034](docs/adr/0034-cancelacion-del-pedido-por-su-dueno.md)).
 - En «Mis pedidos» muestra arriba, en un recuadro, los pedidos de hoy que siguen en curso, y deja
-  plegados los anteriores. Se instala como PWA.
+  visibles los anteriores. Requiere sesión para sincronizar pedidos de la cuenta. Se instala como PWA.
 
 **En el panel de cada tienda (`/panel`):**
 
@@ -144,8 +146,10 @@ cd AS_202620_LaPlacita
 
 Un solo comando, desde la raíz del repositorio:
 
-```bash
-cd backend && npm install && npm run dev
+```powershell
+Set-Location .\backend
+npm ci
+npm run dev
 ```
 
 Queda en http://localhost:3000. La raíz redirige a `/docs`, y
@@ -155,8 +159,10 @@ http://localhost:3000/api/v1/health debe responder `{"status":"ok"}`.
 
 En otra terminal, también desde la raíz:
 
-```bash
-cd frontend && npm install && npm run dev -- -p 3001
+```powershell
+Set-Location .\frontend
+npm ci
+npm run dev -- -p 3001
 ```
 
 Abre http://localhost:3001. El `-p 3001` es necesario porque el backend ya ocupa el 3000. Por
@@ -341,7 +347,7 @@ reescriben; cada trabajo agrega su entrada en `correcciones.md` y en `docs/ia.md
 | S11 | Fallos parciales, idempotencia y decisión de no extraer | [Evidencia S11](docs/evidencias/evidencias-s11.md) |
 | S12 | Consistencia, caché y mensajes | [Evidencia S12](docs/evidencias/evidencias-s12.md) |
 | S13 | Modelado de amenazas, dependencias y privacidad | [Evidencia S13](docs/evidencias/evidencias-s13.md) |
-| S14 | Medición contra umbrales y panel completo | En curso |
+| S14 | Medición contra umbrales y panel completo | [Evidencia S14 (en curso)](docs/evidencias/evidencias-s14.md) |
 | S15 | Entrega final y sustentación | Pendiente |
 
 Pendientes de seguridad en [evidencias-s13 §9.5](docs/evidencias/evidencias-s13.md).

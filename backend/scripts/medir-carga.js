@@ -19,11 +19,10 @@
 // la escritura sin esa defensa mide un sistema que no es el final: montar P-1
 // (fecha 04/11/2026, antes de S14) y después correr este script.
 //
-// TODO (umbral ESC-01): completar el contraste contra la cola de escrituras
-// tras la oleada — GET /metricas expone el tamaño de la cola y la DLQ; la
-// cota del escenario es 99 % procesado y < 1 % de duplicados o perdidos, y
-// este esqueleto aún no lo evalúa automáticamente: se reporta para la
-// evidencia y se contrasta a mano.
+// TODO (umbral ESC-01): acordar el denominador de «procesado» y cómo se tratan
+// los 429 intencionales del borde antes de comparar con 99 % / <1 %. El script
+// toma snapshots de los pedidos de la cuenta y métricas antes/después, pero no
+// calcula un resultado cumple/no cumple porque ese criterio sigue sin definirse.
 //
 // Uso:
 //   node scripts/medir-carga.js [--url https://…] [--fase lectura|escritura]
@@ -94,9 +93,19 @@ async function peticion(token, i) {
         signal: controlador.signal,
       });
     }
-    // Se consume el cuerpo para liberar la conexión (métrica no medida aquí).
-    await respuesta.text();
-    return { estatus: respuesta.status, latencia: performance.now() - t0 };
+    const texto = await respuesta.text();
+    let cuerpo = null;
+    try {
+      cuerpo = texto ? JSON.parse(texto) : null;
+    } catch {
+      // Los rechazos del borde pueden responder contenido que no es JSON.
+    }
+    return {
+      estatus: respuesta.status,
+      latencia: performance.now() - t0,
+      pedidoId: fase === 'escritura' && respuesta.status === 201 ? cuerpo?.id ?? null : null,
+      tiendaId: fase === 'escritura' && respuesta.status === 201 ? cuerpo?.tiendaId ?? TIENDA_CARGA : null,
+    };
   } finally {
     clearTimeout(reloj);
   }
@@ -115,7 +124,44 @@ async function iniciarSesion(correo, contrasena) {
   return cuerpo.token;
 }
 
+async function obtenerJson(url, opciones, etiqueta) {
+  let respuesta;
+  for (let intento = 0; intento < 5; intento += 1) {
+    respuesta = await fetch(url, opciones);
+    if (respuesta.status !== 429 || intento === 4) break;
+    // P-1 puede limitar la lectura de reconciliación justo después de la carga.
+    await new Promise((resolver) => setTimeout(resolver, 1000 * (intento + 1)));
+  }
+  const texto = await respuesta.text();
+  let cuerpo = texto;
+  try {
+    cuerpo = texto ? JSON.parse(texto) : null;
+  } catch {
+    // Los errores de Traefik pueden responder texto plano.
+  }
+  if (!respuesta.ok) {
+    throw new Error(`${etiqueta} respondió ${respuesta.status}: ${JSON.stringify(cuerpo)}`);
+  }
+  return cuerpo;
+}
+
+async function leerPedidosDelCliente(token) {
+  const cuerpo = await obtenerJson(`${urlBase}/api/v1/pedidos`, {
+    headers: { authorization: `Bearer ${token}` },
+  }, 'GET /pedidos');
+  if (!Array.isArray(cuerpo)) throw new Error('GET /pedidos no devolvió una lista');
+  return new Set(cuerpo.map((pedido) => `${pedido.tiendaId}:${pedido.id}`));
+}
+
+async function leerMetricas() {
+  const cuerpo = await obtenerJson(`${urlBase}/api/v1/metricas`, undefined, 'GET /metricas');
+  if (!cuerpo || typeof cuerpo !== 'object') throw new Error('GET /metricas no devolvió un objeto');
+  return cuerpo;
+}
+
 let token = null;
+let idsAntes = null;
+let metricasAntes = null;
 if (fase === 'escritura') {
   const correo = argumento('--correo') ?? process.env.CARGA_CORREO;
   const contrasena = argumento('--contrasena') ?? process.env.CARGA_CONTRASENA;
@@ -124,10 +170,13 @@ if (fase === 'escritura') {
     process.exit(2);
   }
   token = await iniciarSesion(correo, contrasena);
+  idsAntes = await leerPedidosDelCliente(token);
+  metricasAntes = await leerMetricas();
 }
 
 const resultados = [];
 const errores = [];
+let cortePorErrores = false;
 const inicio = performance.now();
 
 for (let lote = 0; lote < total; lote += concurrencia) {
@@ -143,7 +192,8 @@ for (let lote = 0; lote < total; lote += concurrencia) {
   }
   if (errores.length > total / 10) {
     console.error('más de 10 % de errores: se corta la corrida (revisar disponibilidad)');
-    process.exit(1);
+    cortePorErrores = true;
+    break;
   }
 }
 
@@ -160,5 +210,27 @@ console.log(`Latencias ms — p50: ${percentil(latencias, 50).toFixed(0)} · p95
 console.log(`Estatus: ${JSON.stringify(porEstatus)}`);
 console.log(`Excepciones de red/abort: ${errores.length}`);
 if (errores.length) console.log(`  primeras: ${errores.slice(0, 3).join(' | ')}`);
-console.log('Umbral ESC-01 (sobre la cola, no sobre esta oleada): 99 % procesado · < 1 % duplicados o perdidos');
-console.log('Contrastar con GET /metricas (cola y DLQ) y registrar en docs/evidencias/evidencias-s14.md');
+if (fase === 'escritura') {
+  const idsDespues = await leerPedidosDelCliente(token);
+  const metricasDespues = await leerMetricas();
+  const nuevos = [...idsDespues].filter((id) => !idsAntes.has(id));
+  const respuestas201 = resultados.filter((r) => r.estatus === 201 && r.pedidoId);
+  const idsRespuesta = respuestas201.map((r) => `${r.tiendaId}:${r.pedidoId}`);
+  const idsRespuestaUnicos = new Set(idsRespuesta);
+  const respuestas201NoPersistidas = [...idsRespuestaUnicos].filter((id) => !idsDespues.has(id));
+  const nuevosSinRespuesta201 = nuevos.filter((id) => !idsRespuestaUnicos.has(id));
+  const delta = (nombre) => Number(metricasDespues[nombre] ?? 0) - Number(metricasAntes[nombre] ?? 0);
+  console.log(`POST 201 con pedidoId: ${respuestas201.length}`);
+  console.log(`IDs distintos devueltos en 201: ${idsRespuestaUnicos.size}`);
+  console.log(`IDs repetidos en respuestas 201: ${idsRespuesta.length - idsRespuestaUnicos.size}`);
+  console.log(`Pedidos nuevos visibles en GET /pedidos: ${nuevos.length}`);
+  console.log(`IDs 201 que no aparecen en la lectura final: ${respuestas201NoPersistidas.length}`);
+  console.log(`Pedidos nuevos sin respuesta 201 observada (posible respuesta perdida): ${nuevosSinRespuesta201.length}`);
+  console.log(`Métricas — delta pedidosCreados: ${delta('pedidosCreados')} · reintentos: ${delta('escriturasReintentadas')} · descartados duplicado/obsoleto: ${delta('escriturasDescartadas')} · fallidas: ${delta('escriturasFallidas')}`);
+  console.log(`DLQ actual — antes: ${metricasAntes.escriturasEnColaDeFallidos ?? 'N/D'} · después: ${metricasDespues.escriturasEnColaDeFallidos ?? 'N/D'}`);
+  console.log('Use una cuenta exclusiva, sin compras paralelas. Los contadores de /metricas son globales al proceso y en memoria; otro tráfico puede afectar deltas. No reinicie el backend entre snapshots.');
+  console.log('Calcule el umbral ESC-01 con el denominador acordado y registre los 429 de Traefik por separado en docs/evidencias/evidencias-s14.md');
+} else {
+  console.log('Fase lectura: no crea pedidos ni mide la cola de persistencia.');
+}
+if (cortePorErrores) process.exitCode = 1;

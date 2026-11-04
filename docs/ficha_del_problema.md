@@ -12,7 +12,7 @@
 Largas filas y tiempo de espera excesivos en las cafeterías del campus durante las horas de alta demanda, ocasionadas por un proceso de compra presencial centralizado 
 
 ### 1.2. ¿A quien afecta?
-* **Comunidad Universitaria:** Estudiantes, docentes, personal administrativo y visitantes autorizados.
+* **Comunidad Universitaria:** Estudiantes, docentes y personal administrativo con cuenta institucional.
 * **Establecimientos:** Personal de atención y cocina de las 5 tiendas del campus.
 
 ### 1.3. ¿Dónde y cuando ocurre? 
@@ -26,7 +26,7 @@ Ocurre en la zona de comidas de LaPlacita, principalmente en los periodos de rec
 
 ## 2. Propuesta De Solución
 
-Desarrollar una plataforma digital de pre-pedidos y recolección (**Click & Collect**) que unifique la oferta gastronómica de las 5 tiendas, permitiendo a los usuarios ordenar de forma anticipada, monitorear el tiempo de preparación y retirar sus productos mediante validación rápida por PIN de 4 dígitos o QR.
+Desarrollar una plataforma digital de pre-pedidos y recolección (**Click & Collect**) que unifique la oferta de las cinco tiendas. El usuario consulta disponibilidad, crea pedidos, sigue su estado y presenta un PIN de cuatro dígitos para recogerlo. El pago actual es simulado; no hay QR, tiempo estimado ni notificaciones push.
 
 ---
 
@@ -35,9 +35,9 @@ Desarrollar una plataforma digital de pre-pedidos y recolección (**Click & Coll
 | Objetivo | Métrica / Criterio de Aceptación |
 | :--- | :--- |
 | **Optimizar tiempos** | Disminución del tiempo de espera presencial en ventanilla durante horas pico. |
-| **Transparencia** | Consulta de menús e inventarios dinámicos actualizados en tiempo real. |
-| **Trazabilidad** | Notificaciones automáticas en 4 etapas (*Recibido*, *En preparación*, *Listo para recoger*, *Entregado*). |
-| **Seguridad** | Entrega verificada en mostrador con un PIN de 4 dígitos. |
+| **Transparencia** | Consulta del menú y de la disponibilidad de productos publicada por cada tienda. |
+| **Trazabilidad** | El usuario consulta el estado del pedido en la app; el seguimiento se actualiza periódicamente. No se envían notificaciones push ni correo. |
+| **Seguridad** | El PIN de cuatro dígitos solo se muestra a su dueño cuando el pedido está Listo y se valida al entregar. |
 
 ---
 
@@ -64,12 +64,15 @@ A-05 Usabilidad/simplicidad.
 
 #### T-03: Aislamiento vs. simplicidad operativa
 
-LaPlacita tiene 5 establecimientos independientes. se necesita garantizar que una tienda no pueda acceder a los pedidos o inventarios de otra. Sin embargo, se puede conseguir un aislamiento completamente independiente mediante servicios separados, bases de datos separadas, despliegues separados, etc. Lo que aumenta considerablemente la complejidad del sistema.
+LaPlacita tiene cinco establecimientos independientes. El sistema debe evitar que una tienda
+acceda a los pedidos o al menú de otra. Separar completamente cada tienda en servicios, bases de
+datos y despliegues propios podría reforzar el aislamiento, pero aumentaría la complejidad
+operativa del proyecto.
 
 **Atributos enfrentados:** A-02 Aislamiento correcto entre establecimientos ↔
 simplicidad/mantenibilidad
 
 ### 4.1. Detalles de la ponderación técnica
 
-* **Trade-off de Disponibilidad y Consistencia:** Para garantizar que múltiples usuarios no pidan el mismo producto agotado en horas de alto tráfico, la consistencia de los datos del inventario se mantiene mediante transacciones atómicas en el backend, priorizando la precisión sobre la velocidad extrema de respuesta.
+* **Trade-off de Disponibilidad y Consistencia:** Durante picos de demanda se prioriza conservar y asociar correctamente los pedidos a su tienda. La disponibilidad de productos se modela como disponible/agotado; no se gestiona una cantidad de inventario ni se afirma control de stock mediante transacciones atómicas.
 * **Trade-off de Usabilidad y Seguridad:** Se minimizan los pasos de autenticación durante la navegación para acelerar el pre-pedido, desplazando el control de seguridad al punto de recolección físico, donde la validación del PIN de 4 dígitos asegura una entrega sin fricciones pero totalmente verificada.

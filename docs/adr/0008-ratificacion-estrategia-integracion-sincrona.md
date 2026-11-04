@@ -53,9 +53,9 @@ La implementación validó la decisión:
 ## Trazabilidad
 
 - ADR antecedentes: [ADR-0006](0006-estrategia-integracion-sincrona.md), ADR-0001, ADR-0004, ADR-0005
-- Contrato: [`openapi.yaml`](../../openapi.yaml) (v1)
-- Prueba: [`tests/contract-openapi.test.js`](../../tests/contract-openapi.test.js) (23/23)
-- Implementación: [`app/api/v1/*`](../../app/api/v1/)
+- Contrato: [`openapi.yaml`](../../backend/openapi.yaml) (v1; ruta actual)
+- Prueba: [`tests/contract-openapi.test.js`](../../backend/tests/contract-openapi.test.js) (23/23 en el commit histórico)
+- Implementación: [`app/api/v1/`](../../backend/app/api/v1/)
 - Pipeline: [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) (job `contract-test`)
 - Documentación relacionada: [`docs/evidencia-contrato-s7.md`](../evidencia-contrato-s7.md), [`docs/evidencia-fallo-contrato-s7.md`](../evidencia-fallo-contrato-s7.md), arc42 §6, [`docs/aspectos.md`](../aspectos.md) (A-07)
 

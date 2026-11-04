@@ -7,6 +7,7 @@ flowchart TD
     classDef person fill:#08427b,stroke:#073b6f,color:#fff;
     classDef system fill:#1168bd,stroke:#0e5296,color:#fff;
     classDef extSystem fill:#999999,stroke:#666666,color:#fff;
+    classDef planned fill:#eeeeee,stroke:#888888,color:#444444,stroke-dasharray: 5 5;
 
     subgraph b0 ["Zona de Usuarios y Roles"]
         usuario["<b>Usuario</b><br/>[Person]<br/><i>Estudiante, docente o adm.</i>"]:::person
@@ -18,17 +19,15 @@ flowchart TD
     end
 
     subgraph b2 ["Integraciones Externas"]
-        pago["<b>Pasarela de Pagos</b><br/>[Software System]<br/><i>Procesamiento PCI-DSS</i>"]:::extSystem
-        push["<b>Notificaciones Push</b><br/>[Software System]<br/><i>Envío de alertas de estado</i>"]:::extSystem
+        pago["<b>Pasarela de Pagos</b><br/>[Planeada · no integrada]<br/><i>El pago actual es simulado</i>"]:::planned
+        push["<b>Notificaciones Push/Correo</b><br/>[Planeadas · no integradas]<br/><i>El cliente consulta el estado por polling</i>"]:::planned
     end
 
     usuario -->|Ordena y consulta PIN<br/>HTTPS| laPlacita
     establecimiento -->|Gestiona menú y PIN<br/>HTTPS| laPlacita
 
-    laPlacita -->|Procesa cobro<br/>JSON / HTTPS| pago
-    laPlacita -->|Solicita envío de alerta<br/>JSON / HTTPS| push
-
-    push -.->|Entrega notificación push<br/>Push / HTTPS| usuario
+    laPlacita -.->|Integración futura, aún no activa| pago
+    laPlacita -.->|Canal futuro, aún no activo| push
 ```
 
 ## Leyenda de colores

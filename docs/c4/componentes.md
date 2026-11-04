@@ -23,7 +23,7 @@ flowchart TB
         S_NOT[("notificacionesEnviadas<br/>array")]:::containerDb
     end
     DB[("PostgreSQL<br/>IMPLEMENTADO — ADR-0014<br/>(condicional a DATABASE_URL)")]:::container
-    PASARELA["Pasarela de Pagos ext.<br/>(tras ACL)"]:::extSystem
+    PASARELA["Pasarela de Pagos ext.<br/>PLANEADA — no integrada"]:::planned
 
     CV -.->|orquestación| CAT
     CV -.->|orquestación| PED
@@ -36,7 +36,7 @@ flowchart TB
     PED -.->|"OHS notificarCambioEstado()<br/>import ESM síncrono"| NOT
     PAG -.->|"OHS notificarCambioEstado()<br/>import ESM síncrono"| NOT
     ENT -.->|"OHS notificarCambioEstado()<br/>import ESM síncrono"| NOT
-    PAG -->|"ACL futura<br/>HTTPS / JSON"| PASARELA
+    PAG -.->|"ACL futura; sin tráfico actual"| PASARELA
     CAT --> S_CAT
     PED --> S_PED
     PAG --> S_PAG
@@ -53,6 +53,7 @@ flowchart TB
 | Azul brillante (`container`) | Bounded Context de dominio implementado (Catálogo, Pedidos, Pagos, Entrega, Notificaciones). |
 | Azul medio (`containerDb`) | Almacén interno del contexto (`Map` / array en memoria). |
 | Azul petróleo (`appService`) | Orquestador / Application Service — no es un contexto de dominio. |
-| Azul claro (`planned`) | Contenedor **planeado (Corte 2)**: aún sin implementación, se documenta su rol previsto. |
+| Azul claro (`planned`) | Integración o componente previsto, aún no integrado. |
 | Gris (`extSystem`) | Sistema externo integrado fuera del control del equipo. |
+| Línea discontinua hacia un nodo `planned` | Integración futura, no activa. |
 | $\rightarrow$ Flechas con etiqueta | Relación de comunicación; la etiqueta indica qué se intercambia y el patrón (C/S, OHS, ACL). |

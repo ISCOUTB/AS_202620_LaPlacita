@@ -20,13 +20,13 @@ flowchart TD
     subgraph laPlacita ["Sistema LaPlacita"]
         app_user["<b>App / Web Cliente</b><br/>[Next.js PWA]<br/><i>Explora menús, pide con su cuenta, sigue el estado y ve su PIN</i> <br/>IMPLEMENTADO — frontend/, Dokploy"]:::container
         app_local["<b>Portal Establecimiento</b><br/>[Next.js, ruta /panel]<br/><i>Pedidos en vivo, estados, entrega con PIN, menú y resumen</i> <br/>IMPLEMENTADO — misma app web (ADR-0023)"]:::container
-        api["<b>API Backend Central</b><br/>[Next.js / Node.js]<br/><i>API Routes, reglas de negocio, pedidos y PIN; estado en memoria y caché del catálogo (write-through)</i> <br/>IMPLEMENTADO — corte vertical (tiendaId)"]:::container
+        api["<b>API Backend Central</b><br/>[Next.js / Node.js]<br/><i>API Routes y reglas de negocio; PostgreSQL con DATABASE_URL, Maps en modo local</i> <br/>IMPLEMENTADO — corte vertical (tiendaId)"]:::container
         db[("<b>Base de Datos Principal</b><br/>[PostgreSQL]<br/><i>Tablas pedidos, usuarios y productos (ADR-0014, ADR-0021, ADR-0023)</i> <br/>IMPLEMENTADO — Dokploy, condicional a DATABASE_URL")]:::container
         garage[("<b>Almacén de Imágenes</b><br/>[Garage S3]<br/><i>Bytes de las fotos del catálogo y tiendas; solo la referencia uuid en PostgreSQL (ADR-0028)</i> <br/>IMPLEMENTADO — Dokploy, red interna, sin exposición pública")]:::container
     end
 
-    pago["<b>Pasarela de Pagos</b><br/>[Software System]<br/><i>Procesamiento PCI-DSS</i>"]:::extSystem
-    push["<b>Servicio Push</b><br/>[Software System]<br/><i>Envío de alertas móviles</i>"]:::extSystem
+    pago["<b>Pasarela de Pagos</b><br/>[Planeada · no integrada]<br/><i>La confirmación actual es simulada</i>"]:::planned
+    push["<b>Servicio Push/Correo</b><br/>[Planeado · no integrado]<br/><i>El cliente consulta por polling</i>"]:::planned
 
     usuario -->|Ordena y consulta estado<br/>HTTPS (PWA)| app_user
     establecimiento -->|Recibe orden y valida PIN<br/>HTTPS / REST API| app_local
@@ -36,10 +36,8 @@ flowchart TD
 
     api -->|Pedidos: creación confirmada, transiciones write-behind at-least-once (ADR-0026)<br/>Cuentas y menú: espera la confirmación<br/>Rehidratación al arrancar<br/>TCP / pg (SQL, UPSERT)| db
 
-    api -->|Inicia cobro y confirma<br/>HTTPS / JSON| pago
-    api -->|Solicita envío de alerta<br/>PLANEADO (deuda V-05)| push
-
-    push -.->|Entrega notificación al celular<br/>Push / HTTPS| usuario
+    api -.->|Futura integración, no activa| pago
+    api -.->|Canal futuro, no activo (deuda V-05)| push
 
 ```
 
@@ -51,6 +49,7 @@ flowchart TD
 | Azul brillante (`Container` / `ContainerDb`) | Aplicación, API o base de datos que forma parte de La Placita. |
 | Azul claro (`planned`) | Contenedor **planeado**: aún sin implementación, se documenta su rol previsto. |
 | Gris (`System_Ext`) | Servicio externo integrado fuera del control del equipo. |
+| Línea discontinua hacia `planned` | Integración prevista, todavía no activa. |
 | Línea delimitadora (`System_Boundary`) | Frontera lógica que agrupa los contenedores internos de La Placita. |
 | $\rightarrow$ Flechas con etiqueta | Relación de comunicación; la etiqueta indica qué se intercambia y el protocolo (REST, SQL, TCP). |
 

@@ -26,7 +26,7 @@
 
 ## 2. Contrato ejecutable versionado (criterio 1 — Cumple)
 
-Archivo: [`openapi.yaml`](../openapi.yaml), OpenAPI **3.1.0**, 499 líneas.
+Archivo en la estructura actual: [`backend/openapi.yaml`](../backend/openapi.yaml), OpenAPI **3.1.0** en el commit histórico evaluado.
 
 Fragmento `info` y `servers`:
 
@@ -103,7 +103,7 @@ Ejemplo de una operación con parámetros de path (líneas 46-56):
 
 ## 4. Correspondencia contrato ↔ API (criterio 3 — antes "No verificado")
 
-La prueba de contrato (archivo [`tests/contract-openapi.test.js`](../tests/contract-openapi.test.js)) exige que **cada path del contrato tenga su `route.js` en `app/api/v1/`** y que ese route delegue en la función del módulo que manda el contrato. Correspondencia verificada por la suite (pasa 23/23):
+La prueba de contrato (archivo [`backend/tests/contract-openapi.test.js`](../backend/tests/contract-openapi.test.js)) exige que **cada path del contrato tenga su `route.js` en `app/api/v1/`** y que ese route delegue en la función del módulo que manda el contrato. Correspondencia verificada por la suite en el commit evaluado (23/23):
 
 | Path del contrato (`openapi.yaml`) | Route de Next.js (código) | Función del módulo (dominio) |
 |---|---|---|
@@ -139,7 +139,7 @@ $ git log --oneline --date=short --format='%h %ad %s' -- openapi.yaml
 
 ## 6. Prueba de contrato presente (criterio 5 — Cumple)
 
-Archivo: [`tests/contract-openapi.test.js`](../tests/contract-openapi.test.js) (23 pruebas).
+Archivo en la estructura actual: [`backend/tests/contract-openapi.test.js`](../backend/tests/contract-openapi.test.js) (23 pruebas en el commit histórico).
 
 Cubre:
 

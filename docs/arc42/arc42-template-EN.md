@@ -1,18 +1,18 @@
 ---
-date: August 2026
-title: "![arc42](images/arc42-logo.png) LaPlacita — Documentación Arquitectura de Software"
+date: 2026-11-03
+title: "LaPlacita — Documentación de Arquitectura de Software"
 ---
 
 ## 1. Introducción y Objetivos
 
 ### 1.1. Resumen
 
-LaPlacita es una plataforma móvil de tipo **Click & Collect** que unifica la oferta de las 5 tiendas de la zona de comidas del campus universitario. Permite a estudiantes, docentes, personal administrativo y visitantes autorizados: 
+LaPlacita es una plataforma móvil de tipo **Click & Collect** que unifica la oferta de las 5 tiendas de la zona de comidas del campus universitario. Permite a estudiantes, docentes y personal administrativo con cuenta institucional:
 
 - Consultar los menús de las 5 tiendas.
-- Consultar la disponibilidad de productos e inventario. 
-- Pre-ordenar productos de cualquiera de los 5 establecimientos 
--  Monitorear el estado de preparación mediante notificaciones en 4 etapas (Recibido → En preparación → Listo para recoger → Entregado).
+- Consultar los productos publicados y su estado disponible/agotado; no se gestionan cantidades de inventario.
+- Pre-ordenar productos de cualquiera de los 5 establecimientos.
+- Consultar el estado del pedido, que se actualiza mediante polling (Recibido → En preparación → Listo para recoger → Entregado); no hay push ni correo.
 - Retirar el pedido en mostrador validando su identidad con un PIN de 4 dígitos.
  
 El objetivo central es reducir el tiempo de espera presencial durante las horas pico, especialmente en los intervalos de 5 a 10 minutos entre clases, sin perder trazabilidad, consistencia de la información ni seguridad durante la entrega. 
@@ -23,7 +23,7 @@ El objetivo central es reducir el tiempo de espera presencial durante las horas 
 
 | Prioridad | Atributo | Aspecto relacionado | Motivo |
 | :---: | :--- | :---: | :--- |
-| 1 | Disponibilidad y consistencia | A-01 | El sistema debe seguir aceptando y actualizando pedidos correctamente durante los picos de demanda entre clases, sin perder ni duplicar información. |
+| 1 | Disponibilidad y consistencia | A-01 | El sistema debe seguir aceptando y actualizando pedidos durante picos de demanda; el umbral de aceptación está definido en ESC-01 y su medición S14 está pendiente. |
 | 2 | Aislamiento entre establecimientos | A-02 | Al ser 5 negocios independientes compartiendo la plataforma, un pedido o dato mal enrutado genera errores operativos y desconfianza entre vendedores. |
 | 3 | Integridad de la validación en el punto de recolección | A-06 | El PIN es el único control de seguridad del flujo; si puede vulnerarse, cualquiera podría recoger un pedido ajeno. |
 | 4 | Protección de datos personales y de pago | A-04 | El sistema maneja identidad institucional y confirmaciones de pago; una exposición indebida afecta a toda la comunidad universitaria. |
@@ -33,18 +33,18 @@ El objetivo central es reducir el tiempo de espera presencial durante las horas 
 
 Los objetivos anteriores se concretan mediante los siguientes criterios medibles:
 
-- Durante períodos de alta demanda, el sistema deberá mantener una tasa de procesamiento correcta de pedidos de al menos 90 %, evitando pedidos duplicados o perdidos.
+- Durante períodos de alta demanda, al menos el 99 % de las solicitudes de pedido debe procesarse correctamente y la tasa de pedidos duplicados o perdidos debe ser menor al 1 % (ESC-01; la medición S14 sigue pendiente).
 - El 100 % de los pedidos deberá quedar asociado al establecimiento correcto.
 - La validación de entrega deberá impedir despachar cuando el PIN proporcionado no corresponda con el pedido.
 - Un usuario deberá poder completar las acciones principales del flujo de compra en un tiempo razonable, procurando que la navegación hasta la confirmación del pedido no supere los 2 minutos.
-- Los cambios de estado deberán reflejarse en el sistema y generar la correspondiente notificación al usuario.
+- Los cambios de estado deben reflejarse en el seguimiento del pedido. La app consulta cada 3 segundos; el umbral de oportunidad de A-03 sigue pendiente de aprobación.
 
-### 1.4. Stakeholders
+### 1.3. Stakeholders
 
 | Interesado | Rol / interés | Expectativa principal |
 |---|---|---|
-| Estudiantes, docentes, personal administrativo, visitantes autorizados | Ordenan y recogen productos | Pedido correcto, listo cuando se les notifica, sin filas |
-| Las 5 tiendas/establecimientos de LaPlacita | Reciben, preparan y entregan pedidos | Ver solo sus propios pedidos/menú/inventario, sin mezcla con otros negocios |
+| Estudiantes, docentes y personal administrativo con cuenta institucional | Ordenan y recogen productos | Pedido correcto y estado actualizado en la app, con menos espera |
+| Las 5 tiendas/establecimientos de LaPlacita | Reciben, preparan y entregan pedidos | Ver solo sus pedidos y menú; actualizar disponibilidad sin mezcla con otros negocios |
 | Equipo de desarrollo (Buendía Barrios Mateo, Isaza Montalvo Miguel, Jimenez Alvarez Samuel, Martinez Castillo Jorge) | Construye y mantiene el sistema | Arquitectura simple de sostener con 4 personas |
 
 ---
@@ -55,11 +55,12 @@ Las siguientes restricciones condicionan las decisiones arquitectónicas de LaPl
 
 | ID | Restricción | Tipo | Justificación |
 |----|-------------|------|---------------|
-| RES-01 | Confirmación de pago sin almacenar datos sensibles de tarjeta | Normativa / seguridad | El pago en línea pasa por una pasarela externa; el sistema solo debe guardar la confirmación, no los datos de la tarjeta (A-04) |
+| RES-01 | No almacenar datos de tarjeta | Seguridad / alcance | El pago actual es simulado; el sistema no recibe ni almacena datos de tarjeta. Una integración de pago real requiere una decisión posterior (A-04). |
 | RES-02 | Equipo de 4 integrantes | Organizacional | Limita las tácticas viables (por ejemplo, descarta una descomposición extensa en microservicios) |
 | RES-03 | Entrega en un semestre académico | Organizacional / temporal | Obliga a priorizar los aspectos de mayor riesgo (A-01, A-02, A-04, A-06) sobre los de prioridad media |
 | RES-04 | Aplicación móvil como canal principal | Técnica / producto | El sistema está planteado para usuarios que necesitan realizar pedidos rápidamente desde dispositivos móviles. | 
-| RES-06 | Tope de costo de hosting de 5 USD/mes en capa gratuita o de prueba, sin tarjeta asociada a la cuenta | Económica / plataforma | El despliegue (ADR-0009) debe operar dentro de la capa gratuita (Azure for Students / servidor universidad); superar el tope o exigir tarjeta dispara revisión de alcance antes de contratar |
+| RES-05 | Aislamiento estricto por establecimiento | Seguridad / dominio | Cada operación de catálogo, pedido y tienda debe quedar limitada al `tiendaId` autenticado (ADR-0004). |
+| RES-06 | Tope de costo de hosting de 5 USD/mes, sin tarjeta asociada a la cuenta | Económica / plataforma | La infraestructura vigente está en Dokploy en el servidor de la universidad (ADR-0018); cualquier cambio de costo o proveedor debe revisarse antes de contratar. |
 
 ---
 
@@ -69,17 +70,17 @@ Las siguientes restricciones condicionan las decisiones arquitectónicas de LaPl
 
 LaPlacita actúa como intermediario digital entre los compradores y las cinco tiendas de la zona de comidas del campus.
 
-El sistema centraliza la consulta de productos y la creación de pedidos, pero cada establecimiento mantiene la responsabilidad sobre sus propios productos, inventario, preparación y entrega
+El sistema centraliza la consulta de productos y la creación de pedidos, pero cada establecimiento mantiene la responsabilidad sobre su menú, la disponibilidad de productos, preparación y entrega.
 
-- **Usuario (estudiante/docente/personal/visitante)**: ordena, paga, consulta estado, recibe notificaciones, valida su identidad con PIN o QR al recoger.
-- **Establecimiento (una de las 5 tiendas)**: gestiona su propio menú e inventario, recibe únicamente los pedidos que le corresponden, actualiza el estado, valida el PIN en la entrega.
-- **Pasarela de pago externa**: procesa el pago en línea y devuelve una confirmación, sin exponer datos de tarjeta al sistema.
+- **Usuario (estudiante/docente/personal con cuenta institucional)**: consulta el menú, crea pedidos, consulta su estado y presenta el PIN al recoger. El pago es simulado; la entrega se valida con PIN, no QR.
+- **Establecimiento (una de las 5 tiendas)**: gestiona su menú y disponibilidad (disponible/agotado), recibe únicamente sus pedidos, actualiza estados y valida el PIN en la entrega.
+- **Pasarela de pago externa**: no integrada; queda fuera del alcance actual.
 
 ### 3.2. Contexto Técnico
 
 - App móvil ↔ Backend de LaPlacita: vía API, con el establecimiento como dato de enrutamiento en cada pedido.
-- Backend ↔ Pasarela de pago externa: integración para confirmar pagos en línea.
-- Backend ↔ Servicio de notificaciones push: envío de las 4 etapas de estado.
+- Backend ↔ Pasarela de pago externa: no existe integración; el estado de pago se simula en el sistema.
+- Backend ↔ Servicio de notificaciones push: no existe integración; el cliente consulta el estado mediante polling.
 - Panel de cada establecimiento ↔ Backend: misma API, con acceso restringido a su propia información.
 
 ---
@@ -97,7 +98,7 @@ LaPlacita adopta **monolito modular con capas internas**, según lo registrado e
 | Aislamiento entre tiendas (ESC-02) | Débil: el aislamiento se implementaría como filtros dispersos en capas compartidas (`controllers/`, `models/`) | Un puerto por establecimiento sería un adaptador paralelo, no una frontera de dominio | Fuerte: cada dominio (`pedidos`, `catalogo`, `pagos`, `entrega`) es un módulo con límite explícito |
 | Disponibilidad y consistencia en pico (ESC-01) | La lógica de concurrencia se acopla con la capa de datos global; difícil aislar su efecto | Facilita cambiar la estrategia de persistencia sin tocar el dominio, pero no resuelve el problema de fondo | El módulo `pedidos` concentra la lógica de concurrencia sin afectar a los demás módulos |
 | Validación PIN (ESC-03) | La lógica de seguridad se filtra entre varias capas técnicas | Ideal en este punto: puerto de validación + adaptadores PIN aislados de infraestructura | El módulo `entrega` aplica el patrón localmente, sin extenderlo a todo el sistema |
-| Protección del pago (ESC-04) | La integración con la pasarela externa se dispersa entre capas | El adaptador de pasarela queda aislado detrás de un puerto | El módulo `pagos` encapsula la integración externa sin indirección en el resto del sistema |
+| Protección del pago (ESC-04) | Una futura integración con pasarela podría dispersarse entre capas | El adaptador futuro quedaría aislado detrás de un puerto | El módulo `pagos` encapsula actualmente la confirmación simulada; no existe integración externa |
 | Compra rápida (ESC-05) | Rápido al inicio, pero el dominio (5 tiendas) ya lo supera | La indirección adicional no aporta valor a la velocidad del flujo de usuario | Los límites de módulo son internos; no afectan la experiencia del usuario |
 | Costo con equipo de 3-4 personas | Bajo costo inicial, alto costo cuando el dominio crece | Alto costo de disciplina (puertos/adaptadores) sostenida en cada corte semanal | Costo intermedio: exige acordar límites de módulo, no mantener indirección total |
 
@@ -107,11 +108,11 @@ LaPlacita adopta **monolito modular con capas internas**, según lo registrado e
 
 | Módulo | Responsabilidad | Escenario relacionado |
 |---|---|---|
-| `catalogo` | Menús, productos e inventario por establecimiento | ESC-02, ESC-05 |
+| `catalogo` | Menús, productos y bandera de disponibilidad por establecimiento | ESC-02, ESC-05 |
 | `pedidos` | Creación, estado y concurrencia del ciclo de vida del pedido | ESC-01 |
-| `pagos` | Integración con la pasarela externa y confirmación de pago | ESC-04 |
+| `pagos` | Confirmación simulada de pago; sin pasarela integrada | ESC-04 |
 | `entrega` | Validación PIN en el punto de recolección | ESC-03 |
-| `notificaciones` | Envío de alertas de cambio de estado (fuera de alcance en esta entrega) | A-03 |
+| `notificaciones` | Historial interno de cambios; el cliente consulta por polling (sin push ni correo) | A-03 |
 
 ---
 
@@ -138,11 +139,11 @@ graph TD
     API["API Backend (Next.js App Router)\nbackend/app/api/v1/health/route.js\nEndpoint /api/v1/health"]
     CV["Corte vertical ejecutable\nbackend/src/corte-vertical.js\nFlujo catálogo → pedidos → pagos\n→ entrega → notificaciones"]
 
-    CAT["catalogo\nbackend/src/modules/catalogo/\nMenús, productos e inventario\npor establecimiento (tiendaId)"]
+    CAT["catalogo\nbackend/src/modules/catalogo/\nMenús, productos y disponibilidad\npor establecimiento (tiendaId)"]
     PED["pedidos\nbackend/src/modules/pedidos/\nCiclo de vida del pedido:\ncreación, estado, concurrencia (tiendaId)"]
-    PAG["pagos\nbackend/src/modules/pagos/\nIntegración con pasarela\nde pago externa (tiendaId)"]
+    PAG["pagos\nbackend/src/modules/pagos/\nConfirmación simulada; sin pasarela\n(ACL externa futura)"]
     ENT["entrega\nbackend/src/modules/entrega/\nValidación PIN en el punto\nde recolección (tiendaId)"]
-    NOT["notificaciones\nbackend/src/modules/notificaciones/\nAlertas de cambio de estado (tiendaId)"]
+    NOT["notificaciones\nbackend/src/modules/notificaciones/\nHistorial interno; cliente por polling\n(sin push ni correo)"]
 
     API --> CAT
     API --> PED
@@ -162,11 +163,11 @@ graph TD
  
 | Módulo | Ruta | Responsabilidad | Escenario |
 |---|---|---|---|
-| `catalogo` | `backend/src/modules/catalogo/` | Menús, productos e inventario por establecimiento | ESC-02, ESC-05 |
+| `catalogo` | `backend/src/modules/catalogo/` | Menús, productos y disponibilidad por establecimiento | ESC-02, ESC-05 |
 | `pedidos`  | `backend/src/modules/pedidos/`  | Ciclo de vida: creación, estado y concurrencia | ESC-01 |
-| `pagos`    | `backend/src/modules/pagos/`    | Integración con la pasarela de pago externa | ESC-04 |
+| `pagos`    | `backend/src/modules/pagos/`    | Confirmación simulada; sin pasarela integrada | ESC-04 |
 | `entrega`  | `backend/src/modules/entrega/`  | Validación PIN en el punto de recolección | ESC-03 |
-| `notificaciones` | `backend/src/modules/notificaciones/` | Alertas de cambio de estado (fuera del alcance en esta entrega) | A-03 |
+| `notificaciones` | `backend/src/modules/notificaciones/` | Historial interno; polling del cliente, sin push/correo | A-03 |
  
 **Regla de frontera:** ningún módulo importa directamente la capa de datos de otro módulo. Toda comunicación entre módulos ocurre a través de la interfaz pública de cada uno (`index.js`).
 
@@ -529,6 +530,7 @@ Esta sección registra el historial de decisiones arquitectónicas significativa
 | ADR-0031 | Sin ETag ni LISTEN/NOTIFY mientras haya una sola instancia (decisión formal de los entregables S12 no implementados) | Aceptado | 2026-10-28 | ESC-01, S12, S13 | [0031-sin-etag-ni-listen-notify.md](../adr/0031-sin-etag-ni-listen-notify.md) |
 | ADR-0032 | Un pedido por tienda con varios productos, un código y un PIN (precisa ADR-0017 en el carrito) | Propuesto | 2026-11-02 | ESC-05, ESC-02, ESC-03 | [0032-un-pedido-por-tienda-con-varios-productos.md](../adr/0032-un-pedido-por-tienda-con-varios-productos.md) |
 | ADR-0033 | El administrador elimina pedidos del panel sin borrar la fila | Propuesto | 2026-11-02 | ESC-05, ESC-02, ESC-03 | [0033-eliminar-pedidos-sin-borrar-la-fila.md](../adr/0033-eliminar-pedidos-sin-borrar-la-fila.md) |
+| ADR-0034 | El dueño puede cancelar su pedido antes de que esté Listo; se conserva en el historial | Propuesto | 2026-11-03 | ESC-02, ESC-03, ESC-05 | [0034-cancelacion-del-pedido-por-su-dueno.md](../adr/0034-cancelacion-del-pedido-por-su-dueno.md) |
  
 **Relación con los bloques de construcción:**
 - ADR-0001 y ADR-0002 determinan la estructura: un único proceso con módulos de dominio separados.
@@ -625,7 +627,7 @@ El árbol de utilidad relaciona los objetivos generales de calidad con los atrib
 
 **Entorno:** Funcionamiento normal del sistema con las cinco tiendas registradas.
 
-**Respuesta esperada:** El sistema debe mostrar y permitir modificar únicamente los productos, inventario y pedidos pertenecientes al establecimiento autenticado.
+**Respuesta esperada:** El sistema debe mostrar y permitir modificar únicamente los productos, su disponibilidad (disponible/agotado) y los pedidos pertenecientes al establecimiento autenticado. No administra cantidades de inventario.
 
 **Medida de respuesta:**
 
@@ -684,6 +686,8 @@ El árbol de utilidad relaciona los objetivos generales de calidad con los atrib
 **Prioridad:** Alta importancia / Media dificultad arquitectónica.
 
 **Artefacto:** Módulo `pagos` (adaptador de pasarela de pago externa).
+
+**Estado actual:** El módulo confirma el pago de forma simulada. No se integra una pasarela externa ni se reciben datos de tarjeta; cumplir este escenario con un proveedor real requerirá una decisión posterior del equipo.
 
 **Decisión relacionada:** [ADR-0001 — Adopción de monolito modular](../adr/0001-adopcion-monolito-modular.md)
 
@@ -978,19 +982,19 @@ A-19, A-21 y A-23 se cerraron el 01/11 (P-3 y P-2).
 | **A-xx** | Identificador de aspectos de calidad encontrado en `docs/aspectos.md` (ej. A-0x disponibilidad y consistencia de pedidos). |
 | **ESC-xx** | Escenario de calidad definido en [`docs/arc42/arc42-template-EN.md`](../../docs/arc42/arc42-template-EN.md#102-escenarios-de-calidad) (ej. ESC-01 = Picos de demanda entre clases). |
 | **Click & Collect** | Modalidad de compra en la que el usuario ordena digitalmente de forma anticipada y recoge el producto en el establecimiento fisico. |
-| **Corte vertical** | Implementación ejecutable que atraviesa la arquitectura de extremo a extremo: `src/corte-vertical.js` recorre `catalogo → pedidos → pagos → entrega → notificaciones`, con lógica de negocio, estado por tienda y prueba automatizada. |
+| **Corte vertical** | Implementación ejecutable que atraviesa la arquitectura de extremo a extremo: `backend/src/corte-vertical.js` recorre `catalogo → pedidos → pagos → entrega → notificaciones`, con lógica de negocio, estado por tienda y prueba automatizada. El pago que recorre es simulado. |
 | **RES-05** | Restricción asignada en el corte 1: las operaciones de catálogo, pedidos y entrega exigen `tiendaId` y queda prohibido acceder al estado de otra tienda (0 operaciones cruzadas, ver [ADR-0004](../adr/0004-aislamiento-por-establecimiento.md)). |
 | **Capa de interfaz** | En el módulo `pedidos`, la interfaz pública (`crearPedido`, `obtenerPedido`, `cambiarEstado`) recibe siempre `tiendaId` y delega en la lógica. |
 | **Capa lógica** | En el módulo `pedidos`, aplica reglas de negocio y gestiona la máquina de estados en el contexto de la tienda. |
-| **Capa de persistencia** | En el módulo `pedidos`, `pedidosPorTienda`: un `Map` por tienda en memoria (implementación actual), sustituible por PostgreSQL (ADR-0001). |
+| **Capa de persistencia** | El dominio conserva proyecciones en memoria y sincroniza el estado con PostgreSQL cuando `DATABASE_URL` está configurada; sin ella, opera en memoria y no sobrevive al reinicio (ADR-0014, ADR-0026). |
 | **Picos de tráfico** | Intervalo de 5 a 10 minutos en los que se alcanza el valor maximo de clientes simultáneos. |
-| **PIN** | Código númerico de aproximadamente 4 dígitos generado al crear el pedido, se usa para identificar y validar al usuario en el punto de recolección (A-06). | 
+| **PIN** | Código numérico de 4 dígitos generado al marcar el pedido como Listo; solo su dueño lo ve y se usa una vez al entregar (A-06). |
 | **SonarCloud** | Plataforma de análisis estático integrada en el pipeline de CI. Detecta bugs, vulnerabilidades de seguridad, duplicación de código y mide la cobertura de pruebas. Decisión registrada en [ADR-0003](../adr/0003-despliegue-railway-docker-sonarcloud.md). |
-| **Azure Container Apps** | Plataforma serverless de contenedores (Azure for Students, sin tarjeta) donde se despliegan API + sitio con la misma imagen Docker. Decisión registrada en [ADR-0009](../adr/0009-despliegue-azure.md). |
-| **Servidor de la universidad** | Infraestructura del laboratorio donde irá PostgreSQL en Corte 2: sin tarjeta, sin medidor que romper y sin pausas. Decisión registrada en [ADR-0011](../adr/0011-base-de-datos-universidad.md). |
+| **Azure Container Apps** | Proveedor histórico, retirado como despliegue vigente por [ADR-0018](../adr/0018-retiro-de-azure-despliegue-en-dokploy.md). Su apagado operativo sigue pendiente de evidencia. |
+| **Servidor de la universidad** | Infraestructura del laboratorio que ejecuta Dokploy y PostgreSQL. Decisión vigente en [ADR-0018](../adr/0018-retiro-de-azure-despliegue-en-dokploy.md). |
 | **Railway** | Plataforma PaaS alternativa, hoy solo ruta de reversión del despliegue (misma imagen). Referencia histórica en [ADR-0003](../adr/0003-despliegue-railway-docker-sonarcloud.md). |
-| **Quality Gate** | Conjunto de umbrales configurados en SonarCloud (cobertura mínima, cero vulnerabilidades críticas, etc.) que deben superarse antes de aceptar un pull request a `master`. |
-| **Ítem de catálogo** | Producto o servicio ofrecido por un establecimiento, con nombre, descripción, precio y disponibilidad |
-| **Estado del pedido** | Fase del ciclo de vida de un pedido: `Recibido` → `En preparación` → `Listo` → `Entregado` (`const ESTADOS` en `src/modules/pedidos/index.js`; transiciones solo secuenciales). |
-| **Notificación push** | Mensaje enviado al dispositivo del usuario o del dueño del establecimiento ante cambios relevantes en el pedido |
+| **Quality Gate** | Umbral de SonarCloud bloqueante en los pushes a `master`; el job no se ejecuta en pull requests. El resto de los jobs de CI valida los pull requests. |
+| **Ítem de catálogo** | Producto ofrecido por un establecimiento, con nombre, descripción, precio y estado disponible/agotado. No se administra una cantidad de stock. |
+| **Estado del pedido** | Fase del ciclo de vida de un pedido: `Recibido` → `En preparación` → `Listo` → `Entregado` (`const ESTADOS` en `backend/src/modules/pedidos/index.js`; transiciones solo secuenciales). |
+| **Notificación push** | No implementada. El frontend actualiza el seguimiento consultando el backend cada 3 segundos. |
 | **Módulo** | Unidad de organización interna del monolito con responsabilidad única; no puede acceder directamente a la base de datos de otro módulo |

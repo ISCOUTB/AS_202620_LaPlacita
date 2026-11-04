@@ -85,6 +85,7 @@ export function FloatingCart() {
   const router = useRouter()
   const [pidiendo, setPidiendo] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [carritoAbierto, setCarritoAbierto] = useState(false)
 
   // ADR-0032: "Hacer pedido" emite un POST /pedidos por tienda, con todos sus
   // productos: un código y un PIN por tienda. Cada pedido creado se registra en
@@ -94,7 +95,9 @@ export function FloatingCart() {
   // clienteId del cuerpo se ignora con sesión) y así el PIN queda en la cuenta.
   async function hacerPedidos() {
     if (!usuario) {
-      // El carrito vive en el layout: sobrevive al ir a /cuenta y volver.
+      // Cierra el panel antes de navegar. El carrito vive en el layout y
+      // conserva sus productos mientras la persona inicia sesión.
+      setCarritoAbierto(false)
       router.push(`/cuenta?volver=${encodeURIComponent(window.location.pathname)}`)
       return
     }
@@ -129,7 +132,7 @@ export function FloatingCart() {
   const groups = groupByStore(items)
 
   return (
-    <Sheet>
+    <Sheet open={carritoAbierto} onOpenChange={setCarritoAbierto}>
       {/* Reserva espacio al final de la página para que el botón no tape contenido en el celular. */}
       <div aria-hidden="true" className="h-20 md:hidden" />
       <SheetTrigger asChild>

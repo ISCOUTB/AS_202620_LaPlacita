@@ -11,7 +11,7 @@
 
 ## 1. Escenario operativo y diagnóstico
 
-**ESC-01 — Picos de demanda entre clases** (arc42 §10.2, aspecto A-01) exige que el sistema acepte, registre y actualice pedidos «sin generar duplicados ni perder información» y que «el estado almacenado de un pedido coincida con el último estado confirmado por el establecimiento». La elección se registró en [`docs/evidencias/evidencias-s10.md`](evidencias-s10.md) el 2026-10-11: es la deuda que el propio ADR-0011 había diferido al Corte 2, mientras ESC-02 (corte 1) y ESC-03 (S9) ya contaban con evidencia cerrada.
+**ESC-01 — Picos de demanda entre clases** (arc42 §10.2, aspecto A-01) exige que el sistema acepte, registre y actualice pedidos «sin generar duplicados ni perder información» y que «el estado almacenado de un pedido coincida con el último estado confirmado por el establecimiento». La elección se registró en [`docs/evidencias/evidencias-s10.md`](../evidencias/evidencias-s10.md) el 2026-10-11: es la deuda que el propio ADR-0011 había diferido al Corte 2, mientras ESC-02 (corte 1) y ESC-03 (S9) ya contaban con evidencia cerrada.
 
 **Hipótesis:** todo el estado de pedidos vive en `Map` en memoria (`src/modules/pedidos/index.js:19-20`); un reinicio del contenedor lo pierde. La hipótesis se midió contra el **despliegue real en Azure** con un script reproducible (`scripts/medir-persistencia.js`, fases `pre`/`post` por HTTP):
 

@@ -232,7 +232,7 @@ function descartarPedido(pedidoId, tiendaId) {
 function cambiarEstado(pedidoId, tiendaId, nuevoEstado) {
   const pedido = pedidoMutable(pedidoId, tiendaId);
   if (pedido.canceladoEn) {
-    throw new Error('Este pedido fue cancelado por la tienda');
+    throw new Error('Este pedido fue cancelado');
   }
   const indiceActual = ESTADOS.indexOf(pedido.estado);
   const indiceNuevo = ESTADOS.indexOf(nuevoEstado);
@@ -271,6 +271,27 @@ function cancelarPedido(pedidoId, tiendaId, rol) {
     pedido.canceladoEn = new Date().toISOString();
     escribirPedido(pedido);
   }
+  return instantanea(pedido);
+}
+
+// ADR-0034: el dueño puede cancelar su pedido antes de que esté Listo.
+// El soft-delete conserva historial y usa el mismo marcador persistido que
+// la cancelación administrativa; el backend vuelve a comprobar dueño/estado.
+function cancelarPedidoPorDueno(pedidoId, tiendaId, usuarioId) {
+  const pedido = repoTienda(tiendaId ?? '').get(pedidoId);
+  if (!pedido || !usuarioId || pedido.clienteId !== usuarioId) {
+    const e = new Error('Pedido no encontrado en tu cuenta');
+    e.estado = 404;
+    throw e;
+  }
+  if (pedido.canceladoEn) return instantanea(pedido);
+  if (!['Recibido', 'En preparación'].includes(pedido.estado)) {
+    const e = new Error('Solo puedes cancelar un pedido antes de que esté Listo');
+    e.estado = 409;
+    throw e;
+  }
+  pedido.canceladoEn = new Date().toISOString();
+  escribirPedido(pedido);
   return instantanea(pedido);
 }
 
@@ -437,6 +458,7 @@ export {
   resumenDelDia,
   cambiarEstado,
   cancelarPedido,
+  cancelarPedidoPorDueno,
   asignarPin,
   confirmarPago,
   marcarListo,
