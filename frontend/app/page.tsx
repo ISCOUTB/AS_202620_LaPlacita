@@ -26,13 +26,16 @@ export default function Inicio() {
   return (
     <>
       <section className="degradado-utb relative isolate overflow-hidden rounded-b-[2rem] text-white md:mx-auto md:mt-6 md:max-w-6xl md:rounded-3xl">
-        {/* Fachada de La Placita de fondo, algo difuminada. En pantalla ancha
-            ocupa la parte derecha y se desvanece hacia el texto, para que el
-            letrero no quede detrás del título. En el celular cubre todo y una
-            capa azul pareja mantiene legible el texto. */}
+        {/* Fachada de La Placita nítida de fondo, con el texto encima. En
+            pantalla ancha la foto arranca corrida a la derecha (lo que sobra se
+            recorta) para que el letrero quede libre y el texto caiga sobre los
+            árboles y el vidrio; su borde izquierdo se funde con el azul. La capa
+            de color es más oscura donde va el texto y se abre hacia el letrero.
+            En el celular el texto ocupa todo el ancho, así que la foto va como
+            franja debajo de los botones y se funde hacia arriba con el azul. */}
         <div
           aria-hidden="true"
-          className="absolute inset-0 -z-20 md:left-auto md:w-[68%] md:[mask-image:linear-gradient(to_right,transparent,black_40%)]"
+          className="absolute inset-x-0 bottom-0 -z-20 h-48 [mask-image:linear-gradient(to_bottom,transparent,black_40%)] md:inset-y-0 md:right-[-25%] md:left-[25%] md:h-auto md:[mask-image:linear-gradient(to_right,transparent,black_25%)]"
         >
           <Image
             src="/imagenes/placita-utb.webp"
@@ -40,11 +43,14 @@ export default function Inicio() {
             fill
             priority
             unoptimized
-            className="scale-105 object-cover object-[15%_center] blur-[2px]"
+            className="object-cover object-center"
           />
         </div>
-        <div aria-hidden="true" className="absolute inset-0 -z-10 bg-azul/80 md:bg-noche/30" />
-        <div className="mx-auto max-w-6xl px-5 pt-8 pb-10 md:px-10 md:py-16">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 -z-10 hidden md:block md:bg-linear-to-r md:from-azul/40 md:from-30% md:via-noche/35 md:via-45% md:to-transparent md:to-65%"
+        />
+        <div className="mx-auto max-w-6xl px-5 pt-8 pb-48 [text-shadow:0_2px_16px_rgb(0_0_0/0.45)] md:px-10 md:py-16">
           <div className="flex max-w-xl flex-col gap-4">
             <Saludo />
             <h1 className="font-display text-4xl leading-tight font-extrabold text-balance md:text-5xl">
@@ -53,7 +59,7 @@ export default function Inicio() {
             <p className="max-w-md text-lg text-white/85">
               Pide en las cinco tiendas del campus desde el salón o la biblioteca y recógelo sin hacer fila.
             </p>
-            <div className="flex flex-wrap gap-3 pt-2">
+            <div className="flex flex-wrap gap-3 pt-2 [text-shadow:none]">
               <BotonEnlace href="/tiendas" variante="principal" className="bg-white text-azul hover:bg-white/90">
                 Ver tiendas
                 <ArrowRight aria-hidden="true" className="size-5" />
