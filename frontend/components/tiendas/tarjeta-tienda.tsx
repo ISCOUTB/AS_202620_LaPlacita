@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { ChevronRight, MapPin } from "lucide-react"
 import { storeIcons } from "@/components/store-icons"
+import { urlImagenCatalogo } from "@/lib/imagenes-tiendas"
 import { estaAbierta, type Store } from "@/lib/stores"
 import { useMinuto } from "@/lib/use-minuto"
 import { cn } from "@/lib/utils"
@@ -25,17 +26,29 @@ export function EstadoApertura({ store, className }: { store: Store; className?:
   )
 }
 
-export function TarjetaTienda({ store }: { store: Store }) {
+export function TarjetaTienda({ store, imagenId }: { store: Store; imagenId?: string | null }) {
   const Icono = storeIcons[store.icon]
+  const imagenSrc = urlImagenCatalogo(imagenId)
 
   return (
     <Link
       href={`/tiendas/${store.slug}`}
       className="group flex items-center gap-4 rounded-2xl bg-superficie p-4 shadow-tarjeta transition-transform hover:-translate-y-0.5"
     >
-      <span className="grid size-14 shrink-0 place-items-center rounded-xl bg-azul/10 text-azul">
-        <Icono aria-hidden="true" className="size-7" strokeWidth={2} />
-      </span>
+      {imagenSrc ? (
+        // La tarjeta reutiliza la referencia del estado de atención de la ficha.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={imagenSrc}
+          alt=""
+          loading="lazy"
+          className="h-20 w-28 shrink-0 rounded-xl object-cover object-center shadow-sm ring-1 ring-azul/10"
+        />
+      ) : (
+        <span className="grid size-14 shrink-0 place-items-center rounded-xl bg-azul/10 text-azul">
+          <Icono aria-hidden="true" className="size-7" strokeWidth={2} />
+        </span>
+      )}
       <span className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="flex flex-wrap items-center gap-2">
           <span className="font-display text-lg font-bold text-noche">{store.name}</span>

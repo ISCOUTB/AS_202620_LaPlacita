@@ -14,7 +14,7 @@ function Contenedor({ children, contador }: { children: React.ReactNode; contado
   return (
     <section aria-labelledby="catalogo-titulo" className="mx-auto max-w-6xl px-4 pt-6 md:px-6 md:pt-10">
       <div className="mb-4 flex items-end justify-between">
-        <h2 id="catalogo-titulo" className="font-display text-2xl font-extrabold text-noche">
+        <h2 id="catalogo-titulo" className="scroll-mt-6 font-display text-2xl font-extrabold text-noche">
           El menú
         </h2>
         {contador && (
