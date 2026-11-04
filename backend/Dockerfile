@@ -4,6 +4,9 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
+# Huella del código que entra a la imagen: /api/v1/health la devuelve y el
+# workflow de despliegue la compara con la del commit (scripts/huella.mjs).
+RUN node scripts/huella.mjs > huella.txt
 RUN npm run build
 
 # ---------- Stage 2: run ----------
@@ -15,6 +18,7 @@ COPY --from=build --chown=node:node /app/.next/static ./.next/static
 # El contrato lo sirve /api/v1/openapi con fs en runtime; el build standalone
 # no incluye archivos que nadie importa, hay que copiarlo explícitamente.
 COPY --from=build --chown=node:node /app/openapi.yaml ./openapi.yaml
+COPY --from=build --chown=node:node /app/huella.txt ./huella.txt
 EXPOSE 3000
 ENV PORT=3000
 # S13: el servidor corre con el usuario sin privilegios `node` de la imagen,

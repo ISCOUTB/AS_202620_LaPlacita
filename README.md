@@ -276,8 +276,14 @@ a un despliegue real.
 
 | Pieza | Cómo se publica |
 |---|---|
-| Backend | Automático: un push a `master` que toque `backend/**` pasa pruebas y contrato, y [`deploy-dokploy.yml`](.github/workflows/deploy-dokploy.yml) dispara Dokploy |
-| Frontend | Manual: botón **Deploy** en Dokploy después del merge |
+| Backend | Automático: un push a `master` que toque `backend/**` pasa pruebas y contrato, y [`deploy-dokploy.yml`](.github/workflows/deploy-dokploy.yml) dispara Dokploy y espera a que `/api/v1/health` devuelva la huella de ese commit |
+| Frontend | Automático: un push a `master` que toque `frontend/**` pasa lint y build, y el mismo workflow dispara Dokploy **después** del backend y espera a que `/api/version` devuelva la huella de ese commit |
+
+La huella es un SHA-256 del código del paquete (`scripts/huella.mjs`), calculado al construir la
+imagen y en el workflow; si coinciden, Dokploy ya sirve ese commit. Para desplegar a mano las dos
+apps: Actions → *Deploy Dokploy* → **Run workflow**. Cada despliegue reinicia el proceso y vacía lo
+que vive en memoria (cola de escrituras, DLQ, `/metricas`), así que no se unen PR a `master` durante
+una demo ni durante una medición.
 
 Las variables van en **Environment** de Dokploy, no en Build-time. Guías:
 [Garage](docs/despliegue-garage-dokploy.md) y

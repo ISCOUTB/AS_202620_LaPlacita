@@ -5,6 +5,9 @@ COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+# Huella del código que entra a la imagen: /api/version la devuelve y el
+# workflow de despliegue la compara con la del commit (scripts/huella.mjs).
+RUN node scripts/huella.mjs > huella.txt
 RUN npm run build
 
 # ---------- Stage 2: run ----------
@@ -20,6 +23,7 @@ COPY --from=build --chown=node:node /app/.next/static ./.next/static
 # El manifest, el service worker y los íconos viven en public/: el build
 # standalone NO los copia — hay que hacerlo explícitamente.
 COPY --from=build --chown=node:node /app/public ./public
+COPY --from=build --chown=node:node /app/huella.txt ./huella.txt
 EXPOSE 3000
 ENV PORT=3000
 # S13: el servidor corre con el usuario sin privilegios `node` de la imagen,

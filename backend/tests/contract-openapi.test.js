@@ -8,10 +8,11 @@ import * as entrega from '../src/modules/entrega/index.js';
 import * as notificaciones from '../src/modules/notificaciones/index.js';
 import * as health from '../src/health.js';
 
-test('Health: estadoSalud retorna { status: "ok" }', () => {
+test('Health: estadoSalud retorna { status: "ok", huella }', () => {
   const result = health.estadoSalud();
   assert.strictEqual(result.status, 'ok');
-  assert.deepStrictEqual(Object.keys(result), ['status']);
+  assert.deepStrictEqual(Object.keys(result), ['status', 'huella']);
+  assert.strictEqual(typeof result.huella, 'string');
 });
 
 test('Catalogo: obtenerProducto retorna producto con campos obligatorios', () => {
