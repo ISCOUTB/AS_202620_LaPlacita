@@ -29,6 +29,7 @@ Proyecto del curso Arquitecturas de Software, 2026-2. Hoy el proyecto va en la S
 |---|---|
 | App (PWA) | https://laplacita-app.iscoutb.dev |
 | Panel de tienda | https://laplacita-app.iscoutb.dev/panel |
+| Administración general | https://laplacita-app.iscoutb.dev/admin |
 | URL base de la API | `https://laplacita-test.iscoutb.dev/api/v1` |
 | Documentación de la API (Swagger) | https://laplacita-test.iscoutb.dev/docs |
 | Verificación | https://laplacita-test.iscoutb.dev/api/v1/health |
@@ -191,6 +192,7 @@ plantilla del despliegue. Ninguna variable es obligatoria en local.
 | `DATABASE_URL` | Conexión a PostgreSQL | Sí |
 | `JWT_SECRET` | Firma de las sesiones, mínimo 32 caracteres. En local, si falta, se genera uno por proceso | Sí |
 | `CUENTAS_TIENDA` | Cuentas del personal: `tiendaId\|rol\|correo\|contraseña\|Nombre` separadas por `;` | Sí |
+| `ADMINS_GENERALES` | Correos (separados por comas) de las cuentas con administración general en `/admin` ([ADR-0037](docs/adr/0037-administracion-general.md)). La cuenta se registra normal en la app | No, pero sin ella nadie entra a `/admin` |
 | `DOMINIOS_CORREO` | Dominios admitidos en el registro; por defecto `utb.edu.co` | No |
 | `GARAGE_API_URL`, `GARAGE_REGION`, `GARAGE_BUCKET`, `GARAGE_ACCESS_KEY_ID`, `GARAGE_SECRET_ACCESS_KEY` | Almacén de imágenes. Sin ellas, las imágenes viven en memoria | Sí, para conservar las fotos |
 

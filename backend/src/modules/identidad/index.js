@@ -14,6 +14,8 @@ import { activa, alCargarUsuarios, guardarUsuario } from '../../persistencia/ind
 import { error as logError, info } from '../../logger.js';
 import { cifrarContrasena, gastarTiempoEquivalente, verificarContrasena } from './contrasenas.js';
 import { firmarToken, verificarToken } from './tokens.js';
+// Solo para validar la tienda al asignar una cuenta de personal (ADR-0037).
+import { listarTiendas } from '../catalogo/index.js';
 
 const usuariosPorId = estadoCompartido('usuariosPorId', () => new Map());
 const idPorCorreo = estadoCompartido('idPorCorreo', () => new Map());
@@ -51,20 +53,45 @@ function dominiosPermitidos() {
     .filter(Boolean);
 }
 
+/**
+ * ADR-0037: administración general. Los correos de ADMINS_GENERALES (secreto de
+ * Dokploy, separados por comas) tienen el rol `superadmin` mientras estén en la
+ * variable: la cuenta se registra como cualquier otra y el rol NO se guarda en
+ * la base, así que quitar el correo de la variable lo retira al reiniciar.
+ */
+function correosAdminGeneral() {
+  return new Set(
+    (process.env.ADMINS_GENERALES ?? '')
+      .split(',')
+      .map((c) => c.trim().toLowerCase())
+      .filter(Boolean),
+  );
+}
+
+export function esAdminGeneral(usuario) {
+  return Boolean(usuario && correosAdminGeneral().has(usuario.correo));
+}
+
+function rolEfectivo(usuario) {
+  return esAdminGeneral(usuario) ? 'superadmin' : usuario.rol;
+}
+
 /** Vista del usuario que sale del sistema: nunca incluye el hash. */
 export function vistaUsuario(usuario) {
+  const rol = rolEfectivo(usuario);
   return Object.freeze({
     id: usuario.id,
     correo: usuario.correo,
     nombre: usuario.nombre,
-    rol: usuario.rol,
-    tiendaId: usuario.tiendaId ?? null,
+    rol,
+    tiendaId: rol === 'superadmin' ? null : usuario.tiendaId ?? null,
   });
 }
 
 function sesionPara(usuario) {
-  const token = firmarToken({ sub: usuario.id, rol: usuario.rol, tiendaId: usuario.tiendaId ?? null });
-  return { token, usuario: vistaUsuario(usuario) };
+  const vista = vistaUsuario(usuario);
+  const token = firmarToken({ sub: usuario.id, rol: vista.rol, tiendaId: vista.tiendaId });
+  return { token, usuario: vista };
 }
 
 function agregar(usuario) {
@@ -214,6 +241,74 @@ async function asegurarCuenta(c) {
     idPorCorreo.delete(usuario.correo);
     logError({ route: 'identidad', tiendaId: c.tiendaId, mensaje: `cuenta de tienda: ${e.message}` });
   }
+}
+
+// ── Administración general (ADR-0037) ─────────────────────────────────────
+
+/** Todas las cuentas (sin hash), de la más reciente a la más antigua. */
+export function listarUsuarios() {
+  return [...usuariosPorId.values()]
+    .map((u) => ({ ...vistaUsuario(u), creadoEn: u.creadoEn ?? null }))
+    .sort((a, b) => String(b.creadoEn ?? '').localeCompare(String(a.creadoEn ?? '')));
+}
+
+function cuentaExistente(usuarioId) {
+  const usuario = usuariosPorId.get(usuarioId);
+  if (!usuario) throw errorCon('Cuenta no encontrada', 404);
+  return usuario;
+}
+
+// Write-through, como el catálogo: la base confirma y después cambia la
+// memoria. Si la base falla, la cuenta queda como estaba.
+async function guardarCambios(actual, nuevo) {
+  await guardarUsuario(nuevo);
+  usuariosPorId.set(actual.id, nuevo);
+  return { ...vistaUsuario(nuevo), creadoEn: nuevo.creadoEn ?? null };
+}
+
+/**
+ * Cambia nombre, rol y tienda de una cuenta. Roles asignables: cliente,
+ * trabajador y admin (los dos últimos exigen tienda). El rol `superadmin` no se
+ * asigna aquí: sale de ADMINS_GENERALES. Nadie se cambia el rol a sí mismo,
+ * para no quedarse sin acceso por accidente.
+ */
+export async function actualizarUsuario(usuarioId, cambios = {}, { actorId } = {}) {
+  const actual = cuentaExistente(usuarioId);
+  if (esAdminGeneral(actual)) {
+    throw errorCon('Las cuentas de administración general se manejan con ADMINS_GENERALES', 409);
+  }
+  const nuevo = { ...actual };
+  if (cambios.nombre !== undefined) {
+    const nombre = String(cambios.nombre).trim().replace(/\s+/g, ' ');
+    if (nombre.length < 2 || nombre.length > 60) throw errorCon('El nombre debe tener de 2 a 60 caracteres', 400);
+    nuevo.nombre = nombre;
+  }
+  if (cambios.rol !== undefined) {
+    if (usuarioId === actorId) throw errorCon('No puedes cambiar tu propio rol', 409);
+    if (!['cliente', ...ROLES_TIENDA].includes(cambios.rol)) {
+      throw errorCon('El rol debe ser cliente, trabajador o admin', 400);
+    }
+    nuevo.rol = cambios.rol;
+  }
+  if (cambios.tiendaId !== undefined) nuevo.tiendaId = cambios.tiendaId || null;
+  if (nuevo.rol === 'cliente') nuevo.tiendaId = null;
+  const tiendasValidas = new Set(listarTiendas().map((t) => t.id));
+  if (ROLES_TIENDA.has(nuevo.rol) && !tiendasValidas.has(nuevo.tiendaId ?? '')) {
+    throw errorCon('Una cuenta de tienda necesita una tienda válida (tienda-01 … tienda-05)', 400);
+  }
+  return guardarCambios(actual, nuevo);
+}
+
+/** Pone una contraseña nueva (no hay servicio de correo para restablecerla sola). */
+export async function restablecerContrasena(usuarioId, contrasena) {
+  const actual = cuentaExistente(usuarioId);
+  if (typeof contrasena !== 'string' || contrasena.length < 8) {
+    throw errorCon('La contraseña debe tener al menos 8 caracteres', 400);
+  }
+  if (contrasena.length > 128) throw errorCon('La contraseña es demasiado larga', 400);
+  const vista = await guardarCambios(actual, { ...actual, hash: cifrarContrasena(contrasena) });
+  fallosPorCorreo.delete(actual.correo);
+  return vista;
 }
 
 // Rehidratación de cuentas desde PostgreSQL (mismo patrón que pedidos, ADR-0014).

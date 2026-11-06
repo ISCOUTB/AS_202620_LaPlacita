@@ -72,7 +72,8 @@ function rutas(dir = new URL('../app/api/v1/', import.meta.url), prefijo = '') {
 
 test('STRIDE (S13): toda ruta de escritura exige sesión salvo las declaradas', () => {
   const escritura = /export\s+(async\s+)?function\s+(POST|PUT|PATCH|DELETE)\b/;
-  const leeSesion = /\b(usuarioDeLaPeticion|cuentaDeTienda|rechazoFueraDeTienda)\b/;
+  // ADR-0037: `adminGeneral` lee la sesión y exige el rol superadmin.
+  const leeSesion = /\b(usuarioDeLaPeticion|cuentaDeTienda|rechazoFueraDeTienda|adminGeneral)\b/;
   const sinSesion = rutas()
     .filter(({ ruta, codigo }) => escritura.test(codigo) && !leeSesion.test(codigo) && !ESCRITURAS_SIN_SESION.has(ruta))
     .map(({ ruta }) => ruta);
