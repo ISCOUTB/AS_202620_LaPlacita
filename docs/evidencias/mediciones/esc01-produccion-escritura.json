@@ -1,0 +1,174 @@
+{
+  "escenario": "ESC-01",
+  "fecha": "2026-11-06T19:50:21.345Z",
+  "url": "https://laplacita-test.iscoutb.dev",
+  "fase": "escritura",
+  "carga": {
+    "peticiones": 100,
+    "concurrencia": 25,
+    "repeticiones": 3,
+    "calentamiento": 20,
+    "pctReintentos": 10,
+    "tiendas": [
+      "tienda-01",
+      "tienda-02",
+      "tienda-03",
+      "tienda-04",
+      "tienda-05"
+    ]
+  },
+  "fuenteConciliacion": "GET /api/v1/pedidos (memoria del proceso)",
+  "umbral": {
+    "procesadoMinPct": 99,
+    "duplicadoOPerdidoMaxPct": 1
+  },
+  "version": "d7560e44995dcb5e",
+  "corridas": [
+    {
+      "repeticion": 1,
+      "duracionS": 3.87,
+      "rendimientoRps": 28.4,
+      "latenciaMs": {
+        "p50": 708,
+        "p95": 2056,
+        "p99": 2070,
+        "max": 2073
+      },
+      "estatus": {
+        "201": 110
+      },
+      "anomalias": {
+        "filasSinRespuesta201": [],
+        "estatusDeLosOriginalesSin201": {}
+      },
+      "conciliacion": {
+        "enviados": 100,
+        "respuestas201": 100,
+        "idsUnicos201": 100,
+        "filasNuevas": 100,
+        "procesados": 100,
+        "procesadosAlPrimerIntento": 100,
+        "procesadosTrasReintento": 0,
+        "perdidos": 0,
+        "filasSinRespuesta201": 0,
+        "duplicados": 0,
+        "estadoDistinto": 0,
+        "rechazos429": 0,
+        "rechazos503": 0,
+        "reintentosEnviados": 10,
+        "reintentosConMismoId": 10
+      },
+      "resultado": {
+        "procesadoPct": 100,
+        "duplicadoOPerdidoPct": 0,
+        "cumple": true
+      }
+    },
+    {
+      "repeticion": 2,
+      "duracionS": 1.42,
+      "rendimientoRps": 77.3,
+      "latenciaMs": {
+        "p50": 196,
+        "p95": 314,
+        "p99": 323,
+        "max": 432
+      },
+      "estatus": {
+        "201": 110
+      },
+      "anomalias": {
+        "filasSinRespuesta201": [],
+        "estatusDeLosOriginalesSin201": {}
+      },
+      "conciliacion": {
+        "enviados": 100,
+        "respuestas201": 100,
+        "idsUnicos201": 100,
+        "filasNuevas": 100,
+        "procesados": 100,
+        "procesadosAlPrimerIntento": 100,
+        "procesadosTrasReintento": 0,
+        "perdidos": 0,
+        "filasSinRespuesta201": 0,
+        "duplicados": 0,
+        "estadoDistinto": 0,
+        "rechazos429": 0,
+        "rechazos503": 0,
+        "reintentosEnviados": 10,
+        "reintentosConMismoId": 10
+      },
+      "resultado": {
+        "procesadoPct": 100,
+        "duplicadoOPerdidoPct": 0,
+        "cumple": true
+      }
+    },
+    {
+      "repeticion": 3,
+      "duracionS": 0.91,
+      "rendimientoRps": 120.3,
+      "latenciaMs": {
+        "p50": 178,
+        "p95": 221,
+        "p99": 228,
+        "max": 229
+      },
+      "estatus": {
+        "201": 110
+      },
+      "anomalias": {
+        "filasSinRespuesta201": [],
+        "estatusDeLosOriginalesSin201": {}
+      },
+      "conciliacion": {
+        "enviados": 100,
+        "respuestas201": 100,
+        "idsUnicos201": 100,
+        "filasNuevas": 100,
+        "procesados": 100,
+        "procesadosAlPrimerIntento": 100,
+        "procesadosTrasReintento": 0,
+        "perdidos": 0,
+        "filasSinRespuesta201": 0,
+        "duplicados": 0,
+        "estadoDistinto": 0,
+        "rechazos429": 0,
+        "rechazos503": 0,
+        "reintentosEnviados": 10,
+        "reintentosConMismoId": 10
+      },
+      "resultado": {
+        "procesadoPct": 100,
+        "duplicadoOPerdidoPct": 0,
+        "cumple": true
+      }
+    }
+  ],
+  "agregado": {
+    "p95MsMin": 221,
+    "p95MsMediana": 314,
+    "p95MsMax": 2056,
+    "rendimientoRpsMediana": 77.3,
+    "enviados": 300,
+    "procesados": 300,
+    "perdidos": 0,
+    "duplicados": 0,
+    "estadoDistinto": 0,
+    "procesadoPct": 100,
+    "duplicadoOPerdidoPct": 0,
+    "cumpleTodas": true
+  },
+  "metricasFinales": {
+    "pedidosCreados": 301,
+    "pagosConfirmados": 0,
+    "pedidosListos": 0,
+    "entregasValidadas": 0,
+    "pinesRechazados": 0,
+    "pinesBloqueados": 0,
+    "escriturasReintentadas": 0,
+    "escriturasDescartadas": 0,
+    "escriturasFallidas": 0,
+    "escriturasEnColaDeFallidos": 0
+  }
+}

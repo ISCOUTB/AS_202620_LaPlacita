@@ -1,0 +1,22 @@
+ESC-01 · medir-carga · fase escritura · 1000 peticiones × 3 repeticiones · concurrencia 100
+URL base: http://localhost:3000 · versión: "local"
+Conciliación contra: postgresql · reintentos con la misma llave: 10 %
+
+#1 · 3.13 s · 351.6 resp/s · p50 284 · p95 438 · p99 533 · máx 560 ms · estatus {"201":1100}
+   enviados 1000 · 201 1000 · procesados 1000 · perdidos 0 · duplicados 0 · estado distinto 0 · 429 0 · 503 0
+   reintentos con la misma llave 100 → mismo id 100
+   procesado 100 % (umbral ≥ 99 %) · duplicado+perdido 0 % (umbral < 1 %) → CUMPLE
+
+#2 · 2.84 s · 387.9 resp/s · p50 276 · p95 308 · p99 426 · máx 456 ms · estatus {"201":1100}
+   enviados 1000 · 201 1000 · procesados 1000 · perdidos 0 · duplicados 0 · estado distinto 0 · 429 0 · 503 0
+   reintentos con la misma llave 100 → mismo id 100
+   procesado 100 % (umbral ≥ 99 %) · duplicado+perdido 0 % (umbral < 1 %) → CUMPLE
+
+#3 · 2.82 s · 390 resp/s · p50 273 · p95 329 · p99 403 · máx 430 ms · estatus {"201":1100}
+   enviados 1000 · 201 1000 · procesados 1000 · perdidos 0 · duplicados 0 · estado distinto 0 · 429 0 · 503 0
+   reintentos con la misma llave 100 → mismo id 100
+   procesado 100 % (umbral ≥ 99 %) · duplicado+perdido 0 % (umbral < 1 %) → CUMPLE
+
+Agregado: 3000 pedidos · procesado 100 % · duplicado+perdido 0 % · p95 entre corridas 308–438 ms (mediana 329) → CUMPLE en todas las repeticiones
+Métricas del proceso al final: {"pedidosCreados":6050,"pagosConfirmados":0,"pedidosListos":0,"entregasValidadas":0,"pinesRechazados":0,"pinesBloqueados":0,"escriturasReintentadas":0,"escriturasDescartadas":0,"escriturasFallidas":0,"escriturasEnColaDeFallidos":0}
+Informe JSON: ../docs/evidencias/mediciones/esc01-local-estres.json

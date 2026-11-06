@@ -1,0 +1,76 @@
+{
+  "escenario": "ESC-01",
+  "fecha": "2026-11-06T19:38:26.382Z",
+  "url": "https://laplacita-test.iscoutb.dev",
+  "fase": "lectura",
+  "carga": {
+    "peticiones": 200,
+    "concurrencia": 10,
+    "repeticiones": 3,
+    "calentamiento": 20,
+    "pctReintentos": 0,
+    "tiendas": [
+      "tienda-01",
+      "tienda-02",
+      "tienda-03",
+      "tienda-04",
+      "tienda-05"
+    ]
+  },
+  "fuenteConciliacion": null,
+  "umbral": {
+    "procesadoMinPct": 99,
+    "duplicadoOPerdidoMaxPct": 1
+  },
+  "version": "d7560e44995dcb5e",
+  "corridas": [
+    {
+      "repeticion": 1,
+      "duracionS": 3.16,
+      "rendimientoRps": 63.4,
+      "latenciaMs": {
+        "p50": 136,
+        "p95": 411,
+        "p99": 441,
+        "max": 445
+      },
+      "estatus": {
+        "200": 200
+      }
+    },
+    {
+      "repeticion": 2,
+      "duracionS": 2.92,
+      "rendimientoRps": 68.5,
+      "latenciaMs": {
+        "p50": 138,
+        "p95": 155,
+        "p99": 176,
+        "max": 458
+      },
+      "estatus": {
+        "200": 200
+      }
+    },
+    {
+      "repeticion": 3,
+      "duracionS": 2.89,
+      "rendimientoRps": 69.3,
+      "latenciaMs": {
+        "p50": 137,
+        "p95": 150,
+        "p99": 154,
+        "max": 431
+      },
+      "estatus": {
+        "200": 200
+      }
+    }
+  ],
+  "agregado": {
+    "p95MsMin": 150,
+    "p95MsMediana": 155,
+    "p95MsMax": 411,
+    "rendimientoRpsMediana": 68.5
+  }
+}

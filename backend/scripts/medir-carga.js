@@ -1,236 +1,367 @@
-// Esqueleto de la medición de ESC-01 con carga — picos de demanda entre clases
-// (S14, semana del 2 al 8 de noviembre). Plan de ejecución: "medir ESC-01 en
-// producción con backend/scripts/medir-carga.js (autocannon): un pico entre
-// clases contra los umbrales de 99 % procesado y menos de 1 % de duplicados o
-// perdidos".
+// Medición de ESC-01 — picos de demanda entre clases (S14).
 //
-// Ejecuta una oleada de peticiones HTTP concurrentes contra el despliegue y
-// reporta la distribución de latencias (p50/p95/p99), el rendimiento y los
-// errores. Dos fases:
+// Escenario (arc42 §10.2, sin cambios desde S2):
+//   - ≥ 99 % de las solicitudes de pedido se procesan correctamente;
+//   - < 1 % de pedidos duplicados o perdidos;
+//   - el estado almacenado coincide con el último estado confirmado.
 //
-//   lectura  — GET /catalogo/tiendas/{id}/productos (sin efectos; segura
-//              para probar el propio script).
-//   escritura — crea pedidos reales POST /pedidos con sesión de cliente
-//               (Idempotency-Key única por intento, S11). Crea DATOS: correr
-//               solo en la ventana acordada del laboratorio.
+// Qué hace: lanza oleadas de POST /api/v1/pedidos concurrentes (lazo cerrado:
+// `--concurrencia` clientes que piden uno tras otro), reparte los pedidos
+// entre las tiendas indicadas y, al final de cada repetición, concilia lo que
+// el cliente recibió (201 con id) con lo que quedó guardado. Una fracción de
+// las peticiones (`--reintentos`) se reenvía con la MISMA Idempotency-Key,
+// como haría un celular que no recibió la respuesta: si el sistema duplicara,
+// aparecerían filas de más.
 //
-// TODO (bloqueo del escenario, P-1 de evidencias-s13): el rate limit por IP
-// con el middleware `rateLimit` de Traefik NO está desplegado todavía. Medir
-// la escritura sin esa defensa mide un sistema que no es el final: montar P-1
-// (fecha 04/11/2026, antes de S14) y después correr este script.
+// Denominador de «procesado» (decisión de S14, evidencias-s14 §3.1):
+//   procesado = respuesta 201 cuyo pedido aparece guardado con el estado que
+//   devolvió la respuesta. Todo lo demás (429 del borde, 503 de la base, 4xx,
+//   5xx, abortos) cuenta como NO procesado y se informa aparte.
+//   perdido   = 201 recibido cuyo pedido no aparece guardado.
+//   duplicado = filas nuevas de la cuenta de carga que no corresponden a un
+//               id único devuelto en un 201 (incluye las de los reintentos).
 //
-// TODO (umbral ESC-01): acordar el denominador de «procesado» y cómo se tratan
-// los 429 intencionales del borde antes de comparar con 99 % / <1 %. El script
-// toma snapshots de los pedidos de la cuenta y métricas antes/después, pero no
-// calcula un resultado cumple/no cumple porque ese criterio sigue sin definirse.
+// Fuente de la conciliación:
+//   - con `--bd` (y DATABASE_URL en el entorno): se cuenta en PostgreSQL, que
+//     es la verdad persistente; sirve en local o desde la red de la base;
+//   - sin `--bd`: se usa GET /api/v1/pedidos de la cuenta, que lee la
+//     proyección en memoria del proceso (se declara en la salida).
 //
-// Uso:
-//   node scripts/medir-carga.js [--url https://…] [--fase lectura|escritura]
-//        [--peticiones 200] [--concurrencia 10]
-//        [--correo c@utb.edu.co --contrasena …]   // solo fase escritura
+// Uso (desde backend/):
+//   node scripts/medir-carga.js --url http://localhost:3000 --fase escritura \
+//     --peticiones 300 --concurrencia 25 --repeticiones 5 --reintentos 10 \
+//     --tiendas tienda-01,tienda-02,tienda-03,tienda-04,tienda-05 --bd \
+//     --salida ../docs/evidencias/mediciones/esc01-local.json
+//   node scripts/medir-carga.js --url https://laplacita-test.iscoutb.dev --fase lectura
 //
-// URL base: `--url` o BASE_URL; por defecto el despliegue de Dokploy
-// (laplacita-test.iscoutb.dev). Las credenciales NUNCA se pasan por el repo:
-// por bandera, o por CARGA_CORREO / CARGA_CONTRASENA del entorno de quien
-// corre el experimento.
+// Credenciales de la fase escritura: --correo/--contrasena o CARGA_CORREO /
+// CARGA_CONTRASENA. Con `--registrar` crea la cuenta si no existe (útil en
+// local). Nunca se escriben en el repositorio ni en la salida.
+
+import { writeFileSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 const URL_DEFECTO = 'https://laplacita-test.iscoutb.dev';
-const CONCURRENCIA_DEFECTO = 10;
-const PETICIONES_DEFECTO = 200;
-const PRODUCTO_CARGA = 'prod-018'; // la gaseosa: el pedido de mayor impacto menor
 const TIEMPO_MAX_PETICION_MS = 10_000;
-const TIENDA_CARGA = 'tienda-01';
+const UMBRAL_PROCESADO = 99; // %
+const UMBRAL_DUPLICADO_PERDIDO = 1; // %, estricto (<)
+const VERSION_AVISO = '2026-10-28';
 
 function argumento(bandera) {
   const indice = process.argv.indexOf(bandera);
-  return indice !== -1 && process.argv[indice + 1] ? process.argv[indice + 1] : null;
+  return indice !== -1 && process.argv[indice + 1] && !process.argv[indice + 1].startsWith('--')
+    ? process.argv[indice + 1]
+    : null;
 }
+const bandera = (nombre) => process.argv.includes(nombre);
 
 const urlBase = (argumento('--url') ?? process.env.BASE_URL ?? URL_DEFECTO).replace(/\/$/, '');
 const fase = argumento('--fase') ?? 'lectura';
-const total = Number(argumento('--peticiones') ?? PETICIONES_DEFECTO);
-const concurrencia = Number(argumento('--concurrencia') ?? CONCURRENCIA_DEFECTO);
+const total = Number(argumento('--peticiones') ?? 200);
+const concurrencia = Number(argumento('--concurrencia') ?? 10);
+const repeticiones = Number(argumento('--repeticiones') ?? 1);
+const calentamiento = Number(argumento('--calentamiento') ?? 20);
+const pctReintentos = Number(argumento('--reintentos') ?? 0);
+const tiendas = (argumento('--tiendas') ?? 'tienda-01').split(',').map((t) => t.trim()).filter(Boolean);
+const usarBd = bandera('--bd');
+const salida = argumento('--salida');
 
 if (fase !== 'lectura' && fase !== 'escritura') {
   console.error(`fase desconocida: ${fase} (use lectura | escritura)`);
   process.exit(2);
 }
 
-function percentil(latencias, p) {
-  if (latencias.length === 0) return 0;
-  const ordenadas = [...latencias].sort((a, b) => a - b);
-  const indice = Math.min(ordenadas.length - 1, Math.ceil((p / 100) * ordenadas.length) - 1);
-  return ordenadas[Math.max(0, indice)];
+function percentil(valores, p) {
+  if (valores.length === 0) return 0;
+  const ordenados = [...valores].sort((a, b) => a - b);
+  const indice = Math.min(ordenados.length - 1, Math.ceil((p / 100) * ordenados.length) - 1);
+  return ordenados[Math.max(0, indice)];
 }
+const redondear = (n, d = 1) => Math.round(n * 10 ** d) / 10 ** d;
 
-async function peticion(token, i) {
+async function llamar(ruta, opciones = {}) {
   const t0 = performance.now();
   const controlador = new AbortController();
   const reloj = setTimeout(() => controlador.abort(), TIEMPO_MAX_PETICION_MS);
   try {
-    let respuesta;
-    if (fase === 'lectura') {
-      respuesta = await fetch(`${urlBase}/api/v1/catalogo/tiendas/${TIENDA_CARGA}/productos`, {
-        signal: controlador.signal,
-      });
-    } else {
-      const llave = `carga-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 8)}`;
-      respuesta = await fetch(`${urlBase}/api/v1/pedidos`, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${token}`,
-          'idempotency-key': llave,
-        },
-        body: JSON.stringify({
-          productoId: PRODUCTO_CARGA,
-          cantidad: 1,
-          tiendaId: TIENDA_CARGA,
-          // Con sesión (ADR-0021) el clienteId del cuerpo es informativo: el
-          // que vale es el del token. Se envía igual por compatibilidad v1.
-          clienteId: `carga-${llave}`,
-        }),
-        signal: controlador.signal,
-      });
-    }
+    const respuesta = await fetch(`${urlBase}${ruta}`, { ...opciones, signal: controlador.signal });
     const texto = await respuesta.text();
     let cuerpo = null;
     try {
       cuerpo = texto ? JSON.parse(texto) : null;
     } catch {
-      // Los rechazos del borde pueden responder contenido que no es JSON.
+      cuerpo = texto; // los rechazos del borde pueden no ser JSON
     }
-    return {
-      estatus: respuesta.status,
-      latencia: performance.now() - t0,
-      pedidoId: fase === 'escritura' && respuesta.status === 201 ? cuerpo?.id ?? null : null,
-      tiendaId: fase === 'escritura' && respuesta.status === 201 ? cuerpo?.tiendaId ?? TIENDA_CARGA : null,
-    };
+    return { estatus: respuesta.status, cuerpo, latencia: performance.now() - t0, cabeceras: respuesta.headers };
+  } catch (error) {
+    return { estatus: 0, cuerpo: null, latencia: performance.now() - t0, error: String(error?.message ?? error) };
   } finally {
     clearTimeout(reloj);
   }
 }
 
-async function iniciarSesion(correo, contrasena) {
-  const respuesta = await fetch(`${urlBase}/api/v1/auth/sesion`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ correo, contrasena }),
-  });
-  const cuerpo = await respuesta.json();
-  if (respuesta.status !== 200) {
-    throw new Error(`login respondió ${respuesta.status}: ${JSON.stringify(cuerpo)}`);
-  }
-  return cuerpo.token;
-}
-
-async function obtenerJson(url, opciones, etiqueta) {
-  let respuesta;
+async function conReintentoDe429(ruta, opciones, etiqueta) {
+  let r;
   for (let intento = 0; intento < 5; intento += 1) {
-    respuesta = await fetch(url, opciones);
-    if (respuesta.status !== 429 || intento === 4) break;
-    // P-1 puede limitar la lectura de reconciliación justo después de la carga.
-    await new Promise((resolver) => setTimeout(resolver, 1000 * (intento + 1)));
+    r = await llamar(ruta, opciones);
+    if (r.estatus !== 429) break;
+    await new Promise((ok) => setTimeout(ok, 1000 * (intento + 1)));
   }
-  const texto = await respuesta.text();
-  let cuerpo = texto;
-  try {
-    cuerpo = texto ? JSON.parse(texto) : null;
-  } catch {
-    // Los errores de Traefik pueden responder texto plano.
-  }
-  if (!respuesta.ok) {
-    throw new Error(`${etiqueta} respondió ${respuesta.status}: ${JSON.stringify(cuerpo)}`);
-  }
-  return cuerpo;
+  if (r.estatus < 200 || r.estatus >= 300) throw new Error(`${etiqueta} respondió ${r.estatus}: ${JSON.stringify(r.cuerpo)}`);
+  return r.cuerpo;
 }
 
-async function leerPedidosDelCliente(token) {
-  const cuerpo = await obtenerJson(`${urlBase}/api/v1/pedidos`, {
-    headers: { authorization: `Bearer ${token}` },
-  }, 'GET /pedidos');
-  if (!Array.isArray(cuerpo)) throw new Error('GET /pedidos no devolvió una lista');
-  return new Set(cuerpo.map((pedido) => `${pedido.tiendaId}:${pedido.id}`));
-}
-
-async function leerMetricas() {
-  const cuerpo = await obtenerJson(`${urlBase}/api/v1/metricas`, undefined, 'GET /metricas');
-  if (!cuerpo || typeof cuerpo !== 'object') throw new Error('GET /metricas no devolvió un objeto');
-  return cuerpo;
-}
-
-let token = null;
-let idsAntes = null;
-let metricasAntes = null;
-if (fase === 'escritura') {
+async function sesion() {
   const correo = argumento('--correo') ?? process.env.CARGA_CORREO;
   const contrasena = argumento('--contrasena') ?? process.env.CARGA_CONTRASENA;
   if (!correo || !contrasena) {
     console.error('la fase escritura necesita --correo/--contrasena o CARGA_CORREO/CARGA_CONTRASENA');
     process.exit(2);
   }
-  token = await iniciarSesion(correo, contrasena);
-  idsAntes = await leerPedidosDelCliente(token);
-  metricasAntes = await leerMetricas();
+  const json = { 'content-type': 'application/json' };
+  let r = await llamar('/api/v1/auth/sesion', { method: 'POST', headers: json, body: JSON.stringify({ correo, contrasena }) });
+  if (r.estatus !== 200 && bandera('--registrar')) {
+    r = await llamar('/api/v1/auth/registro', {
+      method: 'POST',
+      headers: json,
+      body: JSON.stringify({ correo, contrasena, nombre: 'Carga ESC-01', avisoVersion: VERSION_AVISO }),
+    });
+  }
+  if (r.estatus !== 200 && r.estatus !== 201) throw new Error(`login respondió ${r.estatus}: ${JSON.stringify(r.cuerpo)}`);
+  return { token: r.cuerpo.token, usuarioId: r.cuerpo.usuario?.id ?? null };
 }
 
-const resultados = [];
-const errores = [];
-let cortePorErrores = false;
-const inicio = performance.now();
+async function productosDisponibles() {
+  const porTienda = {};
+  for (const tienda of tiendas) {
+    const cuerpo = await conReintentoDe429(`/api/v1/catalogo/tiendas/${tienda}/productos`, undefined, `catálogo ${tienda}`);
+    const lista = Array.isArray(cuerpo) ? cuerpo : cuerpo?.productos ?? [];
+    const disponible = lista.find((p) => p.disponible !== false);
+    if (!disponible) throw new Error(`la tienda ${tienda} no tiene productos disponibles`);
+    porTienda[tienda] = disponible.id;
+  }
+  return porTienda;
+}
 
-for (let lote = 0; lote < total; lote += concurrencia) {
-  const tamano = Math.min(concurrencia, total - lote);
-  const disparos = Array.from({ length: tamano }, (_, k) => peticion(token, lote + k));
-  const salidas = await Promise.allSettled(disparos);
-  for (const salida of salidas) {
-    if (salida.status === 'fulfilled') {
-      resultados.push(salida.value);
-    } else {
-      errores.push(String(salida.reason?.message ?? salida.reason));
+// ---- Fuente de la conciliación ------------------------------------------------
+let pool = null;
+async function abrirBd() {
+  if (!process.env.DATABASE_URL) throw new Error('--bd necesita DATABASE_URL en el entorno');
+  const { default: pg } = await import('pg');
+  pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
+  // La prueba de fallo detiene PostgreSQL a mitad de la oleada: una conexión
+  // ociosa que se corta no debe tumbar el script de medición.
+  pool.on('error', () => {});
+}
+// Devuelve Map "tienda:id" → { estado, filas } de los pedidos de la cuenta.
+async function guardados(token, usuarioId) {
+  const mapa = new Map();
+  if (pool) {
+    const { rows } = await pool.query(
+      'SELECT tienda_id, pedido_id, estado FROM pedidos WHERE cliente_id = $1',
+      [usuarioId],
+    );
+    for (const f of rows) mapa.set(`${f.tienda_id}:${f.pedido_id}`, { estado: f.estado });
+  } else {
+    const cuerpo = await conReintentoDe429('/api/v1/pedidos', { headers: { authorization: `Bearer ${token}` } }, 'GET /pedidos');
+    for (const p of cuerpo) mapa.set(`${p.tiendaId}:${p.id}`, { estado: p.estado });
+  }
+  return mapa;
+}
+
+// ---- Una repetición -----------------------------------------------------------
+async function oleada({ token, productos, etiqueta }) {
+  const respuestas = [];
+  let siguiente = 0;
+  const inicio = performance.now();
+
+  async function cliente() {
+    while (siguiente < total) {
+      const i = siguiente++;
+      if (fase === 'lectura') {
+        respuestas.push(await llamar(`/api/v1/catalogo/tiendas/${tiendas[i % tiendas.length]}/productos`));
+        continue;
+      }
+      const tiendaId = tiendas[i % tiendas.length];
+      const llave = `carga-${etiqueta}-${i}-${Math.random().toString(36).slice(2, 8)}`;
+      const opciones = {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}`, 'idempotency-key': llave },
+        body: JSON.stringify({ productoId: productos[tiendaId], cantidad: 1, tiendaId }),
+      };
+      const r = await llamar('/api/v1/pedidos', opciones);
+      respuestas.push({ ...r, tiendaId, reintento: false });
+      // Reintento del mismo pedido con la misma llave (respuesta «perdida» en el celular).
+      if (pctReintentos > 0 && i % Math.round(100 / pctReintentos) === 0) {
+        const r2 = await llamar('/api/v1/pedidos', opciones);
+        respuestas.push({ ...r2, tiendaId, reintento: true, original: r.cuerpo?.id ?? null });
+      }
     }
   }
-  if (errores.length > total / 10) {
-    console.error('más de 10 % de errores: se corta la corrida (revisar disponibilidad)');
-    cortePorErrores = true;
-    break;
+  await Promise.all(Array.from({ length: concurrencia }, cliente));
+  return { respuestas, duracionMs: performance.now() - inicio };
+}
+
+function resumirLatencias(respuestas) {
+  const lat = respuestas.map((r) => r.latencia);
+  return {
+    p50: redondear(percentil(lat, 50), 0),
+    p95: redondear(percentil(lat, 95), 0),
+    p99: redondear(percentil(lat, 99), 0),
+    max: redondear(Math.max(0, ...lat), 0),
+  };
+}
+
+function contarEstatus(respuestas) {
+  const porEstatus = {};
+  for (const r of respuestas) porEstatus[r.estatus] = (porEstatus[r.estatus] ?? 0) + 1;
+  return porEstatus;
+}
+
+// ---- Programa -----------------------------------------------------------------
+const informe = {
+  escenario: 'ESC-01',
+  fecha: new Date().toISOString(),
+  url: urlBase,
+  fase,
+  carga: { peticiones: total, concurrencia, repeticiones, calentamiento, pctReintentos, tiendas },
+  fuenteConciliacion: fase === 'escritura' ? (usarBd ? 'postgresql' : 'GET /api/v1/pedidos (memoria del proceso)') : null,
+  umbral: { procesadoMinPct: UMBRAL_PROCESADO, duplicadoOPerdidoMaxPct: UMBRAL_DUPLICADO_PERDIDO },
+  version: null,
+  corridas: [],
+};
+
+const version = await llamar('/api/v1/health');
+informe.version = version.cuerpo?.huella ?? null; // huella del commit servido (ADR de despliegue, PR #37)
+
+let token = null;
+let usuarioId = null;
+let productos = null;
+if (fase === 'escritura') {
+  ({ token, usuarioId } = await sesion());
+  if (usarBd) await abrirBd();
+  productos = await productosDisponibles();
+  if (!usuarioId) {
+    const yo = await conReintentoDe429('/api/v1/auth/yo', { headers: { authorization: `Bearer ${token}` } }, 'GET /auth/yo');
+    usuarioId = yo?.id ?? yo?.usuario?.id ?? null;
   }
 }
 
-const duracion = performance.now() - inicio;
-const latencias = resultados.map((r) => r.latencia);
-const porEstatus = {};
-for (const r of resultados) porEstatus[r.estatus] = (porEstatus[r.estatus] ?? 0) + 1;
+// Calentamiento: lecturas que no se cuentan (compilación JIT de rutas, conexiones).
+for (let i = 0; i < calentamiento; i += 1) await llamar(`/api/v1/catalogo/tiendas/${tiendas[i % tiendas.length]}/productos`);
 
-console.log(`ESC-01 · medir-carga · fase ${fase} · ${total} peticiones · concurrencia ${concurrencia}`);
-console.log(`URL base: ${urlBase}`);
-console.log(`Duración total: ${(duracion / 1000).toFixed(2)} s`);
-console.log(`Rendimiento: ${(resultados.length / (duracion / 1000)).toFixed(1)} resp/s`);
-console.log(`Latencias ms — p50: ${percentil(latencias, 50).toFixed(0)} · p95: ${percentil(latencias, 95).toFixed(0)} · p99: ${percentil(latencias, 99).toFixed(0)} · máx: ${Math.max(0, ...latencias).toFixed(0)}`);
-console.log(`Estatus: ${JSON.stringify(porEstatus)}`);
-console.log(`Excepciones de red/abort: ${errores.length}`);
-if (errores.length) console.log(`  primeras: ${errores.slice(0, 3).join(' | ')}`);
-if (fase === 'escritura') {
-  const idsDespues = await leerPedidosDelCliente(token);
-  const metricasDespues = await leerMetricas();
-  const nuevos = [...idsDespues].filter((id) => !idsAntes.has(id));
-  const respuestas201 = resultados.filter((r) => r.estatus === 201 && r.pedidoId);
-  const idsRespuesta = respuestas201.map((r) => `${r.tiendaId}:${r.pedidoId}`);
-  const idsRespuestaUnicos = new Set(idsRespuesta);
-  const respuestas201NoPersistidas = [...idsRespuestaUnicos].filter((id) => !idsDespues.has(id));
-  const nuevosSinRespuesta201 = nuevos.filter((id) => !idsRespuestaUnicos.has(id));
-  const delta = (nombre) => Number(metricasDespues[nombre] ?? 0) - Number(metricasAntes[nombre] ?? 0);
-  console.log(`POST 201 con pedidoId: ${respuestas201.length}`);
-  console.log(`IDs distintos devueltos en 201: ${idsRespuestaUnicos.size}`);
-  console.log(`IDs repetidos en respuestas 201: ${idsRespuesta.length - idsRespuestaUnicos.size}`);
-  console.log(`Pedidos nuevos visibles en GET /pedidos: ${nuevos.length}`);
-  console.log(`IDs 201 que no aparecen en la lectura final: ${respuestas201NoPersistidas.length}`);
-  console.log(`Pedidos nuevos sin respuesta 201 observada (posible respuesta perdida): ${nuevosSinRespuesta201.length}`);
-  console.log(`Métricas — delta pedidosCreados: ${delta('pedidosCreados')} · reintentos: ${delta('escriturasReintentadas')} · descartados duplicado/obsoleto: ${delta('escriturasDescartadas')} · fallidas: ${delta('escriturasFallidas')}`);
-  console.log(`DLQ actual — antes: ${metricasAntes.escriturasEnColaDeFallidos ?? 'N/D'} · después: ${metricasDespues.escriturasEnColaDeFallidos ?? 'N/D'}`);
-  console.log('Use una cuenta exclusiva, sin compras paralelas. Los contadores de /metricas son globales al proceso y en memoria; otro tráfico puede afectar deltas. No reinicie el backend entre snapshots.');
-  console.log('Calcule el umbral ESC-01 con el denominador acordado y registre los 429 de Traefik por separado en docs/evidencias/evidencias-s14.md');
-} else {
-  console.log('Fase lectura: no crea pedidos ni mide la cola de persistencia.');
+console.log(`ESC-01 · medir-carga · fase ${fase} · ${total} peticiones × ${repeticiones} repeticiones · concurrencia ${concurrencia}`);
+console.log(`URL base: ${urlBase} · versión: ${JSON.stringify(informe.version)}`);
+if (fase === 'escritura') console.log(`Conciliación contra: ${informe.fuenteConciliacion} · reintentos con la misma llave: ${pctReintentos} %`);
+
+for (let rep = 1; rep <= repeticiones; rep += 1) {
+  const antes = fase === 'escritura' ? await guardados(token, usuarioId) : null;
+  const { respuestas, duracionMs } = await oleada({ token, productos, etiqueta: `${Date.now()}-${rep}` });
+  const corrida = {
+    repeticion: rep,
+    duracionS: redondear(duracionMs / 1000, 2),
+    rendimientoRps: redondear(respuestas.length / (duracionMs / 1000)),
+    latenciaMs: resumirLatencias(respuestas),
+    estatus: contarEstatus(respuestas),
+  };
+
+  if (fase === 'escritura') {
+    const despues = await guardados(token, usuarioId);
+    const originales = respuestas.filter((r) => !r.reintento);
+    const reintentos = respuestas.filter((r) => r.reintento);
+    const ok = originales.filter((r) => r.estatus === 201 && r.cuerpo?.id);
+    const idsOk = new Map(ok.map((r) => [`${r.cuerpo.tiendaId ?? r.tiendaId}:${r.cuerpo.id}`, r.cuerpo.estado]));
+    const nuevos = [...despues.keys()].filter((k) => !antes.has(k));
+    const clave = (r) => `${r.cuerpo.tiendaId ?? r.tiendaId}:${r.cuerpo.id}`;
+    // Reintento que obtuvo 201 cuando el intento original no lo obtuvo (p. ej.
+    // 503 + Retry-After): es el mismo pedido lógico, procesado al segundo intento.
+    const rescatados = reintentos.filter((r) => r.estatus === 201 && r.cuerpo?.id && !r.original);
+    const idsRescatados = new Map(rescatados.map((r) => [clave(r), r.cuerpo.estado]));
+    const procesadosPrimero = [...idsOk].filter(([k, estado]) => despues.get(k)?.estado === estado).length;
+    const procesadosReintento = [...idsRescatados].filter(([k, estado]) => despues.get(k)?.estado === estado).length;
+    const procesados = procesadosPrimero + procesadosReintento;
+    const perdidos = [...idsOk.keys(), ...idsRescatados.keys()].filter((k) => !despues.has(k)).length;
+    const estadoDistinto = [...idsOk, ...idsRescatados].filter(([k, estado]) => despues.has(k) && despues.get(k).estado !== estado).length;
+    // Fila guardada sin ningún 201 que la respalde: el cliente recibió un error
+    // (503, aborto) pero el pedido quedó en la base. Si el cliente vuelve a
+    // pedir, se duplica: se cuenta como duplicado (criterio conservador).
+    const fantasmas = nuevos.filter((k) => !idsOk.has(k) && !idsRescatados.has(k));
+    const duplicados = fantasmas.length + (ok.length - idsOk.size);
+    const reintentoMismoId = reintentos.filter((r) => r.estatus === 201 && r.cuerpo?.id === r.original).length;
+    const enviados = originales.length;
+    corrida.anomalias = {
+      filasSinRespuesta201: fantasmas,
+      estatusDeLosOriginalesSin201: contarEstatus(originales.filter((r) => r.estatus !== 201)),
+    };
+
+    corrida.conciliacion = {
+      enviados,
+      respuestas201: ok.length,
+      idsUnicos201: idsOk.size,
+      filasNuevas: nuevos.length,
+      procesados,
+      procesadosAlPrimerIntento: procesadosPrimero,
+      procesadosTrasReintento: procesadosReintento,
+      perdidos,
+      filasSinRespuesta201: fantasmas.length,
+      duplicados,
+      estadoDistinto,
+      rechazos429: originales.filter((r) => r.estatus === 429).length,
+      rechazos503: originales.filter((r) => r.estatus === 503).length,
+      reintentosEnviados: reintentos.length,
+      reintentosConMismoId: reintentoMismoId,
+    };
+    const pctProcesado = (procesados / enviados) * 100;
+    const pctDupPerd = ((duplicados + perdidos) / enviados) * 100;
+    corrida.resultado = {
+      procesadoPct: redondear(pctProcesado, 2),
+      duplicadoOPerdidoPct: redondear(pctDupPerd, 2),
+      cumple: pctProcesado >= UMBRAL_PROCESADO && pctDupPerd < UMBRAL_DUPLICADO_PERDIDO && estadoDistinto === 0,
+    };
+  }
+
+  informe.corridas.push(corrida);
+  const c = corrida;
+  console.log(`\n#${rep} · ${c.duracionS} s · ${c.rendimientoRps} resp/s · p50 ${c.latenciaMs.p50} · p95 ${c.latenciaMs.p95} · p99 ${c.latenciaMs.p99} · máx ${c.latenciaMs.max} ms · estatus ${JSON.stringify(c.estatus)}`);
+  if (c.conciliacion) {
+    const k = c.conciliacion;
+    console.log(`   enviados ${k.enviados} · 201 ${k.respuestas201} · procesados ${k.procesados} (${k.procesadosTrasReintento} tras reintento) · perdidos ${k.perdidos} · duplicados ${k.duplicados} (filas sin 201: ${k.filasSinRespuesta201}) · estado distinto ${k.estadoDistinto} · 429 ${k.rechazos429} · 503 ${k.rechazos503}`);
+    console.log(`   reintentos con la misma llave ${k.reintentosEnviados} → mismo id ${k.reintentosConMismoId}`);
+    console.log(`   procesado ${c.resultado.procesadoPct} % (umbral ≥ ${UMBRAL_PROCESADO} %) · duplicado+perdido ${c.resultado.duplicadoOPerdidoPct} % (umbral < ${UMBRAL_DUPLICADO_PERDIDO} %) → ${c.resultado.cumple ? 'CUMPLE' : 'NO CUMPLE'}`);
+  }
 }
-if (cortePorErrores) process.exitCode = 1;
+
+// ---- Agregado de las repeticiones -------------------------------------------
+const p95s = informe.corridas.map((c) => c.latenciaMs.p95);
+informe.agregado = {
+  p95MsMin: Math.min(...p95s),
+  p95MsMediana: percentil(p95s, 50),
+  p95MsMax: Math.max(...p95s),
+  rendimientoRpsMediana: percentil(informe.corridas.map((c) => c.rendimientoRps), 50),
+};
+if (fase === 'escritura') {
+  const suma = (campo) => informe.corridas.reduce((s, c) => s + c.conciliacion[campo], 0);
+  const enviados = suma('enviados');
+  informe.agregado.enviados = enviados;
+  informe.agregado.procesados = suma('procesados');
+  informe.agregado.perdidos = suma('perdidos');
+  informe.agregado.duplicados = suma('duplicados');
+  informe.agregado.estadoDistinto = suma('estadoDistinto');
+  informe.agregado.procesadoPct = redondear((informe.agregado.procesados / enviados) * 100, 2);
+  informe.agregado.duplicadoOPerdidoPct = redondear(((informe.agregado.duplicados + informe.agregado.perdidos) / enviados) * 100, 2);
+  informe.agregado.cumpleTodas = informe.corridas.every((c) => c.resultado.cumple);
+  console.log(`\nAgregado: ${enviados} pedidos · procesado ${informe.agregado.procesadoPct} % · duplicado+perdido ${informe.agregado.duplicadoOPerdidoPct} % · p95 entre corridas ${informe.agregado.p95MsMin}–${informe.agregado.p95MsMax} ms (mediana ${informe.agregado.p95MsMediana}) → ${informe.agregado.cumpleTodas ? 'CUMPLE en todas las repeticiones' : 'NO CUMPLE en al menos una repetición'}`);
+  const metricas = await llamar('/api/v1/metricas');
+  informe.metricasFinales = metricas.cuerpo;
+  console.log(`Métricas del proceso al final: ${JSON.stringify(metricas.cuerpo)}`);
+} else {
+  console.log(`\nAgregado: p95 entre corridas ${informe.agregado.p95MsMin}–${informe.agregado.p95MsMax} ms (mediana ${informe.agregado.p95MsMediana}) · fase lectura: no crea pedidos.`);
+}
+
+if (salida) {
+  mkdirSync(dirname(salida), { recursive: true });
+  writeFileSync(salida, `${JSON.stringify(informe, null, 2)}\n`);
+  console.log(`Informe JSON: ${salida}`);
+}
+if (pool) await pool.end();
+if (fase === 'escritura' && !informe.agregado.cumpleTodas) process.exitCode = 1;

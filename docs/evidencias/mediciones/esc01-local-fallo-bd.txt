@@ -1,0 +1,12 @@
+ESC-01 · medir-carga · fase escritura · 600 peticiones × 1 repeticiones · concurrencia 25
+URL base: http://localhost:3000 · versión: "local"
+Conciliación contra: postgresql · reintentos con la misma llave: 10 %
+
+#1 · 6.96 s · 94.8 resp/s · p50 85 · p95 727 · p99 1160 · máx 1240 ms · estatus {"201":454,"503":206}
+   enviados 600 · 201 411 · procesados 413 (2 tras reintento) · perdidos 0 · duplicados 2 (filas sin 201: 2) · estado distinto 0 · 429 0 · 503 189
+   reintentos con la misma llave 60 → mismo id 41
+   procesado 68.83 % (umbral ≥ 99 %) · duplicado+perdido 0.33 % (umbral < 1 %) → NO CUMPLE
+
+Agregado: 600 pedidos · procesado 68.83 % · duplicado+perdido 0.33 % · p95 entre corridas 727–727 ms (mediana 727) → NO CUMPLE en al menos una repetición
+Métricas del proceso al final: {"pedidosCreados":7365,"pagosConfirmados":0,"pedidosListos":0,"entregasValidadas":0,"pinesRechazados":0,"pinesBloqueados":0,"escriturasReintentadas":1333,"escriturasDescartadas":0,"escriturasFallidas":421,"escriturasEnColaDeFallidos":0}
+Informe JSON: ../docs/evidencias/mediciones/esc01-local-fallo-bd.json

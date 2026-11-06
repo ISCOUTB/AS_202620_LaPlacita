@@ -1,0 +1,100 @@
+{
+  "escenario": "ESC-01",
+  "fecha": "2026-11-06T19:37:22.501Z",
+  "url": "http://localhost:3000",
+  "fase": "escritura",
+  "carga": {
+    "peticiones": 600,
+    "concurrencia": 25,
+    "repeticiones": 1,
+    "calentamiento": 20,
+    "pctReintentos": 10,
+    "tiendas": [
+      "tienda-01",
+      "tienda-02",
+      "tienda-03",
+      "tienda-04",
+      "tienda-05"
+    ]
+  },
+  "fuenteConciliacion": "postgresql",
+  "umbral": {
+    "procesadoMinPct": 99,
+    "duplicadoOPerdidoMaxPct": 1
+  },
+  "version": "local",
+  "corridas": [
+    {
+      "repeticion": 1,
+      "duracionS": 6.96,
+      "rendimientoRps": 94.8,
+      "latenciaMs": {
+        "p50": 85,
+        "p95": 727,
+        "p99": 1160,
+        "max": 1240
+      },
+      "estatus": {
+        "201": 454,
+        "503": 206
+      },
+      "anomalias": {
+        "filasSinRespuesta201": [
+          "tienda-04:pedido-1361",
+          "tienda-03:pedido-1360"
+        ],
+        "estatusDeLosOriginalesSin201": {
+          "503": 189
+        }
+      },
+      "conciliacion": {
+        "enviados": 600,
+        "respuestas201": 411,
+        "idsUnicos201": 411,
+        "filasNuevas": 415,
+        "procesados": 413,
+        "procesadosAlPrimerIntento": 411,
+        "procesadosTrasReintento": 2,
+        "perdidos": 0,
+        "filasSinRespuesta201": 2,
+        "duplicados": 2,
+        "estadoDistinto": 0,
+        "rechazos429": 0,
+        "rechazos503": 189,
+        "reintentosEnviados": 60,
+        "reintentosConMismoId": 41
+      },
+      "resultado": {
+        "procesadoPct": 68.83,
+        "duplicadoOPerdidoPct": 0.33,
+        "cumple": false
+      }
+    }
+  ],
+  "agregado": {
+    "p95MsMin": 727,
+    "p95MsMediana": 727,
+    "p95MsMax": 727,
+    "rendimientoRpsMediana": 94.8,
+    "enviados": 600,
+    "procesados": 413,
+    "perdidos": 0,
+    "duplicados": 2,
+    "estadoDistinto": 0,
+    "procesadoPct": 68.83,
+    "duplicadoOPerdidoPct": 0.33,
+    "cumpleTodas": false
+  },
+  "metricasFinales": {
+    "pedidosCreados": 7365,
+    "pagosConfirmados": 0,
+    "pedidosListos": 0,
+    "entregasValidadas": 0,
+    "pinesRechazados": 0,
+    "pinesBloqueados": 0,
+    "escriturasReintentadas": 1333,
+    "escriturasDescartadas": 0,
+    "escriturasFallidas": 421,
+    "escriturasEnColaDeFallidos": 0
+  }
+}

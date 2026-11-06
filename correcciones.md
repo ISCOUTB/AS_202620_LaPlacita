@@ -1501,3 +1501,34 @@ botón de la contraseña y reapertura del carrito probados en el navegador. `npm
 | Volver al carrito tras ingresar | Sin sesión, agregar un producto, «Ingresa para hacer el pedido», ingresar: vuelve a la tienda con el carrito abierto |
 | Buscador del menú | En una tienda, escribir «limon»: aparece «Limonada natural» |
 | Descripción de productos | Un producto con descripción en el panel la muestra bajo su nombre en el menú |
+
+## Evidencia S14: medición de ESC-01 y revisión externa en arc42 §11 (06/11/2026)
+
+Qué pidió SAVIO: el resultado de la medición contrastado con el umbral del escenario y, en arc42
+§11, lo que señaló la revisión externa con su estado.
+
+- **`backend/scripts/medir-carga.js`:** pasa de esqueleto a medición completa.
+  - Repeticiones y reparto entre las cinco tiendas.
+  - Reintentos con la misma `Idempotency-Key`.
+  - Conciliación en PostgreSQL con `--bd`, o con `GET /pedidos` sin ella.
+  - Veredicto contra el umbral de arc42 §10.2 e informe JSON.
+  - Queda escrito el denominador de «procesado», que el borrador dejaba abierto.
+- **Mediciones:** carga, estrés y caída de la base en local, y lectura en producción. Salidas en
+  `docs/evidencias/mediciones/`. ESC-01 cumple con la base disponible. Con la base caída el
+  procesado baja a 68,83 % (`503`, 0 perdidos) y aparecen 2/600 filas fantasma (F-03).
+- **`evidencias-s14.md`:** reescrita con el procedimiento, el entorno, los resultados por
+  repetición y la conclusión. Se retiró el párrafo obsoleto del frontend manual que señaló el
+  revisor el 05/11.
+- **arc42 §11:** el título pasa a «Riesgos, deuda técnica y reto RES-05». La nueva §11.8 trae
+  17 señalamientos (RV-01 a RV-17) con su estado y los non-risks medidos.
+- **`aspectos.md`:** la evidencia de A-01 apunta a la medición.
+- **Azure (P-7):** el dominio legado ya no resuelve (NXDOMAIN, 06/11).
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Resultado de ESC-01 reproducible | Seguir evidencias-s14 §2.4 y comparar con `docs/evidencias/mediciones/esc01-local-carga.json` |
+| Filas fantasma de F-03 (RV-01) | Corrida C: detener PostgreSQL durante la oleada; el informe lista las filas en `anomalias.filasSinRespuesta201` |
+| Retiro de Azure | `nslookup laplacita-app.graymoss-fdd72159.canadacentral.azurecontainerapps.io 8.8.8.8` responde NXDOMAIN |
+| Estado de cada señalamiento | arc42 §11.8: cada fila dice corregido, asumido o pendiente, con su evidencia |

@@ -738,9 +738,13 @@ La trazabilidad permite comprobar que cada uno de los principales objetivos de c
 
 ---
 
-## 11. Reto RES-05 — Aislamiento estricto por establecimiento
+## 11. Riesgos, deuda técnica y reto RES-05
 
-### 11.1. Restricción asignada (corte 1)
+Esta sección junta el reto RES-05 del corte 1 (§11.1–§11.5), los modos de fallo de S11 (§11.6), las
+amenazas aceptadas de S13 (§11.7) y lo que señaló la revisión externa de S14 con su estado (§11.8).
+El detalle de los riesgos de seguridad sigue en §14.
+
+### 11.1. Restricción asignada (corte 1) — Reto RES-05, aislamiento estricto por establecimiento
 
 > **RES-05 (asignada al equipo para el corte-1):** las operaciones de catálogo, pedidos y entrega
 > deben ejecutarse **siempre en el contexto de una tienda** (`tiendaId`) y queda **prohibido** leer
@@ -828,6 +832,51 @@ del modelado de S13, con su motivo. La matriz completa está en
 | A-14: imagen válida que explota el decodificador del navegador | App / Web Cliente | 1×2 = 2 | Quien sube es el operador de su propia tienda; el antimalware está fuera de alcance |
 | A-10: `GET /metricas` pública | API Backend Central | 1×1 = 1 | Contadores agregados sin datos personales; se usa para medir ESC-01 |
 | 16 avisos moderados de `npm audit` en el frontend | Cadena de suministro | 1×1 = 1 | Solo en herramientas de lint; 0 en producción (`--omit=dev`) |
+
+### 11.8. Revisión externa y evaluación ATAM (S14)
+
+Fecha de corte: 2026-11-06. La tabla recoge dos fuentes:
+
+- **Revisor del curso:** seguimientos del 03/11 y del 05/11 en el repositorio
+  [AS_202620_feedback](https://github.com/ISCOUTB/AS_202620_feedback/tree/master/revisiones/2026-2/AS_202620_LaPlacita).
+- **ATAM ligero del equipo:** sobre ESC-01, con la medición de
+  [evidencias-s14](../evidencias/evidencias-s14.md).
+
+Al 06/11 el taller «Revisión arquitectónica entre pares» no estaba abierto en SAVIO. Lo que señalen
+los pares se agrega a esta tabla con el mismo formato y su estado.
+
+Cada señalamiento sigue la plantilla del curso: elemento, escenario, observación con evidencia y
+consecuencia. El estado es **corregido** (hay cambio verificable), **asumido** (se conoce y se decide
+no corregir, con el motivo y la condición que lo haría cambiar) o **pendiente** (se va a corregir,
+pero aún no hay cambio).
+
+| ID | Fuente | Elemento · escenario | Señalamiento | Tipo ATAM | Estado | Evidencia, motivo o acción |
+|---|---|---|---|---|---|---|
+| RV-01 | ATAM S14 (medición C) | `POST /pedidos` + persistencia · ESC-01 | Si PostgreSQL cae justo después de escribir, la confirmación se pierde (F-03). El backend responde `503` y retira el pedido de memoria, pero la fila ya está guardada: 2 de 600 pedidos. Al reiniciar el backend, esos pedidos reaparecen como `Recibido` en el historial del cliente y en el panel de la tienda. El cliente puede volver a pedir y la tienda preparar dos veces | Riesgo | **Pendiente** | [evidencias-s14 §3.3](../evidencias/evidencias-s14.md#33-c--postgresql-cae-en-pleno-pico-local-600-pedidos). Se dispara si la base cae durante un pico. Acción: al agotar los reintentos, consultar si la fila existe antes de responder `503`; si la base no responde, encolar un borrado compensatorio con secuencia mayor. Añadir una prueba que simule la confirmación perdida |
+| RV-02 | ATAM S14 (medición B) | Proceso único de Node · ESC-01 | El rendimiento se estanca en ≈ 350–390 pedidos/s. Al pasar de 25 a 100 clientes, el p95 sube de 81–138 ms a 308–438 ms, sin pérdidas ni duplicados | Punto de sensibilidad | **Asumido** | ESC-01 no fija latencia. El pico real de cinco tiendas está muy por debajo de 390 pedidos/s, y ADR-0019 mantiene una instancia. Se revisa si el p95 de creación en producción supera 1 s |
+| RV-03 | Revisor del curso (retrospectiva S11/S12, 03/11) | Idempotencia y Maps en memoria · ESC-01 | La idempotencia vive en memoria: no es durable entre reinicios ni protege varios procesos. Todo el diseño depende de una sola instancia | Compromiso: simplicidad frente a escalado horizontal | **Asumido** | Con una instancia, la medición A dio 150/150 reintentos con el mismo id y la B, 300/300. Si se agrega una segunda instancia, las claves y los contadores pasan a PostgreSQL antes (ADR-0019) |
+| RV-04 | ATAM S14 | Escenario ESC-01 (§10.2) | La medida de respuesta da porcentajes, pero el estímulo («una cantidad elevada de usuarios») no cuantifica la carga, así que «cumple» depende de la carga que se elija | Riesgo de especificación | **Asumido** | El umbral no se cambia. La medición declara su supuesto: 300 pedidos casi simultáneos con 25 clientes, más un estrés de 1000 con 100 ([evidencias-s14 §2.2](../evidencias/evidencias-s14.md#22-carga-y-repeticiones)) |
+| RV-05 | Revisor del curso (05/11) | `evidencias-s14.md` | El documento conservaba un párrafo obsoleto: frontend publicado a mano y health sin huella | — | **Corregido** | Párrafo retirado el 06/11; la versión servida queda en [evidencias-s14 §7](../evidencias/evidencias-s14.md#7-estado-de-las-puertas-del-plan-del-0311) |
+| RV-06 | Revisor del curso (05/11) | ESC-01 sobre la revisión servida | Faltaba la medición de ESC-01 | — | **Corregido** | Corridas A–C en local con PostgreSQL y D–E en producción, con procedimiento, artefactos y conclusión ([evidencias-s14 §5](../evidencias/evidencias-s14.md#5-conclusión-de-la-medición)) |
+| RV-07 | Revisor del curso (05/11) | ESC-05 · flujo móvil | Falta la medición con cinco personas en celular | — | **Pendiente** | Protocolo y regla de cálculo en [evidencias-s14 §6](../evidencias/evidencias-s14.md#6-esc-05--compra-en-celular). Se mide antes de la sustentación final |
+| RV-08 | Revisor del curso (01/11–05/11) | Despliegue Azure legado (P-7) | La URL de Azure seguía respondiendo 200 aunque ADR-0018 la retiró | — | **Corregido** | El 06/11 a las 19:42 UTC el dominio da NXDOMAIN en el DNS de la UTB y en 8.8.8.8 |
+| RV-09 | Revisor del curso (05/11) | Borde Traefik · ESC-01 y A-17 | Sin rate limit por IP (P-1) | Riesgo | **Pendiente** | [Guía P-1](../despliegue-rate-limit-traefik.md). Después de aplicarlo hay que repetir la corrida E y contar los `429` aparte |
+| RV-10 | Revisor del curso (05/11) | `JWT_SECRET` · A-22 | El procedimiento de rotación está escrito, pero no ensayado (P-4) | Riesgo | **Pendiente** | §14.2 |
+| RV-11 | Revisor del curso (05/11) | Proceso del equipo · STRIDE | La reunión STRIDE no tiene acta | — | **Pendiente** | [`sesion-stride-31-10.md`](../evidencias/sesion-stride-31-10.md) es la agenda; falta el registro |
+| RV-12 | Revisor del curso (05/11) | Aceptación funcional en producción | No hay prueba HTTP propia en producción de la compra en varias tiendas, el ciclo con PIN, la cancelación y las imágenes | — | **Pendiente** (parcial) | Ya se comprobaron la compatibilidad v1 y el historial tras reiniciar ([evidencias-s14 §8](../evidencias/evidencias-s14.md#8-aceptación-funcional-en-producción)); el resto sigue pendiente |
+| RV-13 | Revisor del curso (05/11) | Cadena de suministro del frontend | 8 avisos moderados de `npm audit`; el umbral bloqueante del CI es `high` | — | **Asumido** | §11.7: solo en herramientas de desarrollo, 0 en producción. Se revisa si alguno pasa a `high` |
+| RV-14 | ATAM S14 | Despliegue · trazabilidad | La huella servida del backend (`d7560e44995dcb5e`) no coincide con la que calcula `huella.mjs` sobre `master` en el equipo (`b4dc9fcec77ceac8`) | Riesgo de trazabilidad | **Pendiente** | Comparar con el log del último despliegue que incluyó el backend (`d481238`). Si difieren, forzar un despliegue del backend y registrar la huella |
+| RV-15 | ATAM S14 | ESC-01, tercera medida | «Estado almacenado = último estado confirmado» se midió en la creación (0 diferencias en 5100 pedidos), no en las transiciones de pago, preparación, Listo y entrega bajo carga | — | **Pendiente** | Ampliar `medir-carga.js` con una fase de transiciones usando una cuenta de tienda |
+| RV-16 | ATAM S14 (lectura de código) | Código corto A01–Z99 · ESC-01 | Hay 24 letras × 99 = 2376 códigos por tienda y día. Al agotarse, `POST /pedidos` falla con «No hay códigos de pedido libres» (`backend/src/modules/pedidos/codigo.js`) | Punto de sensibilidad | **Asumido** | Una tienda de La Placita no se acerca a 2376 pedidos diarios. En las mediciones cada tienda llegó a ≈ 1400 en un día sin agotar los códigos |
+| RV-17 | Revisor del curso (05/11) | Dependencias | Siguen abiertos 10 PR de Dependabot (#16, #17, #20, #21, #23, #25–#28, #30) | — | **Pendiente** | Revisar e integrar o cerrar con motivo antes del tag final |
+
+**Non-risks medidos (ATAM).** Son decisiones que la medición confirma y no necesitan acción:
+
+- **Idempotencia** (ADR-0019, S11): 491 reintentos con la misma llave y la base disponible
+  devolvieron el mismo id. No hubo ningún duplicado por reintento.
+- **Creación confirmada** (ADR-0026): de 5100 pedidos locales, ninguno recibió `201` sin quedar en
+  PostgreSQL. Con la base caída el sistema respondió `503`, no prometió el pedido.
+- **Orden de escrituras** (cola FIFO, S11): 0 diferencias entre el estado devuelto y el guardado.
 
 ---
 

@@ -1,122 +1,321 @@
-# Evidencias S14 — medición y aceptación del sistema
+# Evidencias S14 — Medición de ESC-01 contra su umbral
 
-Semana 14 · **Evaluación y aptitud arquitectónica** · 2026-11-03
+Semana 14 · **Evaluación y aptitud arquitectónica** · medición del 2026-11-06
 
-> Borrador de seguimiento. No contiene resultados de producción todavía. Completar cada
-> medición con hora, entorno, commit servido, comando, salida íntegra y limitaciones observadas.
+Qué pide la evidencia (SAVIO, «Evidencia S14 — Medición de atributos de calidad»): el resultado de
+la medición contrastado con el umbral del escenario, y la incorporación a arc42 §11 de lo que señaló
+la revisión externa. Este documento cubre la medición (§1–§6). Lo señalado por la revisión y su
+estado está en [arc42 §11.8](../arc42/arc42-template-EN.md#118-revisión-externa-y-evaluación-atam-s14),
+y la fila A-01 de [`aspectos.md`](../aspectos.md) apunta aquí.
 
-## 1. Estado y alcance
+## 1. Escenario medido y umbral
 
-La revisión diaria del repositorio de feedback del 03/11 reporta integrados los PR #34–36:
-acceso del personal al panel, pedidos con varios productos por tienda y cancelación lógica.
-El feedback reporta el CI de `d2fd2cd` aprobado (161 pruebas pasan, 1 omitida, contrato 34/34,
-lint/build, auditoría/SBOM y Sonar). Este dato proviene del seguimiento; no se vuelve a ejecutar
-ni se presenta aquí como verificación independiente.
+Se midió **ESC-01 — Picos de demanda entre clases**, el único escenario marcado Alta importancia /
+Alta dificultad en el árbol de utilidad (arc42 §10.1). Es el (A,A) que ATAM manda mirar primero.
+El umbral se toma **tal como está en arc42 §10.2 desde S2**, sin cambios:
 
-La evidencia S14 debe cerrar las dos mediciones del plan:
-
-| Escenario | Medición esperada | Umbral | Estado |
-|---|---|---|---|
-| ESC-01 | Pico de carga sobre pedidos, contrastado con la cola de escrituras y la DLQ | ≥99 % procesado; <1 % duplicado o perdido | Pendiente de rate limit y ejecución autorizada |
-| ESC-05 | Compra cronometrada con cinco personas en celular | Aproximadamente 2 minutos, según arc42 §10.2 | Pendiente de ejecución y registro |
-
-## 2. Puertas previas a la prueba de producción
-
-| Puerta | Evidencia que se debe adjuntar | Estado al 03/11 |
+| Medida de respuesta (arc42 §10.2) | Umbral | Cómo se mide aquí |
 |---|---|---|
-| Retirar o mitigar el despliegue Azure legado (P-7) | Acción desde la cuenta Azure y comprobación externa de que la URL antigua deja de servir | Pendiente según feedback diario |
-| Revisar STRIDE y las decisiones propuestas ADR-0032–0036 | Fecha, asistentes, acuerdos y cambios de estado acordados por el equipo | Pendiente de registrar la reunión del 03/11 |
-| Aplicar rate limit y límite de cuerpo en Traefik (P-1) | Valores efectivos en ambos dominios, respuestas de borde y flujo normal/subida de imagen | Pendiente; seguir [`guía P-1`](../despliegue-rate-limit-traefik.md) |
-| Ensayar rotación de `JWT_SECRET` (P-4) | Hora, procedimiento, invalidación de sesión anterior y login nuevo verificado | Pendiente; el procedimiento escrito no acredita el ensayo |
-| Identificar las versiones desplegadas | SHA de backend y frontend confirmado en Dokploy; guardar el run y el log del despliegue | Mecanismo implementado el 04/11: `deploy-dokploy.yml` despliega backend y frontend y espera a que `/api/v1/health` y `/api/version` devuelvan la huella del commit. Falta enlazar aquí el primer run en verde |
+| Solicitudes de pedido procesadas correctamente | **≥ 99 %** | `procesados / enviados` |
+| Pedidos duplicados o perdidos | **< 1 %** | `(duplicados + perdidos) / enviados` |
+| Estado almacenado = último estado confirmado | 0 diferencias | Estado guardado frente al estado que devolvió el `201` |
 
-El workflow comprueba que el webhook de Dokploy responda HTTP 200 y luego consulta `/api/v1/health`.
-Ese health check solo devuelve `{"status":"ok"}`; por sí solo no identifica el SHA que está
-sirviendo. Anotar el commit que muestra el despliegue de Dokploy y el despliegue manual del frontend.
-Desplegar primero el backend y después el frontend para mantener la compatibilidad del contrato.
+El escenario no cuantifica la carga («una cantidad elevada de usuarios»), así que el perfil de carga
+de §2.2 es un **supuesto de la medición**, no un umbral nuevo. Queda registrado en arc42 §11.8 (RV-04).
 
-No ejecutar la fase de escritura de `medir-carga.js` antes de aplicar P-1. Después de aplicar P-1,
-confirmar que el perfil de límite acordado permite la carga de prueba: los 429 del borde deben
-contabilizarse por separado y no confundirse con errores de persistencia o con pedidos duplicados.
-Si hay que ajustar temporalmente el límite para la prueba, registrar el cambio, su autorización y
-la restauración del valor de producción.
+### 1.1 Definiciones (denominador de «procesado»)
 
-`medir-carga.js` ahora registra IDs de respuestas 201, toma snapshots de `GET /api/v1/pedidos` con
-la cuenta de prueba y compara los IDs nuevos; además informa deltas de `pedidosCreados`, reintentos,
-escrituras descartadas/fallidas y tamaño de la DLQ antes/después. La fase de escritura no calcula
-automáticamente cumple/no cumple: el equipo debe acordar el denominador de «procesado» y separar los
-429 intencionales del borde. Usar una cuenta exclusiva, sin compras paralelas, y no reiniciar el
-backend entre snapshots porque los contadores de `/api/v1/metricas` viven en memoria y son
-globales al proceso: tráfico concurrente de otras cuentas puede contaminar sus deltas. Registrar
-esa limitación y realizar la corrida en una ventana tranquila.
+El borrador del 03/11 dejaba abierto el denominador. Quedó así, y el script lo calcula solo:
 
-## 3. Medición ESC-01 — carga e integridad de pedidos
+- **Enviado:** cada pedido lógico que el cliente intenta crear (los reintentos con la misma llave no
+  suman al denominador).
+- **Procesado:** el pedido recibió `201` con su id, **y** ese id aparece guardado con el mismo estado
+  que devolvió la respuesta. Si el primer intento falló y el reintento con la misma
+  `Idempotency-Key` obtuvo `201`, cuenta como procesado tras reintento.
+- **No procesado:** cualquier otra salida: `429` del borde, `503` de la base, `4xx`, `5xx`, abortos.
+  Se informan aparte; los `429` no se mezclan con los `503`.
+- **Perdido:** recibió `201`, pero el pedido no está guardado.
+- **Duplicado:** fila nueva de la cuenta de carga que no corresponde a ningún `201`, o el mismo id
+  devuelto a dos pedidos distintos. Incluye la fila que quedó guardada aunque el cliente recibió un
+  error: si el cliente vuelve a pedir, ese pedido se duplica (criterio conservador).
 
-Completar tras ejecutar en una ventana acordada, con una cuenta de prueba y con P-1 activo.
+## 2. Procedimiento
 
-| Dato | Resultado |
-|---|---|
-| Fecha/hora local (COT) y responsables | Pendiente |
-| URL y SHA del backend servido | Pendiente |
-| Versión de rate limit efectiva | Pendiente |
-| Comando, peticiones y concurrencia | Pendiente |
-| Duración, rendimiento, p50/p95/p99 | Pendiente |
-| Respuestas 2xx / 4xx / 5xx / 429 de borde | Pendiente |
-| Pedidos enviados, confirmados y únicos | Pendiente |
-| Cola y DLQ antes/después (`/api/v1/metricas`) | Pendiente |
-| Porcentaje procesado, duplicado y perdido | Pendiente |
-| Umbral y resultado (cumple/no cumple) | Pendiente |
-| Limitaciones, artefactos y salida íntegra | Pendiente |
+### 2.1 Herramienta
 
-Comando base: `node scripts/medir-carga.js --url <URL> --fase escritura --peticiones <N> --concurrencia <C>`
-desde `backend/`. Las credenciales se leen de variables de entorno o argumentos locales; nunca se
-registran en esta evidencia.
+[`backend/scripts/medir-carga.js`](../../backend/scripts/medir-carga.js), versionado (Node ≥ 22, sin
+dependencias nuevas; usa `pg`, que ya es del backend). Por cada repetición:
 
-## 4. Medición ESC-05 — compra en celular
+1. Lee los pedidos de la cuenta de carga **antes** (en PostgreSQL con `--bd`, o con `GET /api/v1/pedidos`).
+2. Lanza `--peticiones` creaciones `POST /api/v1/pedidos` con `--concurrencia` clientes en lazo
+   cerrado (cada cliente pide, espera la respuesta y vuelve a pedir), repartidas en round-robin entre
+   las cinco tiendas, con el primer producto disponible de cada una y una `Idempotency-Key` única.
+3. Al `--reintentos` % de los pedidos le reenvía la misma petición con la misma llave, como un celular
+   que no recibió la respuesta.
+4. Lee los pedidos **después** y concilia: procesados, perdidos, duplicados y estado distinto.
+5. Imprime p50/p95/p99/máx, rendimiento y estatus, y escribe el informe JSON (`--salida`).
 
-Registrar cinco recorridos reales desde la consulta del menú hasta la confirmación del pedido.
-Usar el mismo alcance en todos los intentos y excluir el tiempo externo de procesamiento de pago,
-como indica arc42 §10.2.
+Antes de la primera repetición hace 20 lecturas de calentamiento que no se cuentan. El código de
+salida es `1` si alguna repetición no cumple.
 
-| Participante anonimizado | Dispositivo/ancho | Tiempo | Completó sin ayuda | Errores o fricción |
+### 2.2 Carga y repeticiones
+
+| Corrida | Objetivo (perfil) | Peticiones × repeticiones | Concurrencia | Reintentos con la misma llave |
 |---|---|---|---|---|
-| P1 | Pendiente | Pendiente | Pendiente | Pendiente |
-| P2 | Pendiente | Pendiente | Pendiente | Pendiente |
-| P3 | Pendiente | Pendiente | Pendiente | Pendiente |
-| P4 | Pendiente | Pendiente | Pendiente | Pendiente |
-| P5 | Pendiente | Pendiente | Pendiente | Pendiente |
+| A · carga | ¿Cumple con un pico entre clases? (load) | 300 × 5 = 1500 | 25 clientes | 10 % (150) |
+| B · estrés | ¿Dónde se degrada? (stress) | 1000 × 3 = 3000 | 100 clientes | 10 % (300) |
+| C · fallo de la base | ¿Qué pasa si PostgreSQL cae en pleno pico? (F-03/F-04) | 600 × 1 | 25 clientes | 10 % (60) |
+| D · producción, lectura | Latencia del despliegue real (sin crear datos) | 200 × 3 = 600 lecturas | 10 clientes | — |
+| E · producción, escritura | El mismo criterio de A sobre el despliegue | 100 × 3 = 300 | 25 clientes | 10 % (30) |
 
-Resultado agregado, regla de cálculo y contraste con el umbral: pendiente.
+Supuesto de la carga A: un pico de 300 pedidos que llegan casi a la vez (25 personas pidiendo sin
+pausa) es más exigente que 5–10 minutos de cambio de clase en las cinco tiendas; si el sistema cumple
+así, cumple con el pico real. La B multiplica por cuatro la concurrencia para encontrar el punto de
+saturación.
 
-## 5. Aceptación funcional en el entorno desplegado
+### 2.3 Entorno
 
-Registrar pasos, SHA, resultado y evidencia sin publicar datos personales ni PIN reales.
+| Corridas | Entorno | Detalle |
+|---|---|---|
+| A, B, C | **Local**, declarado | Portátil AMD Ryzen 5 7520U (8 hilos), 15,3 GB, Windows 11. Backend `next start` 16.4.2 en modo producción (un proceso), PostgreSQL 18.6 local en el puerto 55432, `pg` 8.23.1, Node 24.15.0. Cliente y servidor en la misma máquina: no hay latencia de red. Base nueva, creada para la medición. Conciliación directa en PostgreSQL (`--bd`) |
+| D | **Desplegado** (Dokploy, servidor de la UTB) | `https://laplacita-test.iscoutb.dev`, huella servida `d7560e44995dcb5e` en `/api/v1/health`. Cliente: el mismo portátil en la red de la universidad |
+| E | **Desplegado** | Misma URL. Conciliación con `GET /api/v1/pedidos` de la cuenta de carga, que lee la memoria del proceso (no hay acceso a la base desde fuera). Ver §4 |
+
+El código medido en local es el de `master` (`b37f29e`) más este script. La huella servida en
+producción no coincide con la que calcula `huella.mjs` sobre `master` en este equipo
+(`b4dc9fcec77ceac8`): el último despliegue con backend fue el de `d481238` y el run sobre `b37f29e`
+omitió el backend porque no cambió. Se registra el valor servido tal cual; aclarar la diferencia
+queda en arc42 §11.8 (RV-14).
+
+### 2.4 Reproducción
+
+Desde `backend/`:
+
+```bash
+# PostgreSQL local de prueba (no toca otra instancia)
+initdb -D <scratch>/pgdata -U laplacita --auth=trust -E UTF8
+pg_ctl -D <scratch>/pgdata -o "-p 55432" start
+createdb -h localhost -p 55432 -U laplacita laplacita
+
+npm run build
+DATABASE_URL=postgresql://laplacita@localhost:55432/laplacita JWT_SECRET=<32+ caracteres> npx next start -p 3000
+```
+
+```bash
+export DATABASE_URL=postgresql://laplacita@localhost:55432/laplacita CARGA_CORREO=<correo @utb.edu.co de prueba> CARGA_CONTRASENA=<contraseña de prueba>
+node scripts/medir-carga.js --url http://localhost:3000 --fase escritura --peticiones 300 --concurrencia 25 --repeticiones 5 --reintentos 10 --tiendas tienda-01,tienda-02,tienda-03,tienda-04,tienda-05 --bd --registrar --salida ../docs/evidencias/mediciones/esc01-local-carga.json
+```
+
+Corrida C: la misma orden con `--peticiones 600 --repeticiones 1`, y a los 0,8 s, en otra terminal,
+`pg_ctl -D <scratch>/pgdata -m immediate stop`; 4 s después, `pg_ctl … start`.
+
+Las credenciales se pasan por variables de entorno y no aparecen en la salida ni en el informe.
+
+### 2.5 Artefactos versionados
+
+Carpeta [`docs/evidencias/mediciones/`](mediciones/): un `.json` (informe completo por repetición,
+con anomalías) y un `.txt` (salida íntegra de la consola) por corrida.
+
+| Corrida | Informe | Salida |
+|---|---|---|
+| A | [`esc01-local-carga.json`](mediciones/esc01-local-carga.json) | [`esc01-local-carga.txt`](mediciones/esc01-local-carga.txt) |
+| B | [`esc01-local-estres.json`](mediciones/esc01-local-estres.json) | [`esc01-local-estres.txt`](mediciones/esc01-local-estres.txt) |
+| C | [`esc01-local-fallo-bd.json`](mediciones/esc01-local-fallo-bd.json) | [`esc01-local-fallo-bd.txt`](mediciones/esc01-local-fallo-bd.txt) |
+| D | [`esc01-produccion-lectura.json`](mediciones/esc01-produccion-lectura.json) | [`esc01-produccion-lectura.txt`](mediciones/esc01-produccion-lectura.txt) |
+| E | [`esc01-produccion-escritura.json`](mediciones/esc01-produccion-escritura.json) | — |
+
+## 3. Resultados y contraste con el umbral
+
+### 3.1 A · carga (local, 5 repeticiones de 300 pedidos, 25 clientes)
+
+| Rep. | Duración | Resp/s | p50 | p95 | p99 | Máx | Procesado | Dup. + perdido | Estado distinto | ¿Cumple? |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| 1 | 0,97 s | 341,6 | 69 ms | 138 ms | 174 ms | 187 ms | 300/300 (100 %) | 0 (0 %) | 0 | Sí |
+| 2 | 0,87 s | 378,7 | 67 ms | 87 ms | 94 ms | 100 ms | 300/300 (100 %) | 0 (0 %) | 0 | Sí |
+| 3 | 0,84 s | 394,3 | 66 ms | 83 ms | 95 ms | 103 ms | 300/300 (100 %) | 0 (0 %) | 0 | Sí |
+| 4 | 0,85 s | 389,6 | 68 ms | 81 ms | 92 ms | 100 ms | 300/300 (100 %) | 0 (0 %) | 0 | Sí |
+| 5 | 0,88 s | 373,6 | 68 ms | 97 ms | 100 ms | 112 ms | 300/300 (100 %) | 0 (0 %) | 0 | Sí |
+| **Total** | | mediana 378,7 | | **81–138 ms** (mediana 87) | | | **1500/1500 (100 %)** | **0 (0 %)** | **0** | **Sí, en las 5** |
+
+Los 150 reintentos con la misma `Idempotency-Key` devolvieron el mismo id (150/150): ningún reintento
+creó otra fila. La primera repetición es la más lenta (p95 138 ms frente a 81–97 ms): es el
+calentamiento del pool de conexiones y de las rutas, y por eso se informa la dispersión y no un solo número.
+
+La corrida A se ejecutó dos veces porque la primera no guardó la salida de la consola. La primera
+también cumplió en las 5 repeticiones (p95 77–157 ms, 1500/1500). Se reporta la segunda, que es la
+que tiene los artefactos completos.
+
+**Conclusión A: cumple.** 100 % procesado frente a ≥ 99 %, 0 % duplicado o perdido frente a < 1 %,
+0 diferencias de estado; en las cinco repeticiones, en local y con la base disponible.
+
+### 3.2 B · estrés (local, 3 repeticiones de 1000 pedidos, 100 clientes)
+
+| Rep. | Duración | Resp/s | p50 | p95 | p99 | Máx | Procesado | Dup. + perdido | ¿Cumple? |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| 1 | 3,13 s | 351,6 | 284 ms | 438 ms | 533 ms | 560 ms | 1000/1000 | 0 | Sí |
+| 2 | 2,84 s | 387,9 | 276 ms | 308 ms | 426 ms | 456 ms | 1000/1000 | 0 | Sí |
+| 3 | 2,82 s | 390,0 | 273 ms | 329 ms | 403 ms | 430 ms | 1000/1000 | 0 | Sí |
+
+Con cuatro veces más clientes el rendimiento no sube (≈ 350–390 resp/s, igual que en A): el proceso
+único de Node ya estaba saturado. Lo que crece es la latencia (p50 de ≈ 67 a ≈ 275 ms): los pedidos
+esperan en la cola del event loop y de la cola de escrituras, pero **ninguno se pierde ni se duplica**.
+
+**Conclusión B: cumple** el umbral de integridad con 3000 pedidos. El punto de sensibilidad es la
+concurrencia frente a la latencia en un solo proceso; ESC-01 no fija un umbral de latencia, así que
+esto se registra como palanca y no como incumplimiento (arc42 §11.8, RV-02).
+
+### 3.3 C · PostgreSQL cae en pleno pico (local, 600 pedidos)
+
+PostgreSQL se detuvo con `-m immediate` a los 0,8 s de empezar y volvió unos 5,6 s después.
+
+| Dato | Valor |
+|---|---|
+| Duración, rendimiento | 6,96 s · 94,8 resp/s |
+| Latencia | p50 85 ms · p95 727 ms · p99 1160 ms · máx 1240 ms |
+| Estatus de los 600 pedidos originales | 411 `201` · 189 `503` (con `Retry-After: 5`) |
+| Procesados | **413/600 = 68,83 %** (411 al primer intento + 2 rescatados por su reintento) |
+| Perdidos (201 sin fila) | **0** |
+| Duplicados | **2** (0,33 %): filas guardadas cuyo cliente recibió `503` |
+| Estado distinto | 0 |
+| Reintentos con la misma llave | 60 → 41 con el mismo id; el resto, `503` mientras la base seguía caída |
+| Métricas del proceso | `escriturasReintentadas` +658, `escriturasFallidas` +206, DLQ al final: 0 |
+
+**Conclusión C: no cumple** el umbral de procesado (68,83 % frente a ≥ 99 %) mientras la base está
+caída, y **sí cumple** el de duplicados o perdidos (0,33 % frente a < 1 %). Es la respuesta que
+diseñó ADR-0026: sin base no se promete el pedido, se responde `503` y el cliente sabe que debe
+reintentar; no hay ningún `201` sin fila.
+
+Los 2 duplicados son el modo de fallo **F-03 de S11 («escritura aplicada, confirmación perdida»)**,
+ahora medido. En el log del backend, `tienda-04/pedido-1361` quedó con `actualizado_en`
+14:37:23.347 en PostgreSQL y el `ECONNRESET` llegó a las 14:37:23.370: la fila se escribió, la
+confirmación no volvió, los reintentos chocaron con la base caída y la creación respondió `503`.
+Se comprobó qué pasa después: al reiniciar el backend, la rehidratación carga las 6953 filas de la
+cuenta de carga (las mismas que hay en PostgreSQL: 0 pérdidas entre reinicios) y **los dos pedidos
+«fallidos» reaparecen como `Recibido`** en el historial del cliente y en el panel de la tienda.
+Queda como riesgo RV-01 en arc42 §11.8, con la condición de disparo y la acción.
+
+Una primera ejecución de C se descartó: el pool de conexiones **del script** no tenía manejador de
+errores y la caída de la base tumbó la medición, no el backend (el backend siguió respondiendo
+`/api/v1/health`). Se corrigió el script (`pool.on('error')`) y se repitió la corrida completa.
+
+### 3.4 D · producción, lectura del catálogo (desplegado)
+
+| Rep. | Duración | Resp/s | p50 | p95 | p99 | Máx | Estatus |
+|---:|---:|---:|---:|---:|---:|---:|---|
+| 1 | 3,16 s | 63,4 | 136 ms | 411 ms | 441 ms | 445 ms | 200 × 200 |
+| 2 | 2,92 s | 68,5 | 138 ms | 155 ms | 176 ms | 458 ms | 200 × 200 |
+| 3 | 2,89 s | 69,3 | 137 ms | 150 ms | 154 ms | 431 ms | 200 × 200 |
+
+p95 entre corridas 150–411 ms (mediana 155 ms). La primera repetición paga el establecimiento de
+TLS y de las conexiones. No es un umbral de ESC-01 (que no fija latencia); sirve para saber cuánto
+del tiempo en producción es red: el p50 local de A es ≈ 67 ms con escritura en la base, y el p50 de
+una lectura en producción ya es ≈ 137 ms.
+
+### 3.5 E · producción, escritura
+
+300/300 procesados, 0 duplicados ni perdidos: **cumple**. El detalle está en §4.1.
+
+## 4. Medición sobre el entorno desplegado (escritura)
+
+La corrida E crea pedidos reales en las cinco tiendas de producción con una cuenta de prueba. La
+ejecuta el equipo desde su terminal, porque la cuenta y su contraseña no se escriben en el
+repositorio ni las maneja la herramienta de IA:
+
+```bash
+node scripts/medir-carga.js --url https://laplacita-test.iscoutb.dev --fase escritura --peticiones 100 --concurrencia 25 --repeticiones 3 --reintentos 10 --tiendas tienda-01,tienda-02,tienda-03,tienda-04,tienda-05 --registrar --salida ../docs/evidencias/mediciones/esc01-produccion-escritura.json
+```
+
+Límites de esta corrida, declarados de antemano:
+
+- **Sin acceso a la base**: la conciliación usa `GET /api/v1/pedidos` de la cuenta, que lee la
+  memoria del proceso. Un `201` que no llegó a PostgreSQL no se detectaría aquí; esa garantía la
+  mide la corrida A con `--bd` y la sostiene ADR-0026 (la respuesta espera la confirmación de la base).
+- **Sin rate limit** (P-1 no está aplicado en Traefik): no habrá `429` del borde. Si P-1 se activa,
+  hay que repetir E y contar los `429` aparte.
+- Los contadores de `/api/v1/metricas` son globales al proceso: el tráfico real de esa ventana
+  podría mezclarse con las métricas, no con la conciliación (que filtra por la cuenta de carga).
+- Después de la medición, los pedidos de prueba se retiran desde el panel de cada tienda (ADR-0033:
+  se ocultan sin borrar la fila).
+
+### 4.1 Resultado (2026-11-06, 14:50 COT, huella servida `d7560e44995dcb5e`)
+
+El equipo ejecutó la corrida desde su portátil, en la red de la universidad. Informe completo:
+[`esc01-produccion-escritura.json`](mediciones/esc01-produccion-escritura.json).
+
+| Rep. | Duración | Resp/s | p50 | p95 | p99 | Máx | Procesado | Dup. + perdido | Estado distinto | Reintentos → mismo id | ¿Cumple? |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| 1 | 3,87 s | 28,4 | 708 ms | 2056 ms | 2070 ms | 2073 ms | 100/100 | 0 | 0 | 10/10 | Sí |
+| 2 | 1,42 s | 77,3 | 196 ms | 314 ms | 323 ms | 432 ms | 100/100 | 0 | 0 | 10/10 | Sí |
+| 3 | 0,91 s | 120,3 | 178 ms | 221 ms | 228 ms | 229 ms | 100/100 | 0 | 0 | 10/10 | Sí |
+| **Total** | | mediana 77,3 | | **221–2056 ms** (mediana 314) | | | **300/300 (100 %)** | **0 (0 %)** | **0** | **30/30** | **Sí, en las 3** |
+
+Ninguna respuesta fue `429` ni `503`. Las métricas del proceso al final muestran 0 escrituras
+reintentadas, fallidas o descartadas, y la DLQ vacía. `pedidosCreados` = 301: los 300 de la
+medición más 1 pedido real de la misma ventana, lo que confirma que el proceso se había reiniciado
+poco antes y que el tráfico real casi no interfirió.
+
+La primera repetición es mucho más lenta (p95 2056 ms frente a 221–314 ms). Paga el arranque en
+frío: el backend se había reiniciado, así que las rutas, el pool de PostgreSQL y las conexiones TLS
+se crearon en ese momento. Por eso se informa la dispersión y no un único número. El orden de
+magnitud frente a local (p95 ≈ 87 ms) se explica por la red y el servidor compartido del laboratorio.
+
+**Conclusión E: cumple.** 100 % procesado frente a ≥ 99 % y 0 % duplicado o perdido frente a < 1 %,
+en el entorno desplegado, con la limitación de que la conciliación lee la memoria del proceso y no
+la base.
+
+## 5. Conclusión de la medición
+
+| Condición | Procesado (≥ 99 %) | Duplicado o perdido (< 1 %) | Estado = confirmado | Veredicto |
+|---|---|---|---|---|
+| Pico de 300 pedidos, 25 clientes, base disponible (A, ×5) | 100 % | 0 % | 0 diferencias | **Cumple** |
+| 1000 pedidos, 100 clientes, base disponible (B, ×3) | 100 % | 0 % | 0 diferencias | **Cumple** (p95 sube a 308–438 ms) |
+| Base caída ≈ 5,6 s en pleno pico (C) | 68,83 % | 0,33 % | 0 diferencias | **No cumple** el procesado; sí el de duplicados |
+| **Producción**, 100 pedidos × 3, 25 clientes (E) | 100 % | 0 % | 0 diferencias | **Cumple** (p95 221–2056 ms, primera repetición en frío) |
+
+**ESC-01 cumple bajo esta condición:** un solo proceso del backend con PostgreSQL disponible. En
+producción se comprobó con 300 pedidos y 25 clientes simultáneos; en local, hasta 100 clientes y
+≈ 390 pedidos por segundo. Si la base cae,
+el sistema elige no prometer pedidos (`503`) antes que perderlos; el umbral de procesado se incumple
+durante la caída y la integridad se conserva salvo la ventana F-03, que produjo 2 de 600 filas que
+el cliente cree fallidas.
+
+Límites de validez: A, B y C son locales (sin red entre cliente y servidor, máquina distinta al
+servidor de Dokploy). La tercera medida del escenario («estado almacenado = último estado
+confirmado») se comprobó para la creación; las transiciones posteriores (pago, preparación, Listo,
+entrega) bajo carga no se midieron y quedan como pendiente RV-15 de arc42 §11.8.
+
+## 6. ESC-05 — compra en celular
+
+La entrega de S14 pide la medición del escenario prioritario, que es ESC-01. ESC-05 (Media/Baja)
+necesita cinco personas cronometradas en celular y no se ejecutó en esta semana; queda como pendiente
+RV-07 en arc42 §11.8, con el protocolo ya escrito:
+
+| Participante | Dispositivo/ancho | Tiempo (menú → confirmación, sin pasarela) | Sin ayuda | Fricción |
+|---|---|---|---|---|
+| P1–P5 | Pendiente | Pendiente | Pendiente | Pendiente |
+
+Regla de cálculo: cumple si la mediana de los cinco tiempos es ≤ 2 min y ninguno necesitó ayuda.
+
+## 7. Estado de las puertas del plan del 03/11
+
+| Puerta | Estado al 06/11 | Evidencia |
+|---|---|---|
+| Retirar Azure (P-7) | **Hecho**: el dominio `laplacita-app.graymoss-fdd72159.canadacentral.azurecontainerapps.io` ya no existe (NXDOMAIN en el DNS de la UTB y en 8.8.8.8, 2026-11-06 19:42 UTC) | Comprobación con `nslookup` y `curl` del 06/11 |
+| Identificar la versión servida | **Hecho**: `deploy-dokploy.yml` despliega backend y frontend y espera la huella del commit en `/api/v1/health` y `/api/version` (run 41892183494 sobre `b37f29e`, frontend `8da2de19d55f25ed`). Backend servido el 06/11: `d7560e44995dcb5e` | §2.3; run del 04/11 |
+| Rate limit en Traefik (P-1) | Pendiente | [guía P-1](../despliegue-rate-limit-traefik.md); arc42 §11.8 RV-09 |
+| Ensayo de rotación de `JWT_SECRET` (P-4) | Pendiente | arc42 §14.2 |
+| Registro de la sesión STRIDE | Pendiente | [`sesion-stride-31-10.md`](sesion-stride-31-10.md) |
+
+El párrafo del borrador que decía que el frontend se desplegaba a mano y que el health no
+identificaba el commit quedó obsoleto con el PR #37 y se retiró.
+
+## 8. Aceptación funcional en producción
 
 | Caso | Verificación | Resultado |
 |---|---|---|
-| Compra en varias tiendas | Un pedido/código por tienda y todos los productos de esa tienda agrupados | Pendiente |
-| Compatibilidad v1 | Crear pedido con `productoId` y `cantidad` sin `items[]` | Pendiente |
-| Ciclo del pedido | Pago, preparación, Listo y entrega con un solo PIN para el pedido agrupado | Pendiente |
-| Cancelación | Admin puede cancelar; caja no puede; entregado no se cancela; fila se conserva | Pendiente |
-| Aislamiento | Una tienda no consulta ni muta pedidos/productos de otra | Pendiente |
-| Historial del cliente | Pedido cancelado y pedidos anteriores siguen visibles correctamente | Pendiente |
-
-## 6. Hallazgos de revisión entre pares
-
-Registrar cada hallazgo, sección de arc42 afectada, decisión del equipo (corregir, aceptar o
-posponer), responsable y vínculo a la evidencia. No borrar hallazgos por no corregirlos.
-
-| Hallazgo | Decisión | Responsable/fecha | Evidencia |
-|---|---|---|---|
-| Pendiente de la revisión entre pares S14 | Pendiente | Pendiente | Pendiente |
-
-## 7. Cierre
-
-| Criterio | Estado |
-|---|---|
-| ESC-01 medido y contrastado | Pendiente |
-| ESC-05 medido con cinco personas | Pendiente |
-| Prueba funcional backend/frontend con SHA identificado | Pendiente |
-| Hallazgos de revisión entre pares incorporados en arc42 §11 | Pendiente |
-| Ratificación de ADR-0032, ADR-0033 y ADR-0034 (ADR-0036) | Aceptada; registrada en ADR-0036 el 2026-11-04 |
-
+| Compra en varias tiendas | Un pedido/código por tienda con todos sus productos | Pendiente (RV-12) |
+| Compatibilidad v1 | `POST /pedidos` con `productoId` y `cantidad`, sin `items[]` | **Cumple**: es la forma que usan las corridas A, B, C y E (`201` en todas las respuestas con base disponible) |
+| Ciclo del pedido | Pago, preparación, Listo y entrega con un PIN | Pendiente (RV-12) |
+| Cancelación | Admin cancela; caja no; entregado no; la fila se conserva | Pendiente (RV-12) |
+| Aislamiento | Una tienda no ve ni muta pedidos de otra | Medición histórica 0/300 (arc42 §11.4) |
+| Historial del cliente | Los pedidos siguen visibles tras reiniciar | **Cumple**: 6953/6953 pedidos de la cuenta de carga visibles tras reiniciar el backend local (§3.3) |
