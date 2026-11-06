@@ -10,7 +10,7 @@ export interface Usuario {
   id: string
   correo: string
   nombre: string
-  rol: "cliente" | "trabajador" | "admin"
+  rol: "cliente" | "trabajador" | "admin" | "superadmin"
   tiendaId?: string | null
 }
 

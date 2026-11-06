@@ -13,7 +13,7 @@ export function BarraInferior() {
 
 export function BarraInferiorVista({ ruta }: { ruta: string }) {
   // El panel de tienda (/panel) es otra experiencia: sin la navegación del cliente.
-  if (ruta.startsWith("/panel")) return null
+  if (ruta.startsWith("/panel") || ruta.startsWith("/admin")) return null
   return (
     <nav
       aria-label="Navegación principal"

@@ -1532,3 +1532,35 @@ Qué pidió SAVIO: el resultado de la medición contrastado con el umbral del es
 | Filas fantasma de F-03 (RV-01) | Corrida C: detener PostgreSQL durante la oleada; el informe lista las filas en `anomalias.filasSinRespuesta201` |
 | Retiro de Azure | `nslookup laplacita-app.graymoss-fdd72159.canadacentral.azurecontainerapps.io 8.8.8.8` responde NXDOMAIN |
 | Estado de cada señalamiento | arc42 §11.8: cada fila dice corregido, asumido o pendiente, con su evidencia |
+
+## Administración general en /admin (06/11/2026)
+
+Panel nuevo para la persona que administra LaPlacita entera, no una sola tienda
+([ADR-0037](docs/adr/0037-administracion-general.md)).
+
+- **Quién entra:** las cuentas cuyos correos están en `ADMINS_GENERALES` (variable del backend en
+  Dokploy). La cuenta se registra normal en la app; el rol no se guarda en la base.
+- **Resumen:** pedidos activos, de hoy y ventas por tienda, y cuentas por rol.
+- **Pedidos:** las cinco tiendas juntas, con filtros por tienda, estado, cuenta y texto.
+  - Por pedido: confirmar pago, marcar listo y eliminar.
+  - En lote: eliminar los pedidos seleccionados.
+  - **Eliminar pedidos de prueba:** se elige una cuenta y se retiran todos sus pedidos activos de una
+    vez. Se ocultan sin borrar la fila (ADR-0033).
+- **Cuentas:** todas las registradas.
+  - Cambiar nombre, rol (cliente, cajero o admin de una tienda) y tienda.
+  - Poner una contraseña nueva.
+  - Ver sus pedidos.
+- **Tiendas y menús:** precio, disponible/agotado y descripción de cualquier producto.
+- **Límites a propósito:**
+  - La entrega sigue exigiendo el PIN del cliente (ESC-03).
+  - Nadie se cambia su propio rol.
+  - Las cuentas de administración general no se editan desde el panel.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Acceso solo para `ADMINS_GENERALES` | Con una cuenta de cliente, `/admin` muestra el ingreso y `GET /api/v1/admin/resumen` responde 403 |
+| Eliminar los pedidos de prueba | En `/admin` → Pedidos, elegir la cuenta de carga y «Eliminar sus pedidos activos»: desaparecen de `/panel` de cada tienda |
+| Cambio de rol | En Cuentas, poner a una cuenta como cajero de una tienda: al volver a entrar, va a `/panel` de esa tienda |
+| Sin PIN en la administración | La lista de pedidos y «Marcar listo» nunca muestran el PIN |

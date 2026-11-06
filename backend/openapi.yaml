@@ -32,6 +32,8 @@ tags:
     description: Cuentas e inicio de sesión (ADR-0021)
   - name: tienda
     description: Panel del personal de cada tienda; la tienda sale del token (ADR-0023)
+  - name: admin
+    description: Administración general de todas las tiendas y cuentas; rol superadmin por ADMINS_GENERALES (ADR-0037)
 
 paths:
   /auth/registro:
@@ -1048,6 +1050,435 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /admin/resumen:
+    get:
+      tags: [admin]
+      summary: Cifras de las cinco tiendas y cuentas por rol (ADR-0037)
+      operationId: resumenAdmin
+      security:
+        - sesion: []
+      responses:
+        '200':
+          description: Pedidos, ventas y productos por tienda; cuentas por rol
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de administración general
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/usuarios:
+    get:
+      tags: [admin]
+      summary: Todas las cuentas, sin hash, con su número de pedidos (ADR-0037)
+      operationId: listarUsuariosAdmin
+      security:
+        - sesion: []
+      responses:
+        '200':
+          description: Cuentas de la más reciente a la más antigua
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Usuario'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de administración general
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/usuarios/{usuarioId}:
+    patch:
+      tags: [admin]
+      summary: Cambiar nombre, rol (cliente, trabajador, admin) y tienda de una cuenta (ADR-0037)
+      operationId: actualizarUsuarioAdmin
+      security:
+        - sesion: []
+      parameters:
+        - name: usuarioId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nombre:
+                  type: string
+                rol:
+                  type: string
+                  enum: [cliente, trabajador, admin]
+                tiendaId:
+                  type: [string, 'null']
+      responses:
+        '200':
+          description: Cuenta actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        '400':
+          description: Datos inválidos (rol desconocido, tienda inexistente, nombre fuera de rango)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de administración general
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Cuenta no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Cuenta de administración general, o cambio del propio rol
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/usuarios/{usuarioId}/contrasena:
+    post:
+      tags: [admin]
+      summary: Poner una contraseña nueva a una cuenta (ADR-0037)
+      operationId: restablecerContrasenaAdmin
+      security:
+        - sesion: []
+      parameters:
+        - name: usuarioId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                contrasena:
+                  type: string
+                  minLength: 8
+                  maxLength: 128
+              required: [contrasena]
+      responses:
+        '200':
+          description: Contraseña cambiada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        '400':
+          description: Contraseña fuera de rango
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de administración general
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/pedidos:
+    get:
+      tags: [admin]
+      summary: Pedidos de todas las tiendas, sin PIN (ADR-0037)
+      operationId: listarPedidosAdmin
+      security:
+        - sesion: []
+      parameters:
+        - name: tiendaId
+          in: query
+          schema:
+            type: string
+        - name: clienteId
+          in: query
+          schema:
+            type: string
+        - name: estado
+          in: query
+          schema:
+            type: string
+            enum: [Recibido, En preparación, Listo, Entregado, Cancelado]
+        - name: incluirCancelados
+          in: query
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Pedidos del más reciente al más antiguo, con nombre y correo del cliente
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PedidoTienda'
+        '400':
+          description: Estado de filtro desconocido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de administración general
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/pedidos/cancelar:
+    post:
+      tags: [admin]
+      summary: Eliminar varios pedidos de una vez, o todos los de una cuenta (soft-delete de ADR-0033, ADR-0037)
+      operationId: cancelarPedidosAdmin
+      security:
+        - sesion: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                clienteId:
+                  type: string
+                pedidos:
+                  type: array
+                  maxItems: 2000
+                  items:
+                    type: object
+                    properties:
+                      tiendaId:
+                        type: string
+                      pedidoId:
+                        type: string
+                    required: [tiendaId, pedidoId]
+      responses:
+        '200':
+          description: Cuántos se eliminaron y cuáles se omitieron con su motivo (por ejemplo, ya entregados)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cancelados:
+                    type: integer
+                  omitidos:
+                    type: array
+                    items:
+                      type: object
+        '400':
+          description: Sin pedidos ni cuenta, o más de 2000 pedidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de administración general
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/pedidos/avanzar:
+    post:
+      tags: [admin]
+      summary: Confirmar el pago o marcar Listo un pedido de cualquier tienda; la entrega exige el PIN (ADR-0037)
+      operationId: avanzarPedidoAdmin
+      security:
+        - sesion: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tiendaId:
+                  type: string
+                pedidoId:
+                  type: string
+                accion:
+                  type: string
+                  enum: [pago, listo]
+              required: [tiendaId, pedidoId, accion]
+      responses:
+        '200':
+          description: Pedido con su nuevo estado, sin PIN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoTienda'
+        '400':
+          description: Acción desconocida o transición inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de administración general
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/productos:
+    get:
+      tags: [admin]
+      summary: Menú de una tienda o de todas (ADR-0037)
+      operationId: listarProductosAdmin
+      security:
+        - sesion: []
+      parameters:
+        - name: tiendaId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Productos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Producto'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de administración general
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/productos/{productoId}:
+    patch:
+      tags: [admin]
+      summary: Precio, disponibilidad y descripción de un producto de cualquier tienda (ADR-0037)
+      operationId: actualizarProductoAdmin
+      security:
+        - sesion: []
+      parameters:
+        - name: productoId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tiendaId:
+                  type: string
+                precio:
+                  type: integer
+                disponible:
+                  type: boolean
+                descripcion:
+                  type: string
+              required: [tiendaId]
+      responses:
+        '200':
+          description: Producto actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Producto'
+        '400':
+          description: Cambio inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de administración general
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: El producto no es de esa tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
 components:
   securitySchemes:
     sesion:
@@ -1382,7 +1813,7 @@ components:
           type: string
         rol:
           type: string
-          enum: [cliente, trabajador, admin]
+          enum: [cliente, trabajador, admin, superadmin]
         tiendaId:
           type: [string, 'null']
       required: [id, correo, nombre, rol]

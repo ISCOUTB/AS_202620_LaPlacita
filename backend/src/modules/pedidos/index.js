@@ -353,6 +353,55 @@ function pedidosDeTienda(tiendaId, { hoy = fechaColombia() } = {}) {
   return lista.sort((a, b) => String(a.creadoEn ?? '').localeCompare(String(b.creadoEn ?? '')));
 }
 
+// ADR-0037: lectura de la administración general. Es la ÚNICA lectura que
+// cruza tiendas por diseño (excepción declarada a RES-05): recorre los
+// repositorios de cada tienda y devuelve vistas públicas, sin PIN ni token de
+// seguimiento. Las MUTACIONES del administrador general siguen pasando por las
+// funciones de una sola tienda (`cancelarPedido`, métodos de intención), con el
+// `tiendaId` explícito del pedido.
+function todosLosPedidos({ tiendaId, clienteId, estado, incluirCancelados = true } = {}) {
+  const lista = [];
+  const repos = tiendaId ? [[tiendaId, repoTienda(tiendaId)]] : [...pedidosPorTienda];
+  for (const [idTienda, repo] of repos) {
+    for (const pedido of repo.values()) {
+      if (clienteId && pedido.clienteId !== clienteId) continue;
+      if (!incluirCancelados && pedido.canceladoEn) continue;
+      if (estado === 'Cancelado') {
+        if (!pedido.canceladoEn) continue;
+      } else if (estado && (pedido.canceladoEn || pedido.estado !== estado)) {
+        continue;
+      }
+      lista.push(vistaPublica(pedido.id, idTienda));
+    }
+  }
+  return lista.sort((a, b) => String(b.creadoEn ?? '').localeCompare(String(a.creadoEn ?? '')));
+}
+
+// ADR-0037: cifras por tienda para la administración general.
+function estadisticasPorTienda({ hoy = fechaColombia() } = {}) {
+  const salida = {};
+  for (const [tiendaId, repo] of pedidosPorTienda) {
+    const cifras = { total: 0, activos: 0, cancelados: 0, entregados: 0, hoy: 0, ventasHoy: 0, ventasTotales: 0 };
+    for (const pedido of repo.values()) {
+      cifras.total += 1;
+      if (pedido.canceladoEn) {
+        cifras.cancelados += 1;
+        continue;
+      }
+      if (pedido.estado === 'Entregado') cifras.entregados += 1;
+      else cifras.activos += 1;
+      const pagado = pedido.estado !== 'Recibido';
+      if (pagado) cifras.ventasTotales += pedido.total;
+      if (pedido.creadoEn && fechaColombia(new Date(pedido.creadoEn)) === hoy) {
+        cifras.hoy += 1;
+        if (pagado) cifras.ventasHoy += pedido.total;
+      }
+    }
+    salida[tiendaId] = cifras;
+  }
+  return salida;
+}
+
 // Resumen del día de una tienda, calculado desde sus pedidos de hoy. Ventas =
 // pedidos con pago confirmado (En preparación, Listo o Entregado).
 function resumenDelDia(tiendaId, { hoy = fechaColombia() } = {}) {
@@ -455,6 +504,8 @@ export {
   pinParaDueno,
   pedidosDeCliente,
   pedidosDeTienda,
+  todosLosPedidos,
+  estadisticasPorTienda,
   resumenDelDia,
   cambiarEstado,
   cancelarPedido,
