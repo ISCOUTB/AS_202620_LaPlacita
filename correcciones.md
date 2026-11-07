@@ -1564,3 +1564,26 @@ Panel nuevo para la persona que administra LaPlacita entera, no una sola tienda
 | Eliminar los pedidos de prueba | En `/admin` → Pedidos, elegir la cuenta de carga y «Eliminar sus pedidos activos»: desaparecen de `/panel` de cada tienda |
 | Cambio de rol | En Cuentas, poner a una cuenta como cajero de una tienda: al volver a entrar, va a `/panel` de esa tienda |
 | Sin PIN en la administración | La lista de pedidos y «Marcar listo» nunca muestran el PIN |
+
+## Revisión documental previa a S15 (07/11/2026)
+
+Se contrastó el estado de la documentación con el código y con las evidencias de S14 disponibles. El usuario confirmó que la entrega de S14 ya fue enviada en SAVIO; el README ahora refleja esa confirmación. No se cambió el estado de S15 ni se creó la etiqueta `final`, porque el sistema sigue en desarrollo.
+
+- Se alinearon arc42 y `docs/aspectos.md` con los resultados documentados de ESC-01: los perfiles A, B y E cumplieron con PostgreSQL disponible; el perfil C quedó por debajo del umbral durante la interrupción de la base y mantiene RV-01 pendiente.
+- Se actualizaron los diagramas C4 para reflejar una sola aplicación Next.js con las rutas de cliente, tienda y administración general, y para distinguir los cinco contextos de dominio de los módulos de soporte Identidad y Almacén.
+- Se documentó que el módulo de Notificaciones ofrece historial por API y se ejercita en el corte vertical, pero las rutas productivas de transición no publican automáticamente cada cambio. A-03 sigue parcial y sin escenario de calidad aprobado; decidir su umbral e integración corresponde al equipo.
+- Sigue pendiente revisar la estructura arc42: hay secciones numeradas 13 y 14 después de la sección Glosario, mientras que la consigna solicita secciones 1–12 e incluye el glosario. Antes de reorganizarla, el equipo debe acordar cómo conservar los enlaces y la trazabilidad existentes.
+- RV-14 permanece pendiente de comparar la huella del backend con el despliegue vigente en Dokploy. No se afirmó un despliegue o una huella nueva.
+
+**Verificación realizada:** enlaces Markdown locales y `git diff --check`. No se ejecutaron pruebas de aplicación porque esta revisión solo modifica documentación.
+
+## Pruebas locales previas a S15 (07/11/2026)
+
+Se ejecutaron comprobaciones locales del backend y frontend con cuentas ficticias. El backend se inició sin `DATABASE_URL` ni configuración de Garage; por ello los datos de esta ronda fueron efímeros y no representan persistencia ni aceptación del despliegue. Los comandos, resultados y límites se registran en [`docs/evidencias/evidencias-s14.md` §8.1–8.2](docs/evidencias/evidencias-s14.md#81-complemento-de-aceptación-local-2026-11-07).
+
+- Backend: `npm test`, 172 aprobadas, 0 fallidas y 7 omitidas por dependencia de PostgreSQL; `npm run contract-test`, 34/34 aprobadas; `npm run build`, aprobado con permisos de build ampliados.
+- Frontend: `npm run lint`, aprobado; `npm run build -- --webpack`, aprobado. El build predeterminado de Turbopack falló dos veces en esta máquina al crear un proceso hijo al procesar `rubik_1431770f.module.css`.
+- Flujos HTTP: 15/15 comprobaciones funcionales aprobadas en backend local en memoria, incluyendo compra, historial multitienda, aislamiento, cancelación, pagos, PIN, entrega, roles e imágenes abiertas/cerradas.
+- Las rutas principales del frontend y endpoints de salud/catálogo respondieron HTTP 200. No se realizó inspección visual en navegador ni validación responsive.
+
+**Pendiente de validar por el equipo:** ejecutar las pruebas que requieren PostgreSQL y Garage, investigar el fallo de Turbopack en Windows/CI, y hacer la aceptación visual y funcional en Dokploy. No se desplegó, no se modificó configuración productiva y no se cambió código de aplicación.

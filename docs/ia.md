@@ -3,13 +3,13 @@
 
 ## Resumen: qué se aceptó y qué se rechazó
 
-- Entradas registradas: 77 (06/08/2026 al 06/11/2026).
+- Entradas registradas: 79 (06/08/2026 al 07/11/2026).
 - Aceptadas y verificadas por el equipo: 39 (columna Validación con ejecución o confirmación).
 - Aceptadas con ajustes del equipo: 4 entradas.
 - Entradas con propuestas rechazadas y justificadas: 44 (131 propuestas en total).
-- Con validación pendiente declarada: 20 entradas (5 de ago–sep, cubiertas de facto por
+- Con validación pendiente declarada: 21 entradas (5 de ago–sep, cubiertas de facto por
   evidencia posterior —suites en verde, cortes y semanas siguientes—; 5 de la S12, validadas
-  por el equipo el 24/10/2026; la del 25/10, la del 28/10, las dos del 01/11, las tres del 02/11, la del 03/11 y las dos del 06/11, pendientes de revisión del equipo).
+  por el equipo el 24/10/2026; la del 25/10, la del 28/10, las dos del 01/11, las tres del 02/11, la del 03/11, las dos del 06/11 y las dos del 07/11, pendientes de revisión del equipo).
 - Propuestas rechazadas: ampliar C4 a más detalle; restaurar Árbol de Utilidad en aspectos.md;
   auto-corregir V-01/V-03 el mismo día; microservicios o renombrar módulos;
   declarar corte-vertical.js como sexto contexto; párrafos no sustentables por el equipo;
@@ -65,6 +65,8 @@
 
 | Fecha | Herramienta | Propósito | Resumen del Prompt (Entrada) | Resultado obtenido | Rechazado | Validación |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **07/11/2026** | Codex (GPT-6) | Ejecutar pruebas locales reproducibles de frontend y backend, documentar los resultados exactos y distinguir validación local de aceptación productiva. | *"Ejecuta las pruebas locales necesarias, comprueba sus resultados y documenta qué debemos comunicar al equipo."* | Backend: 172 pruebas aprobadas, 0 fallidas y 7 omitidas; contrato 34/34; build aprobado con permisos ampliados. Frontend lint y build Webpack aprobados; el build Turbopack predeterminado falló dos veces en esta máquina. Pasaron 15/15 comprobaciones HTTP funcionales en memoria. Detalle en `docs/evidencias/evidencias-s14.md` §8.1–8.2. | No se afirmó persistencia PostgreSQL, almacenamiento Garage, inspección visual responsive ni aceptación en Dokploy. No se desplegó ni se modificó código de aplicación. | Pendiente de revisión del equipo; evidencia local, no equivale a prueba productiva. |
+| **07/11/2026** | Codex (GPT-6) | Corregir estados S14 y alinear la documentación de arquitectura y aspectos con los módulos y rutas del código actual, sin alterar decisiones ni afirmar pruebas no realizadas. | *"Contrastar documentación y requisitos de S15, editar solo lo respaldado por evidencia y evitar decisiones arbitrarias."* | README marca S14 como entregada; arc42 refleja ESC-01; C4 de componentes incorpora Identidad, Almacén, persistencia y rutas admin, y describe el límite real del historial A-03; `docs/aspectos.md`, el mapa de contextos y la tabla de propiedad distinguen hechos implementados de deuda. | No se cerraron riesgos, no se inventó el escenario de calidad faltante de A-03 ni se cambió código, configuración o estado de despliegue. | Pendiente de revisión y validación del equipo. El envío a SAVIO fue confirmado por el usuario; SAVIO no se consultó desde esta sesión. |
 | **06/08/2026** | Gemini | Elaboración de la estructura inicial del README del proyecto. | *"Generar una estructura base en Markdown para el README organizado con secciones para la descripción, problema, objetivos y documentación."* | Se obtuvo un README organizado con secciones para la descripción y documentación. | — | Revisado y adaptado por el equipo. |
 | **08/08/2026** | ChatGPT (OpenIA) | Ampliación y refinamiento de la documentación inicial necesaria. | *"Complemetar con información necesaria la documentación cumpliendo requerimientos específicos de la guía."* | Estructura formal del repositorio, desglose de información completaria para la documentación. | — | Revisado, editado y adaptado por el equipo de desarrollo. |
 | **15/08/2026** | Claude (Anthropic) | Organización de la información ya definida (ficha del problema y aspectos de calidad) en las secciones 1-3 de arc42, y estructuración del diagrama C4 de contexto. | *"Ayudar a organizar la información existente e ideas del proyecto en la estructura de las secciones de introducción, restricciones y contexto del arc42, y estructurar esa información como diagrama de contexto en formato Mermaid."* | Información reorganizada en las secciones 1-3 del arc42 y diagrama C4 de contexto estructurado en Markdown. | — | Revisado, corregido y adaptado por el equipo de desarrollo. |

@@ -319,3 +319,43 @@ identificaba el commit quedó obsoleto con el PR #37 y se retiró.
 | Cancelación | Admin cancela; caja no; entregado no; la fila se conserva | Pendiente (RV-12) |
 | Aislamiento | Una tienda no ve ni muta pedidos de otra | Medición histórica 0/300 (arc42 §11.4) |
 | Historial del cliente | Los pedidos siguen visibles tras reiniciar | **Cumple**: 6953/6953 pedidos de la cuenta de carga visibles tras reiniciar el backend local (§3.3) |
+
+### 8.1 Complemento de aceptación local (2026-11-07)
+
+Esta comprobación posterior a la medición S14 se ejecutó contra el backend local con cuentas ficticias. `DATABASE_URL` y `GARAGE_*` estuvieron desactivados: los pedidos, cuentas e imágenes vivieron solo en memoria y desaparecieron al detener el proceso. Estos resultados **no sustituyen** la aceptación en Dokploy ni cierran RV-12.
+
+Se ejecutaron 15 comprobaciones HTTP contra `localhost:3000`; las 15 pasaron:
+
+| Flujo | Resultado local | Código HTTP / detalle |
+|---|---|---|
+| Registro de clientes y rol `superadmin` derivado de `ADMINS_GENERALES` | Cumple | `201`; roles `cliente`, `cliente`, `superadmin` |
+| Inicio de sesión de admin de tienda y trabajador | Cumple | `200` para ambos; roles `admin` y `trabajador` |
+| Un pedido con dos productos en una tienda | Cumple | `201`, 2 líneas, estado `Recibido` |
+| Pedidos en dos tiendas y consulta de «Mis pedidos» | Cumple | El historial reúne ambos; cada cola del panel contiene solo pedidos de su tienda |
+| Identidad de pedido | Confirmado | `pedido-1` existe en `tienda-01` y `tienda-02`: el identificador se interpreta junto con `tiendaId` |
+| Cancelación por su dueño antes de Listo | Cumple | `200`; queda `canceladoEn` y sigue en el historial |
+| Cancelación y pago de pedido ajeno | Rechazado como se espera | Cancelación `404`; confirmación de pago `403` |
+| Pago y transición a Listo desde el panel | Cumple | `200` y `200`; la respuesta del panel no incluye el PIN |
+| PIN de entrega | Cumple | Dueño autenticado: `200` y PIN de 4 dígitos; otro cliente: `404`; lectura pública: sin PIN |
+| Cancelación del dueño después de Listo | Rechazada como se espera | `409` |
+| Entrega con PIN correcto | Cumple | `200`, estado `Entregado` |
+| Operación de pedido cuyo ID solo existe en otra tienda | Rechazada como se espera | `404` |
+| Administración general | Cumple | `superadmin`: `200`; cliente: `403` |
+| Imágenes de presentación abierta y cerrada | Cumple en memoria | Dos `POST` con `201`, referencias UUID distintas y ambas lecturas `200` |
+
+El servidor también devolvió `200` para `/api/v1/health` (huella `local`), el catálogo con 5 tiendas y las rutas `/`, `/tiendas`, `/tiendas/el-meson`, `/cuenta`, `/mis-pedidos`, `/panel` y `/admin`. Esto es una comprobación HTTP, no una inspección visual del diseño ni de su comportamiento en distintos anchos.
+
+### 8.2 Comprobaciones de build y suite local (2026-11-07)
+
+Entorno de ejecución: Node `v24.19.0`, npm `11.17.0`, Windows 11. Resultados:
+
+| Comando | Resultado | Alcance / límite |
+|---|---|---|
+| `backend: npm test` | **172 pasan, 0 fallan, 7 omitidas** (179 totales) | Las omitidas requieren PostgreSQL; no había `DATABASE_URL` ni Docker disponible en esta sesión |
+| `backend: npm run contract-test` | **34/34 pasan** | Contrato OpenAPI y rutas |
+| `frontend: npm run lint` | **Pasa** | ESLint terminó con código 0 |
+| `backend: npm run build` | **Pasa con permisos de build ampliados** | Next.js generó 22 rutas API y `/docs`; el primer intento restringido no pudo crear una junction de Windows |
+| `frontend: npm run build -- --webpack` | **Pasa** | Compilación, TypeScript y 20 páginas estáticas |
+| `frontend: npm run build` (Turbopack predeterminado) | **Falla en esta máquina** | Turbopack aborta al crear un proceso hijo al procesar `rubik_1431770f.module.css`; se reprodujo dos veces. El fallback Webpack pasa, pero no reemplaza la verificación del comando predeterminado de CI |
+
+La suite local usa memoria para las pruebas que no requieren base. No se verificó persistencia nueva en PostgreSQL, escritura real en Garage, rotación de `JWT_SECRET`, limitación de tasa, carga bajo concurrencia, ni aceptación visual móvil. La interfaz no se inspeccionó manualmente en el navegador durante esta sesión; los códigos `200` solo acreditan respuesta HTTP.

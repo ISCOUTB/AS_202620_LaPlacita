@@ -16,11 +16,11 @@ flowchart TD
 
     usuario["<b>Usuario</b><br/>[Person]<br/><i>Estudiante, docente o adm.</i>"]:::person
     establecimiento["<b>Establecimiento</b><br/>[Person]<br/><i>Personal del local de comida</i>"]:::person
+    administrador["<b>Administrador general</b><br/>[Person]<br/><i>Cuenta autorizada por ADMINS_GENERALES, si está configurado</i>"]:::person
 
     subgraph laPlacita ["Sistema LaPlacita"]
-        app_user["<b>App / Web Cliente</b><br/>[Next.js PWA]<br/><i>Explora menús, pide con su cuenta, sigue el estado y ve su PIN</i> <br/>IMPLEMENTADO — frontend/, Dokploy"]:::container
-        app_local["<b>Portal Establecimiento</b><br/>[Next.js, ruta /panel]<br/><i>Pedidos en vivo, estados, entrega con PIN, menú y resumen</i> <br/>IMPLEMENTADO — misma app web (ADR-0023)"]:::container
-        api["<b>API Backend Central</b><br/>[Next.js / Node.js]<br/><i>API Routes y reglas de negocio; PostgreSQL con DATABASE_URL, Maps en modo local</i> <br/>IMPLEMENTADO — corte vertical (tiendaId)"]:::container
+        app["<b>Aplicación web / PWA</b><br/>[Next.js 16]<br/><i>Experiencia de cliente y rutas /panel y /admin en el mismo despliegue</i><br/>IMPLEMENTADO — frontend/, Dokploy"]:::container
+        api["<b>API Backend Central</b><br/>[Next.js / Node.js]<br/><i>Route handlers y módulos de dominio; PostgreSQL con DATABASE_URL, Maps en modo local</i><br/>IMPLEMENTADO — backend/, Dokploy"]:::container
         db[("<b>Base de Datos Principal</b><br/>[PostgreSQL]<br/><i>Tablas pedidos, usuarios y productos (ADR-0014, ADR-0021, ADR-0023)</i> <br/>IMPLEMENTADO — Dokploy, condicional a DATABASE_URL")]:::container
         garage[("<b>Almacén de Imágenes</b><br/>[Garage S3]<br/><i>Bytes de las fotos del catálogo y tiendas; solo la referencia uuid en PostgreSQL (ADR-0028)</i> <br/>IMPLEMENTADO — Dokploy, red interna, sin exposición pública")]:::container
     end
@@ -28,11 +28,11 @@ flowchart TD
     pago["<b>Pasarela de Pagos</b><br/>[Planeada · no integrada]<br/><i>La confirmación actual es simulada</i>"]:::planned
     push["<b>Servicio Push/Correo</b><br/>[Planeado · no integrado]<br/><i>El cliente consulta por polling</i>"]:::planned
 
-    usuario -->|Ordena y consulta estado<br/>HTTPS (PWA)| app_user
-    establecimiento -->|Recibe orden y valida PIN<br/>HTTPS / REST API| app_local
+    usuario -->|Ordena y consulta estado<br/>HTTPS (PWA)| app
+    establecimiento -->|Opera pedidos y valida PIN<br/>HTTPS (panel)| app
+    administrador -->|Administra cuentas, tiendas y pedidos<br/>HTTPS (/admin)| app
 
-    app_user -->|Contrato /api/v1 mismo origen<br/>BFF (route handler)| api
-    app_local -->|Actualiza orden y valida PIN<br/>HTTPS / REST API| api
+    app -->|Contrato /api/v1 mismo origen<br/>BFF / route handler| api
 
     api -->|Pedidos: creación confirmada, transiciones write-behind at-least-once (ADR-0026)<br/>Cuentas y menú: espera la confirmación<br/>Rehidratación al arrancar<br/>TCP / pg (SQL, UPSERT)| db
 
@@ -58,9 +58,8 @@ flowchart TD
 | Contenedor | Estado | Evidencia |
 | --- | --- | --- |
 | API Backend Central | Implementado (`tiendaId` en todo el flujo) | `backend/src/modules/*`, `backend/src/corte-vertical.js`, `backend/tests/aislamiento.test.js` |
-| App / Web Cliente | **Implementado** (PWA Next.js 16, identidad UTB, cuentas y PIN) | `frontend/`, BFF `frontend/app/api/v1/[...path]/route.js` y sesión `frontend/app/api/sesion/route.ts`, desplegada en Dokploy (ADR-0017, ADR-0021, ADR-0022) |
+| Aplicación web / PWA | **Implementada** (cliente, panel de tienda `/panel` y administración general `/admin` en el mismo contenedor) | `frontend/`, BFF `frontend/app/api/v1/[...path]/route.js`, sesión `frontend/app/api/sesion/route.ts`, guardas de rutas y ADR-0017, ADR-0021, ADR-0022, ADR-0037 |
 | Base de Datos Principal (PostgreSQL) | **Implementado** (Dokploy, condicional a `DATABASE_URL`; en su ausencia el dominio conserva Maps en memoria) | [ADR-0014](../adr/0014-base-de-datos-postgresql-dokploy.md), `backend/src/persistencia/index.js`, experimento ESC-01 3/3 ([evidencias-s10 §6](../evidencias/evidencias-s10.md)) |
-| Portal Establecimiento | **Implementado** como ruta `/panel` de la misma app web (un solo despliegue) | `frontend/app/panel/page.tsx`, `frontend/components/panel/*`, rutas `backend/app/api/v1/tienda/*` con sesión de tienda (ADR-0023) |
 | Caché y Colas (Redis) | **Retirado del diagrama (S12, 22/10/2026).** Con un solo proceso (ADR-0019) una caché distribuida no aporta: la caché del catálogo vive dentro de la API (write-through) y los PINs se guardan con su pedido en PostgreSQL | [evidencias-s12 §3](../evidencias/evidencias-s12.md) |
 | Broker de mensajes | **No existe.** Las escrituras a PostgreSQL son mensajes dentro del proceso de la API (cola por pedido, reintentos y cola de fallidos, ADR-0026); no hay contenedor de mensajería | [evidencias-s12 §4](../evidencias/evidencias-s12.md) |
 | Pasarela de Pagos / Servicio Push | Externo, no integrado | Deuda declarada (A-04, V-05) |

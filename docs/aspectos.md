@@ -10,13 +10,13 @@
 | --------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | A-01 | Disponibilidad y consistencia del estado de los pedidos | [RF-01 → ESC-01](arc42/arc42-template-EN.md#esc-01--picos-de-demanda-entre-clases) | [ADR-0001](adr/0001-adopcion-monolito-modular.md), [ADR-0014](adr/0014-base-de-datos-postgresql-dokploy.md) (persistencia, S10) | [`backend/src/modules/pedidos/index.js`](../backend/src/modules/pedidos/index.js) — `cambiarEstado` y reglas del pedido; [`backend/src/persistencia/index.js`](../backend/src/persistencia/index.js) — rehidratación y escritura a PostgreSQL | [`backend/tests/modulos.test.js`](../backend/tests/modulos.test.js), [`backend/tests/persistencia.test.js`](../backend/tests/persistencia.test.js), [`backend/tests/cola-escrituras.test.js`](../backend/tests/cola-escrituras.test.js) | **Medición S14 de ESC-01** ([`evidencias-s14.md`](evidencias/evidencias-s14.md), script [`backend/scripts/medir-carga.js`](../backend/scripts/medir-carga.js), artefactos en [`evidencias/mediciones/`](evidencias/mediciones/)). **Cumple** con la base disponible: 1500/1500 procesados y 0 % duplicados o perdidos en 5 repeticiones de 300 pedidos, y 3000/3000 con 100 clientes (local); en producción, 300/300 en 3 repeticiones (p95 221–2056 ms). **No cumple** el 99 % de procesado con PostgreSQL caído (68,83 %, con `503` y 0 perdidos); la ventana F-03 dejó 2/600 filas fantasma (riesgo RV-01 en [arc42 §11.8](arc42/arc42-template-EN.md#118-revisión-externa-y-evaluación-atam-s14)). La línea base S10 (0/3 tras reinicio sin persistencia) y el arreglo del orden de escritura están en las evidencias S10/S11. |
 | A-02 | Aislamiento y enrutamiento correcto entre establecimientos | [RF-02 → ESC-02](arc42/arc42-template-EN.md#esc-02--aislamiento-entre-las-cinco-tiendas) | [ADR-0001](adr/0001-adopcion-monolito-modular.md), [ADR-0004](adr/0004-aislamiento-por-establecimiento.md) | [`backend/src/modules/pedidos/index.js`](../backend/src/modules/pedidos/index.js) — `repoTienda` (`:38`) particiona el almacén por tienda | [`backend/tests/aislamiento.test.js`](../backend/tests/aislamiento.test.js) — aislamiento de catálogo, lectura y estados | `node backend/scripts/medir-aislamiento.js` — medición histórica 0 accesos cruzados en 300 intentos; no recalifica la prueba de producción. |
-| A-03 | Notificación oportuna del cambio de estado | RF-03 — **sin escenario de calidad asociado** (ver nota 1) | [ADR-0005](adr/0005-reajuste-contextos-propiedad.md) — Notificaciones como OHS | [`backend/src/modules/notificaciones/index.js`](../backend/src/modules/notificaciones/index.js) — historial por tienda | [`backend/tests/modulos.test.js`](../backend/tests/modulos.test.js) — historial de notificaciones por tienda | Función interna cubierta por pruebas; no hay umbral temporal aprobado ni canal push/correo. El cliente consulta por polling cada 3 s. |
+| A-03 | Notificación oportuna del cambio de estado | RF-03 — **sin escenario de calidad asociado** (ver nota 1) | [ADR-0005](adr/0005-reajuste-contextos-propiedad.md) — Notificaciones como OHS | [`backend/src/modules/notificaciones/index.js`](../backend/src/modules/notificaciones/index.js) — historial en memoria; las rutas de transición no publican eventos automáticamente | [`backend/tests/modulos.test.js`](../backend/tests/modulos.test.js) — módulo; [`backend/app/api/v1/notificaciones/route.js`](../backend/app/api/v1/notificaciones/route.js) — publicación explícita | Parcial: hay endpoints de historial y polling del estado, pero las rutas productivas de pago, Listo, entrega y cancelación no publican automáticamente el cambio. No hay umbral temporal aprobado ni push/correo. |
 | A-04 | Protección de datos personales y de pago | [RF-04 → ESC-04](arc42/arc42-template-EN.md#esc-04--protecci%C3%B3n-del-pago) | [ADR-0001](adr/0001-adopcion-monolito-modular.md), [ADR-0021](adr/0021-identidad-cuentas-y-sesion-jwt.md), [ADR-0014](adr/0014-base-de-datos-postgresql-dokploy.md) | [`backend/src/modules/pagos/index.js`](../backend/src/modules/pagos/index.js) — pago simulado, sin datos de tarjeta | [`backend/tests/panel-tienda.test.js`](../backend/tests/panel-tienda.test.js), [`backend/tests/identidad.test.js`](../backend/tests/identidad.test.js) | El pago real no está integrado; privacidad y tratamiento de datos se describen en [`evidencias-s13.md`](evidencias/evidencias-s13.md). |
 | A-05 | Simplicidad del flujo de navegación y pedido | [RF-05 → ESC-05](arc42/arc42-template-EN.md#esc-05--compra-r%C3%A1pida) | [ADR-0001](adr/0001-adopcion-monolito-modular.md) | [`backend/src/corte-vertical.js`](../backend/src/corte-vertical.js) — orquestador del flujo en 4 pasos de dominio | [`backend/tests/corte-vertical.test.js`](../backend/tests/corte-vertical.test.js) — flujo de dominio; la experiencia visual requiere recorrido manual | `node backend/src/corte-vertical.js` ejecuta solo dominio; no mide pantallas ni tiempo de compra. |
 | A-06 | Integridad en la validación de identidad en el punto de recolección | [RF-06 → ESC-03](arc42/arc42-template-EN.md#esc-03--validaci%C3%B3n-de-entrega-mediante-pin) | [ADR-0007](adr/0007-v01-v03-dueno-pin-metodos-intencion.md) (V-01, V-03), [ADR-0013](adr/0013-proyeccion-publica-pedido-sin-pin.md) (S9) | [`backend/src/modules/entrega/index.js`](../backend/src/modules/entrega/index.js) — validación con límite de intentos; `pedidos.vistaPublica` excluye el PIN; vista C4: [`c4/componentes.md`](c4/componentes.md) | [`backend/tests/modulos.test.js`](../backend/tests/modulos.test.js), [`backend/tests/contract-openapi.test.js`](../backend/tests/contract-openapi.test.js) | `node backend/scripts/medir-exposicion-pin.js` y revisión de producción S14 pendientes; resultados históricos de S9/S10 en [`evidencias-s10.md`](evidencias/evidencias-s10.md) §7. |
 | A-07 | Contrato de API versión 1 y prueba de contrato | [RF-07 → §6 Vista de ejecución](arc42/arc42-template-EN.md#6-vista-de-ejecuci%C3%B3n) | [ADR-0006](adr/0006-estrategia-integracion-sincrona.md) + [ADR-0008](adr/0008-ratificacion-estrategia-integracion-sincrona.md) | [`backend/openapi.yaml`](../backend/openapi.yaml) (contrato v1), [`backend/src/modules/*/index.js`](../backend/src/) (funciones exportadas), `backend/app/api/v1/*/route.js` (endpoints HTTP) | [`backend/tests/contract-openapi.test.js`](../backend/tests/contract-openapi.test.js) — valida que módulos cumplen contrato, que cada path tiene su `route.js`, que los imports relativos resuelven, y falla ante cambio incompatible | `npm run contract-test` en verde; job `contract-test` en [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) |
 
-**Nota 1 — A-03 sin escenario de calidad.** Los cinco escenarios de §10.2 del arc42 cubren A-01, A-02, A-04, A-05 y A-06. **A-03 (notificación oportuna del cambio de estado) no tiene escenario asociado**, porque el modelo declarado del proyecto son cinco escenarios de calidad (ADR-0001, ADR-0002, ADR-0006 y ADR-0008) y ninguno cubre notificaciones. Es una deuda de trazabilidad real y declarada, no un enlace roto. Agregar un escenario o cambiar la numeración requiere una decisión del equipo y actualizar la trazabilidad de los ADR afectados. Al 03/11/2026 sigue pendiente; no hay fecha de cierre documentada.
+**Nota 1 — A-03 sin escenario de calidad.** Los cinco escenarios de §10.2 del arc42 cubren A-01, A-02, A-04, A-05 y A-06. **A-03 (notificación oportuna del cambio de estado) no tiene escenario asociado**, porque el modelo declarado del proyecto son cinco escenarios de calidad (ADR-0001, ADR-0002, ADR-0006 y ADR-0008) y ninguno cubre notificaciones. Es una deuda de trazabilidad real y declarada, no un enlace roto. Agregar un escenario o cambiar la numeración requiere una decisión del equipo y actualizar la trazabilidad de los ADR afectados. Al 07/11/2026 sigue pendiente; no hay fecha de cierre documentada. El estado parcial del historial se describe en la fila A-03 y no se presenta como una notificación automática de cada transición.
 
 **Nota 2 — La columna ADR y la columna Código se rellenaron en S9.** Hasta la semana 8 ambas columnas estaban vacías para A-01 a A-06: el contenido de pruebas y de evidencia ocupaba su lugar por un desplazamiento de columnas, de modo que la cadena `aspectos.md → ADR → código → prueba → medición` no se podía recorrer para ningún aspecto salvo A-07. La corrección es de S9 y está en `docs/evidencias/evidencias-s9.md`.
 
@@ -29,7 +29,7 @@ La corrección se hizo donde estaba el síntoma, no donde estaba la consecuencia
 |---|---|---|---|---|---|
 | A-01 | Pedidos | [ESC-01](arc42/arc42-template-EN.md#esc-01--picos-de-demanda-entre-clases) | [mapa](dominio/mapa-de-contextos.md) | [componentes](c4/componentes.md) | [ADR-0001](adr/0001-adopcion-monolito-modular.md), [ADR-0014](adr/0014-base-de-datos-postgresql-dokploy.md) |
 | A-02 | Todos (SK `tiendaId`) | [ESC-02](arc42/arc42-template-EN.md#esc-02--aislamiento-entre-las-cinco-tiendas) | [mapa](dominio/mapa-de-contextos.md) | [componentes](c4/componentes.md) | [ADR-0004](adr/0004-aislamiento-por-establecimiento.md) |
-| A-03 | Notificaciones (OHS) | sin escenario de calidad (ver nota 1) | [mapa](dominio/mapa-de-contextos.md) | | |
+| A-03 | Notificaciones (OHS) | sin escenario de calidad (ver nota 1) | [mapa](dominio/mapa-de-contextos.md) | [componentes](c4/componentes.md) | [ADR-0005](adr/0005-reajuste-contextos-propiedad.md) |
 | A-04 | Pagos (confirmación simulada; sin pasarela integrada) | [ESC-04](arc42/arc42-template-EN.md#esc-04--protecci%C3%B3n-del-pago) | [mapa](dominio/mapa-de-contextos.md) | [componentes](c4/componentes.md) | [ADR-0021](adr/0021-identidad-cuentas-y-sesion-jwt.md) |
 | A-05 | Orquestador (composición) | [ESC-05](arc42/arc42-template-EN.md#esc-05--compra-r%C3%A1pida) | [mapa](dominio/mapa-de-contextos.md) | [componentes](c4/componentes.md) | [ADR-0001](adr/0001-adopcion-monolito-modular.md) |
 | A-06 | Entrega (concepto) + Pedidos (almacén PIN) | [ESC-03](arc42/arc42-template-EN.md#esc-03--validaci%C3%B3n-de-entrega-mediante-pin) | [mapa](dominio/mapa-de-contextos.md) | [componentes](c4/componentes.md) | [ADR-0007](adr/0007-v01-v03-dueno-pin-metodos-intencion.md), [ADR-0013](adr/0013-proyeccion-publica-pedido-sin-pin.md) |
@@ -37,15 +37,13 @@ La corrección se hizo donde estaba el síntoma, no donde estaba la consecuencia
 
 ---
 
-# 2. Descripción de Aspectos 
-
 # 2. Descripción de Aspectos
 
 ## Aspecto A-01
 
 **Nombre:** Disponibilidad y consistencia del estado de los pedidos.
 
-**Usuario:** Estudiantes, docentes, personal administrativo y establecimiento de LaPlacita.
+**Usuario:** Estudiantes, docentes, personal administrativo y establecimientos de LaPlacita.
 
 **Problema Que Resuelve:** Durante las horas de mayor demanda pueden existir múltiples pedidos realizados simultáneamente. El sistema debe mantenerse disponible y, al mismo tiempo, garantizar que el estado de cada pedido sea correcto y consistente para evitar confusiones entre los usuarios y los establecimiento.
 
@@ -53,21 +51,21 @@ La corrección se hizo donde estaba el síntoma, no donde estaba la consecuencia
 
 **Escenario:** Durante una hora de alta demanda, varios usuarios realizan pedidos simultáneamente desde la aplicación. El sistema debe procesar las solicitudes y mantener correctamente asociado cada pedido con su usuario y establecimiento correspondiente.
 
-**Criterio De Éxito:** Ningún pedido debe perderse, duplicarse o mostrar un estado incorrecto como consecuencia de la concurrencia de solicitudes.
+**Criterio De Éxito:** Conforme a ESC-01, se procesa correctamente al menos el 99 % de las solicitudes de pedido, la tasa de pedidos duplicados o perdidos es menor al 1 % y el estado almacenado coincide con el último estado confirmado. El criterio se contrasta por perfil de carga y condición de la base de datos; no equivale a una garantía bajo cualquier fallo.
 
 **Prioridad:** Alta.
 
-**Estado:** Implementado en el flujo y la persistencia; medición S14 pendiente.
+**Estado:** Medido en S14. Los perfiles A, B y E cumplieron con PostgreSQL disponible. El perfil C procesó 68,83 % con PostgreSQL interrumpido y detectó dos filas persistidas pese a responder `503` (RV-01 pendiente). La medición de transiciones posteriores bajo carga sigue pendiente (RV-15).
 
 ## Aspecto A-02
 
 **Nombre:** Aislamiento y enrutamiento correcto entre establecimientos.
 
-**Usuario:** Establecimientos de LaPlacita y personal administrivo.
+**Usuario:** Establecimientos de LaPlacita y personal administrativo.
 
-**Problema Que Resuelve:** LaPlacita agrupa varios establecimientos independientes que operan bajo la misma plataforma. Si el sistema no aísla correctamente los datos de cada establecimiento (pedidos, menú, inventario), un pedido podría enrutarse al negocio equivocado, o un establecimiento podría ver o modificar información que no le pertenece, generando errores operativos y desconfianza entre los vendedores.
+**Problema Que Resuelve:** LaPlacita agrupa varios establecimientos independientes que operan bajo la misma plataforma. Si el sistema no aísla correctamente los pedidos, el menú y la disponibilidad de productos de cada establecimiento, un pedido podría enrutarse al negocio equivocado, o un establecimiento podría ver o modificar información que no le pertenece, generando errores operativos y desconfianza entre los vendedores.
 
-**Resultado Esperado:** El sistema garantiza que cada pedido, menú e inventario esté correctamente asociado a su establecimiento correspondiente, y que cada establecimiento solo pueda consultar y gestionar su propia información dentro de la plataforma.
+**Resultado Esperado:** El sistema asocia cada pedido, menú y disponibilidad de productos con su establecimiento; cada tienda consulta y gestiona únicamente la información que le corresponde. La plataforma no administra cantidades de inventario.
 
 **Escenario:** Un usuario realiza pedidos para dos establecimientos distintos dentro de LaPlacita. El sistema debe crear un pedido por establecimiento y asociar sus productos, datos y notificaciones con el negocio que lo prepara, sin mezclar información entre negocios.
 
@@ -81,7 +79,7 @@ La corrección se hizo donde estaba el síntoma, no donde estaba la consecuencia
 
 **Nombre:** Notificación oportuna del cambio de estado del pedido.
 
-**Usuario:** Estudiantes, docentes y personal administrativo que realizan pedidos enLaPlacita.
+**Usuario:** Estudiantes, docentes y personal administrativo que realizan pedidos en LaPlacita.
 
 **Problema Que Resuelve:** Los usuarios necesitan saber en qué momento su pedido pasa de una etapa a otra (recibido, en preparación, listo para recoger, entregado) sin tener que consultar manualmente la aplicación de forma constante. Una demora significativa en la notificación puede generar filas innecesarias, confusión o que el usuario no recoja su pedido a tiempo.
 
@@ -93,7 +91,7 @@ La corrección se hizo donde estaba el síntoma, no donde estaba la consecuencia
 
 **Prioridad:** Media
 
-**Estado:** Parcial. Hay historial interno y seguimiento por polling; no se envían push ni correo.
+**Estado:** Parcial. El módulo mantiene un historial en memoria y expone rutas para publicarlo y leerlo; el corte vertical las ejercita, pero las rutas productivas de transición no agregan automáticamente esos eventos. El estado del pedido se consulta por polling cada 3 segundos. No hay umbral temporal aprobado, push ni correo. La integración del historial con las transiciones requiere decisión y cambio del equipo.
 
 ## Aspecto A-04
 

@@ -23,7 +23,7 @@ El objetivo central es reducir el tiempo de espera presencial durante las horas 
 
 | Prioridad | Atributo | Aspecto relacionado | Motivo |
 | :---: | :--- | :---: | :--- |
-| 1 | Disponibilidad y consistencia | A-01 | El sistema debe seguir aceptando y actualizando pedidos durante picos de demanda; el umbral de aceptación está definido en ESC-01 y su medición S14 está pendiente. |
+| 1 | Disponibilidad y consistencia | A-01 | ESC-01 se midió en S14: los perfiles A, B y E cumplieron con PostgreSQL disponible; el perfil C no alcanzó el umbral de solicitudes procesadas durante la caída de la base (RV-01). |
 | 2 | Aislamiento entre establecimientos | A-02 | Al ser 5 negocios independientes compartiendo la plataforma, un pedido o dato mal enrutado genera errores operativos y desconfianza entre vendedores. |
 | 3 | Integridad de la validación en el punto de recolección | A-06 | El PIN es el único control de seguridad del flujo; si puede vulnerarse, cualquiera podría recoger un pedido ajeno. |
 | 4 | Protección de datos personales y de pago | A-04 | El sistema maneja identidad institucional y confirmaciones de pago; una exposición indebida afecta a toda la comunidad universitaria. |
@@ -33,7 +33,7 @@ El objetivo central es reducir el tiempo de espera presencial durante las horas 
 
 Los objetivos anteriores se concretan mediante los siguientes criterios medibles:
 
-- Durante períodos de alta demanda, al menos el 99 % de las solicitudes de pedido debe procesarse correctamente y la tasa de pedidos duplicados o perdidos debe ser menor al 1 % (ESC-01; la medición S14 sigue pendiente).
+- Durante períodos de alta demanda, al menos el 99 % de las solicitudes de pedido debe procesarse correctamente y la tasa de pedidos duplicados o perdidos debe ser menor al 1 % (ESC-01). En S14, A, B y E cumplieron con PostgreSQL disponible; C procesó 68,83 % durante la caída y dejó dos filas persistidas pese a responder `503` (RV-01; detalle en [evidencias S14](../evidencias/evidencias-s14.md)).
 - El 100 % de los pedidos deberá quedar asociado al establecimiento correcto.
 - La validación de entrega deberá impedir despachar cuando el PIN proporcionado no corresponda con el pedido.
 - Un usuario deberá poder completar las acciones principales del flujo de compra en un tiempo razonable, procurando que la navegación hasta la confirmación del pedido no supere los 2 minutos.
@@ -269,7 +269,9 @@ Solo se permiten transiciones secuenciales; un salto de más de un estado es rec
 | `pagos` ↔ `pedidos` | import ESM síncrono | Objeto JS en memoria | pagos, pedidos |
 | `entrega` ↔ `pedidos` | import ESM síncrono | Objeto JS en memoria | entrega, pedidos |
 | Orquestador → módulos | import ESM síncrono | Objeto JS en memoria | corte-vertical.js → todos |
-| Módulo → Notificaciones | import ESM síncrono | Objeto JS en memoria | Todos → notificaciones |
+| Rutas API → Identidad | import ESM síncrono | Usuario de sesión / objeto JS | Registro, ingreso, resolución del token y autorización de roles |
+| Rutas API → Almacén | import ESM síncrono; Garage usa S3 SigV4 por HTTP interno | Bytes y referencia UUID | Subida protegida por sesión; descarga pública de imagen por UUID |
+| Rutas API → Notificaciones | import ESM síncrono | Objeto JS en memoria | `POST /notificaciones` y lectura del historial; las rutas de transición no lo invocan automáticamente |
 
 ### 6.3 — Caso de uso UC-01 — Creación de pedido en hora pico
 
@@ -413,12 +415,14 @@ flowchart TB
 | Pago / Confirmación | `{pedidoId, tiendaId, monto, confirmadoEn}` clave `tienda:pedido`, sin tarjeta | Pagos |
 | Recolección / Validación | `marcarListo/validarPin` en mostrador | Entrega |
 | Notificación | `{pedidoId, tiendaId, estado, mensaje, enviadaEn}` | Notificaciones |
+| Cuenta / Sesión | Usuario, contraseña derivada, rol efectivo y token firmado | Identidad (módulo de soporte) |
+| Imagen de catálogo o tienda | Bytes validados y referencia UUID; bytes en Garage cuando está configurado | Almacén (módulo de soporte) / Catálogo (referencia) |
 | Cliente | `clienteId` opaco que ordena | Pedidos (ref) |
 | Orquestador | `backend/src/corte-vertical.js`, composición, no es contexto | — |
 
 ### 8.2 Mapa de contextos (resumen + enlace)
 Ver `docs/dominio/mapa-de-contextos.md` (diagrama Mermaid canónico).
-Relaciones: Pedidos→Catálogo (C/S), Pagos→Pedidos (C/S), Entrega→Pedidos (C/S), *→Notificaciones (OHS), Pagos→Pasarela (ACL futura), `tiendaId` (Shared Kernel).
+Relaciones de dominio: Pedidos→Catálogo (C/S), Pagos→Pedidos (C/S), Entrega→Pedidos (C/S), y `tiendaId` (Shared Kernel). Notificaciones ofrece el historial por API y el corte vertical lo invoca en su flujo de demostración; las rutas productivas de transición no publican esos eventos automáticamente (A-03 parcial). Las rutas HTTP consultan Identidad para autenticar y autorizar; Almacén sirve archivos y Garage cuando está configurado. Pagos→Pasarela (ACL futura, no activa).
 Proyección a código: `docs/c4/componentes.md`. Decisiones: ADR-0001 (estilo), ADR-0004 (aislamiento), ADR-0005 (reajuste S6).
 
 ### 8.3 Reglas transversales
@@ -832,7 +836,7 @@ del modelado de S13, con su motivo. La matriz completa está en
 | A-13: contadores de intentos en memoria | API Backend Central | 1×2 = 2 | Con una instancia, el riesgo es la ventana de un reinicio |
 | A-14: imagen válida que explota el decodificador del navegador | App / Web Cliente | 1×2 = 2 | Quien sube es el operador de su propia tienda; el antimalware está fuera de alcance |
 | A-10: `GET /metricas` pública | API Backend Central | 1×1 = 1 | Contadores agregados sin datos personales; se usa para medir ESC-01 |
-| 16 avisos moderados de `npm audit` en el frontend | Cadena de suministro | 1×1 = 1 | Solo en herramientas de lint; 0 en producción (`--omit=dev`) |
+| 8 avisos moderados de `npm audit` en el frontend | Cadena de suministro | 1×1 = 1 | Según la revisión del 05/11, solo en herramientas de desarrollo; el umbral bloqueante del CI es `high` |
 
 ### 11.8. Revisión externa y evaluación ATAM (S14)
 
@@ -864,7 +868,7 @@ pero aún no hay cambio).
 | RV-09 | Revisor del curso (05/11) | Borde Traefik · ESC-01 y A-17 | Sin rate limit por IP (P-1) | Riesgo | **Pendiente** | [Guía P-1](../despliegue-rate-limit-traefik.md). Después de aplicarlo hay que repetir la corrida E y contar los `429` aparte |
 | RV-10 | Revisor del curso (05/11) | `JWT_SECRET` · A-22 | El procedimiento de rotación está escrito, pero no ensayado (P-4) | Riesgo | **Pendiente** | §14.2 |
 | RV-11 | Revisor del curso (05/11) | Proceso del equipo · STRIDE | La reunión STRIDE no tiene acta | — | **Pendiente** | [`sesion-stride-31-10.md`](../evidencias/sesion-stride-31-10.md) es la agenda; falta el registro |
-| RV-12 | Revisor del curso (05/11) | Aceptación funcional en producción | No hay prueba HTTP propia en producción de la compra en varias tiendas, el ciclo con PIN, la cancelación y las imágenes | — | **Pendiente** (parcial) | Ya se comprobaron la compatibilidad v1 y el historial tras reiniciar ([evidencias-s14 §8](../evidencias/evidencias-s14.md#8-aceptación-funcional-en-producción)); el resto sigue pendiente |
+| RV-12 | Revisor del curso (05/11) | Aceptación funcional en producción | No hay prueba HTTP propia en producción de la compra en varias tiendas, el ciclo con PIN, la cancelación y las imágenes | — | **Pendiente** (parcial) | La prueba local posterior obtuvo 15/15 comprobaciones HTTP con backend en memoria ([evidencias-s14 §8.1–8.2](../evidencias/evidencias-s14.md#81-complemento-de-aceptación-local-2026-11-07)); no sustituye la aceptación en Dokploy, persistencia PostgreSQL ni Garage. Se mantienen pendientes |
 | RV-13 | Revisor del curso (05/11) | Cadena de suministro del frontend | 8 avisos moderados de `npm audit`; el umbral bloqueante del CI es `high` | — | **Asumido** | §11.7: solo en herramientas de desarrollo, 0 en producción. Se revisa si alguno pasa a `high` |
 | RV-14 | ATAM S14 | Despliegue · trazabilidad | La huella servida del backend (`d7560e44995dcb5e`) no coincide con la que calcula `huella.mjs` sobre `master` en el equipo (`b4dc9fcec77ceac8`) | Riesgo de trazabilidad | **Pendiente** | Comparar con el log del último despliegue que incluyó el backend (`d481238`). Si difieren, forzar un despliegue del backend y registrar la huella |
 | RV-15 | ATAM S14 | ESC-01, tercera medida | «Estado almacenado = último estado confirmado» se midió en la creación (0 diferencias en 5100 pedidos), no en las transiciones de pago, preparación, Listo y entrega bajo carga | — | **Pendiente** | Ampliar `medir-carga.js` con una fase de transiciones usando una cuenta de tienda |
