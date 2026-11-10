@@ -6,8 +6,8 @@
 [![CI](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/workflows/ci.yml)
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=ISCOUTB_AS_202620_LaPlacita&metric=alert_status)](https://sonarcloud.io/project/overview?id=ISCOUTB_AS_202620_LaPlacita)
 
-Proyecto del curso Arquitecturas de Software, 2026-2. Hoy el proyecto va en la Semana 14
-(evaluación y medición); la entrega final es en la Semana 15.
+Proyecto del curso Arquitecturas de Software, 2026-2. La evidencia de S14 fue entregada en SAVIO;
+la entrega final y sustentación de S15 siguen pendientes.
 
 ## Índice
 

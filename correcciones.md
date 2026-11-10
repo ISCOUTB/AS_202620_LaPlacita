@@ -1572,10 +1572,10 @@ Se contrastó el estado de la documentación con el código y con las evidencias
 - Se alinearon arc42 y `docs/aspectos.md` con los resultados documentados de ESC-01: los perfiles A, B y E cumplieron con PostgreSQL disponible; el perfil C quedó por debajo del umbral durante la interrupción de la base y mantiene RV-01 pendiente.
 - Se actualizaron los diagramas C4 para reflejar una sola aplicación Next.js con las rutas de cliente, tienda y administración general, y para distinguir los cinco contextos de dominio de los módulos de soporte Identidad y Almacén.
 - Se documentó que el módulo de Notificaciones ofrece historial por API y se ejercita en el corte vertical, pero las rutas productivas de transición no publican automáticamente cada cambio. A-03 sigue parcial y sin escenario de calidad aprobado; decidir su umbral e integración corresponde al equipo.
-- Sigue pendiente revisar la estructura arc42: hay secciones numeradas 13 y 14 después de la sección Glosario, mientras que la consigna solicita secciones 1–12 e incluye el glosario. Antes de reorganizarla, el equipo debe acordar cómo conservar los enlaces y la trazabilidad existentes.
+- **Estructura arc42:** verificación del 10/11 confirma que están las secciones 1–14 y el Glosario; las secciones 13 y 14 preceden al Glosario (`arc42-template-EN.md`, líneas 966–1034). La preocupación anotada el 07/11 era incorrecta. No se renumeró ni reorganizó el documento, porque las secciones adicionales contienen decisiones y trazabilidad vigentes y la consigna no exige eliminarlas.
 - RV-14 permanece pendiente de comparar la huella del backend con el despliegue vigente en Dokploy. No se afirmó un despliegue o una huella nueva.
 
-**Verificación realizada:** enlaces Markdown locales y `git diff --check`. No se ejecutaron pruebas de aplicación porque esta revisión solo modifica documentación.
+**Verificación realizada:** enlaces Markdown locales y `git diff --check`. La repetición de pruebas de aplicación y builds se registra en `evidencias-s14.md` §8.5.
 
 ## Pruebas locales previas a S15 (07/11/2026)
 
@@ -1587,3 +1587,20 @@ Se ejecutaron comprobaciones locales del backend y frontend con cuentas ficticia
 - Las rutas principales del frontend y endpoints de salud/catálogo respondieron HTTP 200. No se realizó inspección visual en navegador ni validación responsive.
 
 **Pendiente de validar por el equipo:** ejecutar las pruebas que requieren PostgreSQL y Garage, investigar el fallo de Turbopack en Windows/CI, y hacer la aceptación visual y funcional en Dokploy. No se desplegó, no se modificó configuración productiva y no se cambió código de aplicación.
+
+## Auditoría documental transversal (10/11/2026)
+
+Se revisaron las referencias internas, el estado S14/S15 y la coherencia entre los resultados recientes y la documentación de arquitectura.
+
+- **Enlaces Markdown:** se recorrieron 70 archivos Markdown bajo `docs/`; no se encontraron destinos de archivo inexistentes. Se detectaron y corrigieron dos anclas rotas que apuntaban al procedimiento P-4 en `evidencias-s13.md`.
+- **Estado de entrega:** el README decía que el proyecto «va en la Semana 14», aunque también indicaba que S14 ya fue entregada y S15 seguía pendiente. Se sustituyó por ese estado explícito y consistente.
+- **Evidencia de rendimiento local:** §8.3–8.4 de `evidencias-s14.md` se contrastó con los tres JSON del 10/11. Se corrigió la frase que atribuía la imposibilidad de simular la caída a que PostgreSQL no estaba instalado: PostgreSQL 18.6 sí está instalado; la conexión al clúster temporal no pudo establecerse. No se presentan nuevas mediciones persistentes.
+- **Verificación:** `git diff --check` y validación de destinos de archivo/anclas internas. No se ejecutaron pruebas de aplicación en esta auditoría.
+
+### Observaciones documentales y decisiones que siguen siendo del equipo
+
+- **Estados ADR ratificados:** ADR-0036 y ADR-0008 tienen estado aceptado y ratifican explícitamente decisiones anteriores. Los ADR originales conservan el estado con que se registraron, de acuerdo con la inmutabilidad que esos documentos declaran. No es una decisión sin resolver ni se modificaron los originales; la tabla arc42 debe enlazar la ratificación aceptada como estado vigente.
+- **arc42 y consigna S15:** se confirma que §§1–14 y el Glosario existen y que §§13–14 están antes del Glosario. Se conserva esta estructura y sus enlaces; no hay una corrección pendiente por orden del glosario.
+- **A-03:** `docs/aspectos.md` conserva la nota fechada «al 07/11» sobre el escenario de notificaciones pendiente. Se mantiene como corte histórico; debe actualizarse cuando el equipo decida si añade escenario o conserva la deuda.
+
+La lista anterior contiene pendientes de decisión documental, no errores corregidos automáticamente ni evidencia de que las decisiones grupales ya estén aprobadas.

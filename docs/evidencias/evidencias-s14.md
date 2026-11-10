@@ -359,3 +359,44 @@ Entorno de ejecución: Node `v24.19.0`, npm `11.17.0`, Windows 11. Resultados:
 | `frontend: npm run build` (Turbopack predeterminado) | **Falla en esta máquina** | Turbopack aborta al crear un proceso hijo al procesar `rubik_1431770f.module.css`; se reprodujo dos veces. El fallback Webpack pasa, pero no reemplaza la verificación del comando predeterminado de CI |
 
 La suite local usa memoria para las pruebas que no requieren base. No se verificó persistencia nueva en PostgreSQL, escritura real en Garage, rotación de `JWT_SECRET`, limitación de tasa, carga bajo concurrencia, ni aceptación visual móvil. La interfaz no se inspeccionó manualmente en el navegador durante esta sesión; los códigos `200` solo acreditan respuesta HTTP.
+
+### 8.3 Repetición local de rendimiento durante indisponibilidad del despliegue (2026-11-10)
+
+Se repitieron las mediciones de ESC-01 contra una instancia local compilada de Next.js (`Node v24.19.0`, `npm 11.17.0`, Windows 11), en `http://127.0.0.1:3100`. No se configuró `DATABASE_URL`: el backend operó en modo memoria y la conciliación de pedidos se hizo mediante `GET /api/v1/pedidos`. La cuenta `carga.local.20261110@utb.edu.co` fue desechable y los datos se mantuvieron únicamente en el proceso local. La huella `local` identifica esta compilación; no es una huella de Dokploy.
+
+| Perfil | Carga | Respuestas | Resultado e integridad | Latencia p95 | Rendimiento mediano |
+|---|---|---|---|---|---|
+| Lectura del catálogo | 200 consultas × 3 repeticiones; 10 concurrentes; cinco tiendas | 600/600 HTTP 200 | Sin escrituras | 37–76 ms; mediana entre repeticiones 51 ms | 278,3 respuestas/s |
+| Carga de creación | 300 pedidos × 5 repeticiones; 25 concurrentes; 10 % reintentos con la misma llave | 1500/1500 HTTP 201 | 100 % procesado; 0 duplicados, pérdidas o estados distintos; 150/150 reintentos devolvieron el mismo ID | 220–926 ms; mediana entre repeticiones 661 ms | 166 respuestas/s |
+| Estrés de creación | 1000 pedidos × 3 repeticiones; 100 concurrentes; 10 % reintentos con la misma llave | 3000/3000 HTTP 201 | 100 % procesado; 0 duplicados, pérdidas o estados distintos; 300/300 reintentos devolvieron el mismo ID | 369–444 ms; mediana entre repeticiones 421 ms | 269 respuestas/s |
+
+Los informes completos por repetición están en [`mediciones/2026-11-10/esc01-memoria-lectura.json`](mediciones/2026-11-10/esc01-memoria-lectura.json), [`esc01-memoria-carga.json`](mediciones/2026-11-10/esc01-memoria-carga.json) y [`esc01-memoria-estres.json`](mediciones/2026-11-10/esc01-memoria-estres.json). Las tres mediciones de aplicación completaron sin errores HTTP. La primera repetición de carga fue más lenta; sus resultados no se reducen a esa corrida y se informan rangos y medianas.
+
+**Interpretación y límites.** Los perfiles locales de escritura alcanzan los umbrales funcionales de ESC-01, pero no son comparables con las mediciones anteriores respaldadas por PostgreSQL: la memoria elimina la latencia de disco y no permite demostrar persistencia, recuperación de reinicio ni conciliación contra la base. La concurrencia también está limitada al backend y al cliente en la misma máquina. Por esa razón, estos resultados no reemplazan la prueba con PostgreSQL ni la corrida desplegada.
+
+La comprobación adicional de 20 paquetes ICMP al host desplegado recibió 0/20 respuestas. Dado que la consulta HTTP de salud sí respondió y las mediciones HTTP anteriores dieron 200, el resultado es compatible con ICMP bloqueado y **no se interpreta como 100 % de pérdida de paquetes de la aplicación**. Esta corrida no midió ancho de banda, jitter de red, CPU/RAM del servidor ni priorización de tráfico; esos aspectos de QoS quedan pendientes de un entorno con telemetría y control de red. No se simuló una caída de PostgreSQL: aunque PostgreSQL 18.6 está instalado, no se pudo obtener una conexión desde esta sesión a un clúster local aislado; el intento está documentado en §8.4.
+
+Para repetir las corridas, se compiló el backend con `npm run build`, se arrancó `.next/standalone/server.js` con `DATABASE_URL` vacío y un `JWT_SECRET` temporal de al menos 32 caracteres, y se ejecutó `scripts/medir-carga.js` contra `127.0.0.1`. Las fases de escritura usaron una cuenta temporal con `--registrar`; el informe JSON se guardó con `--salida`. Al detener el proceso, se descartaron los pedidos y la cuenta en memoria.
+
+En esta misma revisión, `backend: npm test` volvió a dar 172 aprobadas, 0 fallidas y 7 omitidas (PostgreSQL); `backend: npm run contract-test` dio 34/34 y `frontend: npm run lint` pasó. `backend: npm run build` pasó. El build frontend predeterminado de Turbopack volvió a fallar al crear un proceso hijo durante el procesamiento de `rubik_1431770f.module.css`, incluso con permisos ampliados; `frontend: npm run build -- --webpack` pasó, generó 20 páginas y completó la recopilación de trazas. El build con Webpack permite verificar el código, pero no reemplaza el build Turbopack que usa la configuración predeterminada.
+
+### 8.4 Intento de repetir los perfiles con PostgreSQL (2026-11-10)
+
+PostgreSQL 18.6 está instalado. Para no tocar una base ya existente, se inicializó un clúster nuevo bajo `%LOCALAPPDATA%\Temp\laplacita-pg-20261110`, usuario local `laplacita`, autenticación `trust` y puerto exclusivo 55432. `initdb` terminó correctamente. Sin embargo, la conexión de prueba con `pg_isready`/`createdb` no pudo completarse desde el entorno de ejecución de esta sesión (socket local rechazado con `10013`); un segundo arranque informó que el puerto temporal ya estaba ocupado. No se creó la base `laplacita_test`, no se conectó el backend a PostgreSQL y **no se generaron resultados nuevos de rendimiento persistente ni de caída/recuperación de base**. No se modificó ni detuvo ningún servicio o clúster de PostgreSQL preexistente.
+
+Por tanto, los únicos resultados nuevos de escritura de esta fecha son los perfiles A y B de §8.3, ejecutados contra memoria; no reemplazan las corridas A/B/C históricas respaldadas por PostgreSQL de §3. Tampoco se vuelve a afirmar el perfil C como repetido. Para completar una repetición válida, PostgreSQL debe aceptar conexiones en una base vacía aislada y el proceso del backend y el medidor deben poder acceder al mismo puerto; entonces se repiten A/B con `--bd` y C deteniendo solo ese clúster temporal durante la oleada. Los perfiles D/E de S14 eran contra el despliegue y no son pruebas locales; con el servicio desplegado indisponible quedan sin repetición actual.
+
+### 8.5 Verificación automatizada de documentación y aplicación (2026-11-10)
+
+Se repitieron las verificaciones después de revisar esta evidencia. Resultados observados en esta ejecución:
+
+| Comando | Resultado | Alcance y límite |
+|---|---|---|
+| `backend: npm test` | **172 aprobadas, 0 fallidas, 7 omitidas** de 179 | Las siete requieren `DATABASE_URL`; no validan persistencia en esta corrida. |
+| `backend: npm run contract-test` | **34/34 aprobadas** | Consistencia del contrato OpenAPI y las rutas presentes. |
+| `frontend: npm run lint` | **Aprobado** (código de salida 0) | ESLint terminó sin emitir errores. |
+| `backend: npm run build` | **Aprobado al repetir con permisos ampliados** | El primer intento restringido falló al crear una junction en Windows (`Acceso denegado`, error 5); el segundo compiló, pasó TypeScript y generó las rutas de la aplicación. |
+| `frontend: npm run build -- --webpack` | **Aprobado al repetir con permisos ampliados**; compiló, pasó TypeScript y generó 20 rutas/páginas | El primer intento restringido falló durante prerender de `/mis-pedidos` por `EPERM` al crear directorios bajo `frontend/.next`. El segundo completó la recopilación de trazas. |
+| Enlaces y formato Markdown | **70 archivos Markdown bajo `docs/`, 0 destinos de archivo rotos; `git diff --check` limpio** | La validación automática de rutas no interpreta con fidelidad todas las anclas GitHub con tildes y guiones Unicode; las dos referencias corregidas a §8 de S13 se contrastaron con el título real. |
+
+La auditoría confirma además que arc42 contiene §§1–14 y el Glosario, en ese orden; la nota anterior que situaba §§13–14 después del Glosario era errónea y se corrigió en `correcciones.md`. ADR-0036 y ADR-0008 son las ratificaciones aceptadas vigentes; los ADR antecedentes retienen su estado histórico por la regla de inmutabilidad. No se cambiaron estados ni contenido de decisiones arquitectónicas. Los fallos restringidos de build fueron reproducibles como problemas de permisos de Windows al escribir en `.next`; ambos builds terminaron correctamente al repetir con permisos ampliados. El build predeterminado de frontend con Turbopack no se repitió en esta ronda y el fallo previo de Turbopack sigue pendiente de evaluación.

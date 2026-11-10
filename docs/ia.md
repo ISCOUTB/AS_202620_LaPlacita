@@ -3,13 +3,13 @@
 
 ## Resumen: qué se aceptó y qué se rechazó
 
-- Entradas registradas: 79 (06/08/2026 al 07/11/2026).
+- Entradas registradas: 80 (06/08/2026 al 10/11/2026).
 - Aceptadas y verificadas por el equipo: 39 (columna Validación con ejecución o confirmación).
 - Aceptadas con ajustes del equipo: 4 entradas.
 - Entradas con propuestas rechazadas y justificadas: 44 (131 propuestas en total).
-- Con validación pendiente declarada: 21 entradas (5 de ago–sep, cubiertas de facto por
+- Con validación pendiente declarada: 22 entradas (5 de ago–sep, cubiertas de facto por
   evidencia posterior —suites en verde, cortes y semanas siguientes—; 5 de la S12, validadas
-  por el equipo el 24/10/2026; la del 25/10, la del 28/10, las dos del 01/11, las tres del 02/11, la del 03/11, las dos del 06/11 y las dos del 07/11, pendientes de revisión del equipo).
+  por el equipo el 24/10/2026; la del 25/10, la del 28/10, las dos del 01/11, las tres del 02/11, la del 03/11, las dos del 06/11, las dos del 07/11 y la del 10/11, pendientes de revisión del equipo).
 - Propuestas rechazadas: ampliar C4 a más detalle; restaurar Árbol de Utilidad en aspectos.md;
   auto-corregir V-01/V-03 el mismo día; microservicios o renombrar módulos;
   declarar corte-vertical.js como sexto contexto; párrafos no sustentables por el equipo;
@@ -65,6 +65,7 @@
 
 | Fecha | Herramienta | Propósito | Resumen del Prompt (Entrada) | Resultado obtenido | Rechazado | Validación |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **10/11/2026** | Codex (GPT-6) | Auditar la documentación del repositorio, corregir referencias internas rotas y mantener las afirmaciones de evidencia alineadas con los resultados comprobables. | *"Revisa toda la documentación implementada y verifica que esté correctamente implementada."* | Revisados los enlaces de los documentos: no hay destinos de archivo inexistentes y se corrigieron dos referencias al ancla de §8 de evidencias S13. README distingue S14 entregada de S15 pendiente. Evidencias S14 aclara que PostgreSQL 18.6 está instalado, pero no se pudo conectar al clúster temporal y no se repitieron pruebas persistentes. Se corrigió la lectura equivocada del orden de arc42. | No se cambiaron estados ni contenidos de ADR; ADR-0036 y ADR-0008 son las ratificaciones aceptadas y los antecedentes conservan su estado histórico. No se alteró código. Las siete pruebas que requieren PostgreSQL siguen omitidas y no se reporta persistencia nueva. | 70 Markdown bajo `docs/`: 0 destinos de archivo rotos; `git diff --check` limpio. Backend: 172 aprobadas, 0 fallidas, 7 omitidas; contrato 34/34; lint frontend aprobado; builds backend y frontend Webpack aprobados al repetir con permisos ampliados. Pendiente de revisión del equipo. |
 | **07/11/2026** | Codex (GPT-6) | Ejecutar pruebas locales reproducibles de frontend y backend, documentar los resultados exactos y distinguir validación local de aceptación productiva. | *"Ejecuta las pruebas locales necesarias, comprueba sus resultados y documenta qué debemos comunicar al equipo."* | Backend: 172 pruebas aprobadas, 0 fallidas y 7 omitidas; contrato 34/34; build aprobado con permisos ampliados. Frontend lint y build Webpack aprobados; el build Turbopack predeterminado falló dos veces en esta máquina. Pasaron 15/15 comprobaciones HTTP funcionales en memoria. Detalle en `docs/evidencias/evidencias-s14.md` §8.1–8.2. | No se afirmó persistencia PostgreSQL, almacenamiento Garage, inspección visual responsive ni aceptación en Dokploy. No se desplegó ni se modificó código de aplicación. | Pendiente de revisión del equipo; evidencia local, no equivale a prueba productiva. |
 | **07/11/2026** | Codex (GPT-6) | Corregir estados S14 y alinear la documentación de arquitectura y aspectos con los módulos y rutas del código actual, sin alterar decisiones ni afirmar pruebas no realizadas. | *"Contrastar documentación y requisitos de S15, editar solo lo respaldado por evidencia y evitar decisiones arbitrarias."* | README marca S14 como entregada; arc42 refleja ESC-01; C4 de componentes incorpora Identidad, Almacén, persistencia y rutas admin, y describe el límite real del historial A-03; `docs/aspectos.md`, el mapa de contextos y la tabla de propiedad distinguen hechos implementados de deuda. | No se cerraron riesgos, no se inventó el escenario de calidad faltante de A-03 ni se cambió código, configuración o estado de despliegue. | Pendiente de revisión y validación del equipo. El envío a SAVIO fue confirmado por el usuario; SAVIO no se consultó desde esta sesión. |
 | **06/08/2026** | Gemini | Elaboración de la estructura inicial del README del proyecto. | *"Generar una estructura base en Markdown para el README organizado con secciones para la descripción, problema, objetivos y documentación."* | Se obtuvo un README organizado con secciones para la descripción y documentación. | — | Revisado y adaptado por el equipo. |

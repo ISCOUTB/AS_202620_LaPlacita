@@ -1,0 +1,76 @@
+{
+  "escenario": "ESC-01",
+  "fecha": "2026-11-10T19:23:24.615Z",
+  "url": "http://127.0.0.1:3100",
+  "fase": "lectura",
+  "carga": {
+    "peticiones": 200,
+    "concurrencia": 10,
+    "repeticiones": 3,
+    "calentamiento": 20,
+    "pctReintentos": 0,
+    "tiendas": [
+      "tienda-01",
+      "tienda-02",
+      "tienda-03",
+      "tienda-04",
+      "tienda-05"
+    ]
+  },
+  "fuenteConciliacion": null,
+  "umbral": {
+    "procesadoMinPct": 99,
+    "duplicadoOPerdidoMaxPct": 1
+  },
+  "version": "local",
+  "corridas": [
+    {
+      "repeticion": 1,
+      "duracionS": 0.98,
+      "rendimientoRps": 204.8,
+      "latenciaMs": {
+        "p50": 44,
+        "p95": 76,
+        "p99": 86,
+        "max": 92
+      },
+      "estatus": {
+        "200": 200
+      }
+    },
+    {
+      "repeticion": 2,
+      "duracionS": 0.72,
+      "rendimientoRps": 278.3,
+      "latenciaMs": {
+        "p50": 34,
+        "p95": 51,
+        "p99": 59,
+        "max": 64
+      },
+      "estatus": {
+        "200": 200
+      }
+    },
+    {
+      "repeticion": 3,
+      "duracionS": 0.64,
+      "rendimientoRps": 312.6,
+      "latenciaMs": {
+        "p50": 31,
+        "p95": 37,
+        "p99": 38,
+        "max": 39
+      },
+      "estatus": {
+        "200": 200
+      }
+    }
+  ],
+  "agregado": {
+    "p95MsMin": 37,
+    "p95MsMediana": 51,
+    "p95MsMax": 76,
+    "rendimientoRpsMediana": 278.3
+  }
+}
