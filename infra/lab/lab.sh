@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Laboratorio local de seguridad (S14) — PostgreSQL en Podman + backend/PWA en Next.
-# Uso: ./infra/lab/lab.sh {preparar|arrancar|parar|estado|reset|logs|pruebas}
+# Uso: ./infra/lab/lab.sh {preparar|arrancar|parar|estado|reset|logs|pruebas|pentesting}
 set -euo pipefail
 
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -190,6 +190,11 @@ pruebas() {
   node "$LAB/pruebas/seguridad-http.mjs"
 }
 
+pentesting() {
+  arrancar
+  node "$LAB/pruebas/pentesting.mjs"
+}
+
 case "${1:-}" in
   preparar) preparar "${2:-}" ;;
   arrancar|start) arrancar ;;
@@ -199,5 +204,6 @@ case "${1:-}" in
   reset) reset ;;
   logs) logs "${2:-backend}" ;;
   pruebas|test) pruebas ;;
-  *) echo "Uso: $0 {preparar|arrancar|parar|estado|reiniciar|reset|logs [backend|frontend]|pruebas}" ; exit 1 ;;
+  pentesting|pentest) pentesting ;;
+  *) echo "Uso: $0 {preparar|arrancar|parar|estado|reiniciar|reset|logs [backend|frontend]|pruebas|pentesting}" ; exit 1 ;;
 esac

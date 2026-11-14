@@ -1627,3 +1627,45 @@ una CSP con `script-src`, para obligar a revisar el riesgo y arc42 §14.
   `JWT_SECRET`: bloqueados por el panel caído.
 - No se mergea nada que toque `backend/**` o `frontend/**` hasta que vuelva el panel: el push
   dispara el despliegue de las dos apps.
+
+---
+
+## Pentesting S14 (14/11/2026)
+
+Complemento de la batería anterior: en vez de comprobar el contrato, se atacó la superficie pública
+del laboratorio con **59 pruebas**. La evidencia completa está en
+[`docs/evidencias/pentesting-s14.md`](docs/evidencias/pentesting-s14.md).
+
+- **Batería:** `infra/lab/pruebas/pentesting.mjs`, ejecutable con `./infra/lab/lab.sh pentesting`.
+  Cubre JWT forjado, subida de archivos, inyección (SQLi, traversal, prototype pollution, CRLF),
+  límites/DoS, lógica de negocio, fugas de información y CSRF/sesión.
+- **Resultado:** **59/59**, 0 fallos, 3 riesgos aceptados con guarda.
+
+### Hallazgo corregido
+
+| # | Hallazgo | Corrección |
+|---|---|---|
+| S14-07 | `POST /admin/usuarios/{id}/contrasena` permitía restablecer la contraseña de una cuenta `superadmin`; `PATCH` sí la bloqueaba. Contradecía ADR-0037 y permitía que una sesión de superadmin se apropiara de la cuenta de otro. | La misma guarda de `actualizarUsuario` en `restablecerContrasena` (`backend/src/modules/identidad/index.js`): `esAdminGeneral(actual)` → `409`. Prueba unitaria en `backend/tests/admin-general.test.js` y prueba HTTP en la batería. |
+
+Antes: `PATCH` 409 / `POST .../contrasena` 200. Después: ambos 409 y la contraseña original sigue
+funcionando.
+
+### Riesgos aceptados con guarda
+
+| # | Riesgo | Por qué se acepta | Guarda |
+|---|---|---|---|
+| H-02 | `TRACE` devuelve `500` (Next 16 lo rechaza internamente) | Respuesta vacía, sin fuga ni cambio de estado; ningún navegador lo envía y el arreglo exigiría middleware en el borde | La prueba exige que el `500` siga siendo vacío |
+| H-03 | El BFF no valida `Origin` | La cookie es `HttpOnly; SameSite=Lax`: el navegador no la envía en un POST cross-site. Validar `Origin` es defensa en profundidad y tocaría `frontend/**` con el panel caído | La prueba verifica que sin cookie el cambio de estado da 401 y que no hay CORS abierto |
+| H-04 | El logout no revoca el JWT | Decisión ADR-0021 (JWT stateless, 7 días); la rotación de `JWT_SECRET` es la revocación de emergencia (P-4) | La prueba falla si el token deja de valer tras el logout, para revisar la decisión |
+
+### Verificación
+
+- Pentesting: 59 pruebas, 59 ok, 0 fallos, 3 aceptadas.
+- Batería base: 50 pruebas, 50 ok, 0 fallos, 2 aceptadas (A-24).
+- Backend: `npm test` 182 pruebas (175 pasan, 0 fallan, 7 omitidas sin PostgreSQL) y contrato 34/34.
+- No se ejecutó nada intrusivo contra producción.
+
+### Pendiente
+
+- Validar `Origin` en el BFF (H-03) cuando vuelva el panel, junto con P-1 y el resto del despliegue.
+- No se mergea: la rama toca `backend/**` y el push a `master` dispara el deploy de las dos apps.

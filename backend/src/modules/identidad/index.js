@@ -302,6 +302,9 @@ export async function actualizarUsuario(usuarioId, cambios = {}, { actorId } = {
 /** Pone una contraseña nueva (no hay servicio de correo para restablecerla sola). */
 export async function restablecerContrasena(usuarioId, contrasena) {
   const actual = cuentaExistente(usuarioId);
+  if (esAdminGeneral(actual)) {
+    throw errorCon('Las cuentas de administración general se manejan con ADMINS_GENERALES', 409);
+  }
   if (typeof contrasena !== 'string' || contrasena.length < 8) {
     throw errorCon('La contraseña debe tener al menos 8 caracteres', 400);
   }

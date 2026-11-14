@@ -107,6 +107,10 @@ test('cambiar el rol de una cuenta: de cliente a cajero de una tienda y de vuelt
 
 test('una cuenta de administración general no se edita desde el panel', async () => {
   await assert.rejects(identidad.actualizarUsuario(jefe.usuario.id, { nombre: 'Otro' }), /ADMINS_GENERALES/);
+  // S14-07: la contraseña tampoco se restablece desde el panel; si no, una
+  // sesión de superadmin podría apropiarse de la cuenta de otro superadmin.
+  await assert.rejects(identidad.restablecerContrasena(jefe.usuario.id, 'clave-nueva-2026'), /ADMINS_GENERALES/);
+  assert.equal(identidad.iniciarSesion({ correo: 'jefe.general@utb.edu.co', contrasena: 'clave-jefe-01' }).usuario.rol, 'superadmin');
   await assert.rejects(identidad.actualizarUsuario(carga.usuario.id, { rol: 'admin', tiendaId: 'tienda-01' }, { actorId: carga.usuario.id }), /propio rol/);
 });
 
