@@ -10,5 +10,5 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   const cuerpo = { ...resumen(), escriturasEnColaDeFallidos: colaDeFallidos().length };
   info({ route: 'GET /api/v1/metricas', mensaje: 'métricas consultadas' });
-  return NextResponse.json(cuerpo);
+  return NextResponse.json(cuerpo, { headers: { 'cache-control': 'no-store' } });
 }

@@ -1564,3 +1564,66 @@ Panel nuevo para la persona que administra LaPlacita entera, no una sola tienda
 | Eliminar los pedidos de prueba | En `/admin` → Pedidos, elegir la cuenta de carga y «Eliminar sus pedidos activos»: desaparecen de `/panel` de cada tienda |
 | Cambio de rol | En Cuentas, poner a una cuenta como cajero de una tienda: al volver a entrar, va a `/panel` de esa tienda |
 | Sin PIN en la administración | La lista de pedidos y «Marcar listo» nunca muestran el PIN |
+
+## Pruebas de seguridad S14 en laboratorio local (14/11/2026)
+
+El panel de Dokploy sigue caído (502 desde el 07/11), así que las pruebas que no son seguras
+contra producción se hicieron en un laboratorio local. La evidencia completa está en
+[`docs/evidencias/seguridad-s14.md`](docs/evidencias/seguridad-s14.md).
+
+- **Laboratorio:** `infra/lab/lab.sh` levanta PostgreSQL 16 en Podman (5433), el backend en 3100 y
+  el PWA en 3200. Los secretos se generan en `infra/lab/.env.local` (ignorado por git); la
+  plantilla es `infra/lab/.env.example`.
+- **Batería:** `infra/lab/pruebas/seguridad-http.mjs`, 50 pruebas HTTP sin dependencias. Cubre
+  administración general, autenticación y JWT, IDOR, PIN, aislamiento de tiendas, integridad del
+  pedido, entrada, cabeceras, CORS, BFF y bitácora. Resultado final: **50/50**, con 2 guardas del
+  riesgo aceptado A-24.
+- **Corrección del laboratorio:** el `JWT_SECRET` generado tenía 24 caracteres y el backend exige
+  ≥ 32; ahora genera 64 y la corrida prueba el secreto configurado.
+
+### Hallazgos corregidos
+
+| # | Hallazgo | Corrección |
+|---|---|---|
+| S14-01 | Sin HSTS en backend ni PWA | `Strict-Transport-Security: max-age=31536000` en `backend/next.config.mjs` y `frontend/next.config.mjs` |
+| S14-03 | Swagger desde unpkg sin SRI | `integrity` SHA-384 + `crossorigin` en CSS y JS (`backend/app/docs/route.js`) |
+| S14-04 | `x-powered-by: Next.js` | `poweredByHeader: false` en los dos `next.config.mjs` |
+| S14-05 | `/metricas` sin `no-store` | `cache-control: no-store` en `backend/app/api/v1/metricas/route.js` |
+| S14-06 | `cantidad: 1e9` → desborde `NUMERIC` → `503` | `MAX_UNIDADES_POR_LINEA = 100` y `MAX_UNIDADES_POR_PEDIDO = 500` con `validarUnidades` en `backend/src/modules/pedidos/index.js`; `maximum` en `backend/openapi.yaml` |
+
+El hallazgo S14-02 (CSP completa) se mantiene como **riesgo aceptado A-24**: Next exige nonces por
+petición y el token vive en cookie `httpOnly`. Las guardas de la batería fallan si algún día aparece
+una CSP con `script-src`, para obligar a revisar el riesgo y arc42 §14.
+
+### Endurecimiento adicional
+
+- La huella de idempotencia incluye `tiendaId`, además de las líneas y el cliente.
+- El tope de cantidad se declara en el contrato (`maximum: 100` por línea y `maximum: 500` por
+  pedido) y tiene pruebas unitarias, además de las HTTP.
+- Se exportan `MAX_LINEAS`, `MAX_UNIDADES_POR_LINEA`, `MAX_UNIDADES_POR_PEDIDO` y
+  `validarUnidades` para probar la validación pura sin depender del catálogo.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| HSTS en los dos servicios | `curl -sI http://127.0.0.1:3100/api/v1/health` y `curl -sI http://127.0.0.1:3200/`: debe aparecer `strict-transport-security` |
+| SRI del Swagger | Abrir `/docs` y revisar que CSS y JS de unpkg lleven `integrity` y `crossorigin`; la batería exige dos hashes |
+| Tope de cantidad | `POST /api/v1/pedidos` con `cantidad: 101` → 400; con `1000000000` → 400 (antes 503) y sin pedido huérfano |
+| Sin `x-powered-by` | Las respuestas de backend y PWA no deben traer esa cabecera |
+| `/metricas` no cacheable | `curl -sI http://127.0.0.1:3100/api/v1/metricas` debe traer `cache-control: no-store` |
+
+### Verificación
+
+- Batería HTTP: 50 pruebas, 50 ok, 0 fallos, 2 aceptadas (A-24).
+- Backend: `npm test` con 175 pruebas y 0 fallos (incluye contrato 34/34).
+- `npm audit --omit=dev`: 0 vulnerabilidades en backend y frontend.
+- Producción (no destructivo): TLS y cabeceras, cookie `httpOnly`, IDOR y PIN, path traversal y
+  dependencias; sin fuerza bruta, carga ni subidas maliciosas.
+
+### Pendiente
+
+- P-1 (rate limit en Traefik), HSTS de borde, configuración de Garage y ensayo de rotación de
+  `JWT_SECRET`: bloqueados por el panel caído.
+- No se mergea nada que toque `backend/**` o `frontend/**` hasta que vuelva el panel: el push
+  dispara el despliegue de las dos apps.
