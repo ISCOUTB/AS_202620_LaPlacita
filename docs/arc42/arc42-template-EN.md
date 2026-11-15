@@ -23,7 +23,7 @@ El objetivo central es reducir el tiempo de espera presencial durante las horas 
 
 | Prioridad | Atributo | Aspecto relacionado | Motivo |
 | :---: | :--- | :---: | :--- |
-| 1 | Disponibilidad y consistencia | A-01 | ESC-01 se midió en S14: los perfiles A, B y E cumplieron con PostgreSQL disponible; el perfil C no alcanzó el umbral de solicitudes procesadas durante la caída de la base (RV-01). |
+| 1 | Disponibilidad y consistencia | A-01 | ESC-01 exige ≥99 % de pedidos procesados, <1 % de duplicados o perdidos y cero diferencias de estado. Las mediciones originales S14 y la repetición local del 15/11 están en la evidencia S14 §3.6; esta última no cumple en el perfil de estrés de 100 clientes. |
 | 2 | Aislamiento entre establecimientos | A-02 | Al ser 5 negocios independientes compartiendo la plataforma, un pedido o dato mal enrutado genera errores operativos y desconfianza entre vendedores. |
 | 3 | Integridad de la validación en el punto de recolección | A-06 | El PIN es el único control de seguridad del flujo; si puede vulnerarse, cualquiera podría recoger un pedido ajeno. |
 | 4 | Protección de datos personales y de pago | A-04 | El sistema maneja identidad institucional y confirmaciones de pago; una exposición indebida afecta a toda la comunidad universitaria. |
@@ -33,7 +33,7 @@ El objetivo central es reducir el tiempo de espera presencial durante las horas 
 
 Los objetivos anteriores se concretan mediante los siguientes criterios medibles:
 
-- Durante períodos de alta demanda, al menos el 99 % de las solicitudes de pedido debe procesarse correctamente y la tasa de pedidos duplicados o perdidos debe ser menor al 1 % (ESC-01). En S14, A, B y E cumplieron con PostgreSQL disponible; C procesó 68,83 % durante la caída y dejó dos filas persistidas pese a responder `503` (RV-01; detalle en [evidencias S14](../evidencias/evidencias-s14.md)).
+- Durante períodos de alta demanda, al menos el 99 % de las solicitudes de pedido debe procesarse correctamente y la tasa de pedidos duplicados o perdidos debe ser menor al 1 % (ESC-01). En las corridas originales S14, A, B y E cumplieron con PostgreSQL disponible; C procesó 68,83 % durante la caída y dejó dos filas persistidas pese a responder `503` (RV-01). En la repetición local del 15/11, el perfil B no cumplió ambos umbrales. Los resultados y sus límites están en [evidencias S14](../evidencias/evidencias-s14.md#36-repetición-complementaria-local-del-1511).
 - El 100 % de los pedidos deberá quedar asociado al establecimiento correcto.
 - La validación de entrega deberá impedir despachar cuando el PIN proporcionado no corresponda con el pedido.
 - Un usuario deberá poder completar las acciones principales del flujo de compra en un tiempo razonable, procurando que la navegación hasta la confirmación del pedido no supere los 2 minutos.
@@ -874,6 +874,7 @@ pero aún no hay cambio).
 | RV-15 | ATAM S14 | ESC-01, tercera medida | «Estado almacenado = último estado confirmado» se midió en la creación (0 diferencias en 5100 pedidos), no en las transiciones de pago, preparación, Listo y entrega bajo carga | — | **Pendiente** | Ampliar `medir-carga.js` con una fase de transiciones usando una cuenta de tienda |
 | RV-16 | ATAM S14 (lectura de código) | Código corto A01–Z99 · ESC-01 | Hay 24 letras × 99 = 2376 códigos por tienda y día. Al agotarse, `POST /pedidos` falla con «No hay códigos de pedido libres» (`backend/src/modules/pedidos/codigo.js`) | Punto de sensibilidad | **Asumido** | Una tienda de La Placita no se acerca a 2376 pedidos diarios. En las mediciones cada tienda llegó a ≈ 1400 en un día sin agotar los códigos |
 | RV-17 | Revisor del curso (05/11) | Dependencias | Siguen abiertos 10 PR de Dependabot (#16, #17, #20, #21, #23, #25–#28, #30) | — | **Pendiente** | Revisar e integrar o cerrar con motivo antes del tag final |
+| RV-18 | ATAM S14 (repetición local) | Pool PostgreSQL y creación de pedidos · ESC-01 | En la repetición local del perfil de 100 clientes, el procesado fue 95,8 % y las filas sin respuesta `201` fueron 1,37 %, fuera de los umbrales. Los logs registraron timeouts al obtener conexiones. La configuración observada usa pool máximo 5 y timeout de conexión de 2 s; la relación causal aún no se aisló | Riesgo | **Pendiente** | [Evidencia S14 §3.6](../evidencias/evidencias-s14.md#36-repetición-complementaria-local-del-1511). Repetir con entorno controlado y medir pool, errores y latencias antes de decidir cambios. Revisar también la idempotencia después de timeout o `503` |
 
 **Non-risks medidos (ATAM).** Son decisiones que la medición confirma y no necesitan acción:
 

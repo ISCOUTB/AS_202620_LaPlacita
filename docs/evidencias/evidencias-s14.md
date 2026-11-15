@@ -215,6 +215,23 @@ una lectura en producción ya es ≈ 137 ms.
 
 300/300 procesados, 0 duplicados ni perdidos: **cumple**. El detalle está en §4.1.
 
+### 3.6 Repetición complementaria local del 15/11
+
+El 15/11 se volvieron a ejecutar perfiles que ya estaban medidos en §3.1–§3.4 y §3.3, sobre la revisión `c31545cf6ff749ccd8d355fc5ed9da29565b934c`. **No son escenarios nuevos ni sustituyen las corridas originales.** Se registran como repetición comparativa del mismo protocolo para comprobar el estado posterior del código y dejar visibles tanto la coincidencia como la diferencia observada.
+
+| Perfil existente | Resultado documentado anteriormente | Repetición del 15/11 | Lectura correcta |
+|---|---|---|---|
+| A · carga, 300 pedidos × 5, 25 clientes | 1500/1500 procesados, 0 duplicados/perdidos, p95 mediano 87 ms y rendimiento mediano 378,7 pedidos/s. | 1500/1500 procesados, 0 duplicados/perdidos, p95 mediano 171 ms y rendimiento mediano 209,8 pedidos/s. | Ambos resultados cumplen el umbral de ESC-01 en el perfil A. La latencia y el rendimiento difieren; no se atribuye la diferencia solo al código porque también cambiaron la revisión y la ejecución local. |
+| B · estrés, 1000 pedidos × 3, 100 clientes | 3000/3000 procesados, sin duplicados/perdidos, p95 mediano 329 ms y rendimiento mediano 387,9 pedidos/s. | 2874/3000 procesados (95,8 %), 41 filas persistidas sin respuesta `201` (1,37 %), 0 diferencias de estado, p95 mediano 7350 ms y rendimiento mediano 40,7 pedidos/s. Se observaron 30 respuestas `503` y 109 solicitudes sin respuesta HTTP observada. | La repetición del 15/11 **no cumple** los dos umbrales de procesado e integridad. Es una señal que requiere diagnóstico; no demuestra por sí sola que el cambio de código sea la causa. |
+| D · lectura de catálogo | 600 lecturas desplegadas; p95 mediano 155 ms. | 600 lecturas locales; p95 mediano 64 ms. | Son ubicaciones de ejecución distintas (producción frente a local), por lo que no se comparan como una mejora de latencia. El JSON local se conserva como referencia de lectura del backend actual. |
+| C · interrupción de PostgreSQL | Corrida completa: 413/600 procesados, 2 duplicados, 0 perdidos; el resultado está en §3.3. | Se intentó detener y recuperar el cluster temporal; no se pudo confirmar que la instancia volviera a aceptar conexiones ni concluir la conciliación. | **Repetición inconclusa.** Se conserva como tal y no reemplaza el resultado completo de C. |
+
+La corrida original A/B usó `next start`, Node 24.15.0 y PostgreSQL 18.6; la repetición usó el build standalone, Node 24.19.0 y PostgreSQL 18.6 en otro puerto local. Aunque el protocolo y el equipo son de desarrollo local, las diferencias de runtime y forma de arranque impiden atribuir causalidad o tratar la comparación como un experimento controlado. Durante la repetición B, los logs registraron timeouts al adquirir conexiones; el pool observado está limitado a cinco conexiones con timeout de dos segundos. Es una hipótesis de diagnóstico, no una causa demostrada. Se debe repetir con entorno controlado y métricas del pool antes de decidir ajustes.
+
+Detalle de la repetición: Windows 11, Node.js 24.19.0, build optimizado para producción servido localmente en modo standalone en `127.0.0.1:3100` y PostgreSQL 18.6 nativo en `127.0.0.1:55433`; cliente, backend y base compartieron el mismo equipo. La revisión sometida a la repetición fue `c31545cf6ff749ccd8d355fc5ed9da29565b934c`. El entorno de las corridas originales (Node 24.15.0, `next start`, PostgreSQL 18.6, puerto 55432 y revisión `b37f29e` más el script de medición) queda descrito en §2.3.
+
+Los artefactos nuevos están en [`mediciones/2026-11-15/`](mediciones/2026-11-15/): lectura, carga y estrés en JSON. La suite de seguridad HTTP ya está documentada aparte en [`seguridad-s14.md`](seguridad-s14.md); no se vuelve a contar aquí como evidencia nueva. La batería se volvió a ejecutar durante esta revisión, pero su resultado es una repetición del mismo conjunto de 50 casos ya informado allí.
+
 ## 4. Medición sobre el entorno desplegado (escritura)
 
 La corrida E crea pedidos reales en las cinco tiendas de producción con una cuenta de prueba. La
@@ -269,15 +286,17 @@ la base.
 |---|---|---|---|---|
 | Pico de 300 pedidos, 25 clientes, base disponible (A, ×5) | 100 % | 0 % | 0 diferencias | **Cumple** |
 | 1000 pedidos, 100 clientes, base disponible (B, ×3) | 100 % | 0 % | 0 diferencias | **Cumple** (p95 sube a 308–438 ms) |
+| Repetición local del perfil B el 15/11, revisión `c31545c` | 95,8 % | 1,37 % | 0 diferencias | **No cumple** ambos umbrales; comparación no controlada, ver §3.6 |
 | Base caída ≈ 5,6 s en pleno pico (C) | 68,83 % | 0,33 % | 0 diferencias | **No cumple** el procesado; sí el de duplicados |
 | **Producción**, 100 pedidos × 3, 25 clientes (E) | 100 % | 0 % | 0 diferencias | **Cumple** (p95 221–2056 ms, primera repetición en frío) |
 
-**ESC-01 cumple bajo esta condición:** un solo proceso del backend con PostgreSQL disponible. En
-producción se comprobó con 300 pedidos y 25 clientes simultáneos; en local, hasta 100 clientes y
-≈ 390 pedidos por segundo. Si la base cae,
-el sistema elige no prometer pedidos (`503`) antes que perderlos; el umbral de procesado se incumple
-durante la caída y la integridad se conserva salvo la ventana F-03, que produjo 2 de 600 filas que
-el cliente cree fallidas.
+Las corridas originales A y B cumplieron los umbrales con la base disponible, y E los cumplió en
+producción según la conciliación descrita en §4. La repetición B del 15/11 en la revisión `c31545c`
+no cumplió; como cambió el runtime y el modo de arranque, la diferencia requiere una repetición
+controlada antes de atribuirla al código. Por tanto, **la evidencia disponible no permite afirmar
+que ESC-01 cumpla de forma general bajo alta concurrencia**. En la caída de base C, el sistema
+respondió `503` y no perdió filas confirmadas, pero incumplió el umbral de pedidos procesados; la
+ventana F-03 produjo dos filas que el cliente consideró fallidas.
 
 Límites de validez: A, B y C son locales (sin red entre cliente y servidor, máquina distinta al
 servidor de Dokploy). La tercera medida del escenario («estado almacenado = último estado

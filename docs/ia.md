@@ -1,63 +1,34 @@
 # Registro de uso de Inteligencia Artificial (IA)
 > Este documento registra de manera transparente el uso de de herramientas de Inteligencia Artificial durante el desarrollo del proyecto **LaPlacita**, con el propósito de mantener la transparencia en el proceso de elaboración de la documentación, diseño y desarrollo del sistema, bajo la supervisión directa del equipo de desarrollo.
 
-## Resumen: qué se aceptó y qué se rechazó
+## Resumen de aceptación, ajustes y rechazos
 
-- Entradas registradas: 80 (06/08/2026 al 10/11/2026).
-- Aceptadas y verificadas por el equipo: 39 (columna Validación con ejecución o confirmación).
-- Aceptadas con ajustes del equipo: 4 entradas.
-- Entradas con propuestas rechazadas y justificadas: 44 (131 propuestas en total).
-- Con validación pendiente declarada: 22 entradas (5 de ago–sep, cubiertas de facto por
-  evidencia posterior —suites en verde, cortes y semanas siguientes—; 5 de la S12, validadas
-  por el equipo el 24/10/2026; la del 25/10, la del 28/10, las dos del 01/11, las tres del 02/11, la del 03/11, las dos del 06/11, las dos del 07/11 y la del 10/11, pendientes de revisión del equipo).
-- Propuestas rechazadas: ampliar C4 a más detalle; restaurar Árbol de Utilidad en aspectos.md;
-  auto-corregir V-01/V-03 el mismo día; microservicios o renombrar módulos;
-  declarar corte-vertical.js como sexto contexto; párrafos no sustentables por el equipo;
-  run en rojo en master; editar el ADR-0006 ya aceptado;
-  ocultar el pin en el cliente; dependencia jsonwebtoken con middleware;
-  evaluar el proveedor generativo antes del cierre; renumerar ESC-01…ESC-05;
-  citar el umbral ESC-03 sin declararlo; persistir intentos/pagos en esta fase;
-  dominio asíncrono; editar ADR aceptados (se crea ADR nuevo);
-  completar tabla arc42 0005-0008; scaffoldear el frontend sin decisión de stack;
-  reescribir citas históricas de evidencias pasadas; integración CI/CD del portal tal cual
-  (build por ACR Tasks, deshabilitado en Azure for Students); secrets de password de SP en
-  GitHub (se usa OIDC federado); DATABASE_URL en GitHub Actions (vive en el Container App);
-  rama de pruebas en Azure (mismo firewall, modo memoria); exponer la BD externamente;
-  versionar la URL sslip del entorno de pruebas (incrusta la IP del servidor);
-  rehidratación por fusión en vez de limpiar (rompería la simulación de arranque en blanco
-  de la línea base); capturar fallos de lista() para seguir en memoria (consistencia
-  primero, ADR-0014: mejor 500 que divergir de la base); dependencia npm de swagger-ui o
-  scalar (CDN sin dependencias nuevas); Redoc (solo lectura, sin Try it out); servir los docs
-  desde frontend/ (es tooling del backend); duplicar el contrato en public/ (drift: se sirve
-  el mismo openapi.yaml con fs y COPY explícito en el Dockerfile); Next.js Commerce como
-  plantilla del frontend (acoplada a Shopify y volumen no sustentable); Serwist (plugin
-  webpack frente a Turbopack de Next 16); CORS en el backend vía proxy.js (Turbopack dev no
-  lo ejecuta: se adoptó BFF con rewrites, mismo origen); Ionic/Expo (otro paradigma; la PWA
-  cubre la instalación); HeroUI (menos control del código que componentes copiados);
-  afirmar mediciones o verificaciones no ejecutadas en una sesión de propuestas S11 (todo
-  como propuesta); implementar idempotencia/saga en código en esa misma sesión (fuera de
-  alcance de lo pedido); editar el ADR-0019 aceptado para quitar sus rótulos «(propuesta)»
-  (se aclara en arc42 §13.2, criterio ADR-0015); `Idempotency-Key` obligatoria (rompería a
-  los clientes v1); idempotencia en la confirmación de pago (la máquina de estados ya rechaza
-  la segunda); persistir las claves de idempotencia en esta entrega y enviar la cabecera
-  desde la PWA (deuda declarada); marcar como «Safe» el PRNG del PIN en SonarCloud (es una
-  credencial: se usa `crypto.randomInt`); ampliar el PIN a más dígitos (A-06 ya limita intentos);
-  probar la idempotencia contra producción (crearía pedidos reales); crear `corte-2` sin
-  constancia de que el enunciado la exija; usar el logo oficial de la UTB sin permiso;
-  la paleta del manual de identidad 2021 (reemplazada en 2023); conservar el CSS de v0;
-  reemplazar el pedidoId por el código corto; letras I y O en el código; PIN en la lectura
-  pública del pedido; token en localStorage; dependencias jsonwebtoken/bcrypt; exigir sesión
-  en las rutas de tienda antes del panel; recibir el tiendaId en las rutas del panel;
-  registro abierto para tiendas; WebSockets para el tiempo real del panel; Redis como caché
-  distribuida (un solo proceso); TTL en la caché del catálogo; migrar ya el pedidoId a UUID v7;
-  corregir la enumeración y la reutilización de ids dentro de la evidencia S12; broker externo
-  para el taller; exigir sesión para leer un pedido; esperar la base en todas las mutaciones;
-  DLQ persistente; subir el backend a Next 16 directo en master; `npm audit fix --force` (bajaba
-  eslint-config-next a la 14); ignorar los avisos de Sonar con el gate en verde; exigir sesión de
-  tienda en el pago del dueño o conservar las rutas de entrega (contra ADR-0029); reescribir la
-  tabla STRIDE del 25/10; un segundo job de audit; `npm audit fix --force` para zod; CSP
-  completa con `script-src`; gitleaks-action; verificar el correo por enlace.
-- Detalle completo por fecha y herramienta en la bitácora (§1).
+El resumen combina la bitácora previa de `revision-documentacion-s15` con las entradas posteriores de `master`. Las cifras de aceptación verificadas y aceptación con ajustes se conservan porque coinciden en ambos cortes; el nuevo aporte del 15/11 sigue pendiente y no incrementa las aceptaciones.
+
+| Estado | Recuento o criterio al 15/11/2026 |
+|---|---|
+| Entradas en la bitácora | **82** filas (06/08/2026–15/11/2026), contadas en la tabla §1 tras integrar ambos historiales. |
+| Aceptadas y verificadas por el equipo | **39** según las validaciones previas; la entrada nueva del 15/11 no se suma a este total. |
+| Aceptadas con ajustes del equipo | **4** según las validaciones previas. |
+| Alternativas rechazadas | Se conservan justificadas en la columna «Rechazado» de cada fila; el nuevo registro documenta dos alternativas descartadas. No se arrastra un total único porque los resúmenes previos correspondían a cortes distintos y no cuadraban con la bitácora combinada. |
+| Validación pendiente | La columna «Validación» de cada entrada es la fuente vigente. La entrada del 15/11 sigue pendiente de revisión del equipo; no se presenta como aprobación grupal. |
+
+### Aportes aceptados y verificados
+
+Las contribuciones aceptadas y las aceptadas con ajustes se detallan en sus filas de §1. El equipo conserva la decisión final: una prueba ejecutada por la herramienta no equivale a aprobación grupal. En particular, la medición complementaria de QoS aquí registrada se deja para revisión del equipo.
+
+### Criterios y motivos de rechazo
+
+| Tema | Criterio aplicado | Ejemplos de alternativas rechazadas |
+|---|---|---|
+| Coherencia arquitectónica | No contradecir ADR aceptados ni introducir complejidad sin necesidad demostrada. | Microservicios, Redis con una instancia, editar ADR aceptados o hacer asíncrono el dominio. |
+| Seguridad y privacidad | No debilitar controles ni exponer datos o credenciales. | Token en `localStorage`, exponer PostgreSQL, secretos de servicio en GitHub, PIN en vistas públicas o CSP incompatible sin nonces. |
+| Alcance y evidencia | No afirmar trabajo no ejecutado ni agregar entregables sin requisito. | Mediciones inventadas, taller no realizado, escenarios sin aprobación o pruebas intrusivas en producción. |
+| Compatibilidad técnica | Mantener compatibilidad con el stack y las restricciones reales. | Serwist frente a Turbopack, plantillas acopladas a Shopify o middleware que no corre en el modo de desarrollo usado. |
+| Operación y despliegue | Respetar disponibilidad, seguridad y capacidades de la plataforma. | ACR Tasks no habilitado, exponer la base de datos o versionar URL de entorno con IP. |
+| Documentación y trazabilidad | Preservar historia de decisiones y evitar duplicación. | Renumerar escenarios ya citados por ADR, reescribir evidencia histórica o duplicar el contrato OpenAPI. |
+
+La tabla §1 contiene el detalle por fecha, herramienta, alternativa descartada, motivo y validación; esta síntesis no sustituye esos registros.
 
 ---
 
@@ -145,6 +116,8 @@
 | **04/11/2026 (2)** | Claude Opus 5.5 (Claude Code) | Banners con fotos de las fachadas y mejoras de la PWA en el celular. | Paráfrasis: poner la foto de La Placita y de cada tienda en los banners, nítidas y con el texto legible; revisar toda la app como en el teléfono y hacer todas las mejoras visuales y funcionales. | Fachadas en la portada, las fichas y las tarjetas (con prioridad para la imagen subida desde el panel); títulos de pestaña por página; botón para ver la contraseña; aviso y reapertura del carrito tras ingresar; buscador y descripción en el menú; el proxy ya no reenvía `Content-Encoding`. | 1) Reconstruir a mano las letras cortadas de los letreros: quedaba peor que el corte original. 2) Restablecer la contraseña por correo: no hay servicio de correo; se indica a quién escribir. 3) Ampliar el espacio bajo el carrito: ya existía; lo que se veía tapado era a mitad del scroll. | Recorrido en 375 px y escritorio contra la API de producción, solo lecturas; buscador, botón de la contraseña y reapertura del carrito probados en el navegador; `npm run lint` y `npm run build` sin errores. |
 | **06/11/2026** | Claude Opus 5.5 (Claude Code) | Evidencia S14: medir ESC-01 contra su umbral e incorporar a arc42 §11 lo señalado por la revisión externa. | Paráfrasis: entrar a SAVIO, ver qué pide la semana 14, revisar el repositorio y hacer la entrega completa. | Ampliación de `backend/scripts/medir-carga.js` (repeticiones, reparto entre las 5 tiendas, reintentos con la misma `Idempotency-Key`, conciliación en PostgreSQL, veredicto contra el umbral e informe JSON). Corridas de carga, estrés y caída de la base en local, y lectura en producción. Reescritura de `evidencias-s14.md`, arc42 §11.8 con 17 señalamientos y su estado, y la fila A-01 de `aspectos.md`. La caída de la base mostró el modo F-03 (2/600 filas con `503`). | Se rechazó medir la escritura en producción con una cuenta creada por la herramienta: la corre el equipo con sus credenciales. Se rechazó contar la primera corrida C, porque falló el script y no el backend. Se rechazó cambiar el umbral de ESC-01 al no estar cuantificada la carga: se declaró el supuesto (RV-04). Se rechazó presentar la revisión del curso como revisión de pares: el taller no estaba abierto en SAVIO. | Las corridas A, B y C se repitieron con artefactos en `docs/evidencias/mediciones/`. Las filas fantasma se comprobaron en PostgreSQL y en el log, y se probó el reinicio (6953/6953). Azure se comprobó con `nslookup`. La corrida E en producción la ejecutó el equipo (300/300, cumple). Pendiente de revisión del equipo. |
 | **06/11/2026 (2)** | Claude Opus 5.5 (Claude Code) | Administración general (`/admin`) para ver y operar todas las cuentas, tiendas y pedidos, y eliminar rápido los pedidos de prueba. | Paráfrasis: un panel administrativo general con todos los usuarios, todas las tiendas y sus pedidos, para hacer todos los cambios, y para eliminar los pedidos de prueba de forma más rápida. | Rol `superadmin` por `ADMINS_GENERALES`, 9 rutas `/api/v1/admin/*` en el contrato, `src/http/administracion.js`, página `/admin` con cuatro pestañas y ADR-0037. | Se rechazó guardar `superadmin` en la base (una cuenta comprometida podría promover a otras). Se rechazó ofrecer «Entregar» sin PIN (rompería ESC-03). Se rechazó el borrado real de filas (ADR-0033). Se rechazó el tope de 2000 pedidos en el borrado por cuenta: la prueba con 6953 pedidos lo mostró. | 10 pruebas nuevas; suite del backend 172/172 sin fallos y contrato 34/34; lint y build del frontend. En local con PostgreSQL: un cliente recibe 403 y sin sesión 401; 6953 pedidos quedaron con `cancelado_en`; cambio de rol a cajero; edición de menú a 390 px. Pendiente: configurar `ADMINS_GENERALES` en Dokploy y revisión del equipo. |
+| **14/11/2026** | Big Pickle (OpenCode) | Pruebas de seguridad S14 en laboratorio local mientras el panel de Dokploy sigue caído (502 desde el 07/11). | Paráfrasis: ejecutar el plan de pruebas de seguridad en local, sin fingir defensas, y dejar la evidencia y las correcciones listas sin mergear. | Laboratorio con Podman (`infra/lab/lab.sh`) y batería HTTP de 50 pruebas (`infra/lab/pruebas/seguridad-http.mjs`). Correcciones: HSTS y `poweredByHeader: false` en backend y PWA; SRI en Swagger; `no-store` en `/metricas`; tope de 100 unidades por línea y 500 por pedido con validación pura `validarUnidades`; `maximum` en el contrato; `tiendaId` en la huella de idempotencia. Evidencia nueva `docs/evidencias/seguridad-s14.md`. | Se rechazó implementar CSP completa con `script-src`: Next exige nonces por petición (A-24 aceptado). Se rechazó inventar productos para hacer alcanzable el tope de 500 por HTTP: se prueba la función pura y se declara que el catálogo actual llega justo a 500. Se rechazó probar fuerza bruta, carga o subidas maliciosas contra producción. Se rechazó mergear cambios de `backend/**` o `frontend/**` con el panel caído: dispara el deploy de las dos apps. | Batería 50/50 en verde (2 guardas de A-24); suite del backend 175/175 y contrato 34/34; `npm audit --omit=dev` en 0. Verificado en local: 9 rutas `/admin` con 401/403 y superadmin pasa, JWT alterado/`alg=none`/vencido/otro secreto → 401, IDOR y PIN, aislamiento de tiendas, BFF con cookie `httpOnly`, bitácora sin PIN ni contraseñas. Pendiente: P-1, HSTS de borde, Garage y rotación de `JWT_SECRET`, bloqueados por el panel; revisión del equipo. |
+| **15/11/2026** | Codex (GPT-6) | Revisar que el aporte de QoS complemente la evidencia S14 existente, corregir su ubicación y actualizar la bitácora de IA. | Paráfrasis: comparar las pruebas locales con las ya realizadas por el equipo; integrar en la evidencia de semana 14 solo los resultados adicionales, aclarar las repeticiones y dejar explícitos los límites y pendientes. | Se añadió §3.6 a `docs/evidencias/evidencias-s14.md` como repetición comparativa de los perfiles A/B ya documentados, con lectura local adicional y referencias a los artefactos del 15/11. A cumple en ambas corridas; B en la repetición actual no cumple (2874/3000, 95,8 %, y 41/3000 filas sin respuesta `201`, 1,37 %). La repetición C quedó inconclusa y no reemplaza la corrida completa anterior. Se actualizaron la trazabilidad A-01 y RV-18 en `docs/aspectos.md` y arc42. Se confirmó que la batería de seguridad 50/50 ya está documentada en `seguridad-s14.md`; no se agregó una segunda evidencia. | Se rechazó conservar un documento QoS independiente rotulado S15 en vez de integrar el complemento en la evidencia oficial S14. También se rechazó volver a contabilizar la batería de seguridad ya documentada como aporte nuevo. La diferencia de rendimiento entre corridas no se atribuyó causalmente al código ni se propuso aumentar el pool sin una medición controlada. | Suite backend con PostgreSQL temporal: 181 aprobadas, 0 fallidas y 1 omitida; contrato OpenAPI 37/37; lint y builds completados. Artefactos de lectura/carga/estrés guardados en `docs/evidencias/mediciones/2026-11-15/`. La entrada queda pendiente de revisión del equipo. |
 
 ---
 
@@ -168,4 +141,4 @@ Todas las decisiones de arquitectura, diseño e implementación serán analizada
 Para medir el valor real del soporte de la Inteligencia Artificial en el proyecto, se evalúan periódicamente los siguientes indicadores:
 - **Ahorro de tiempo en formato:** Reducción estimada del 40% en el tiempo dedicado a la maquetación inicial de documentos en Markdown y estructuración de índices.
 - **Calidad técnica y conceptual:** Mejora en la formalización de los atributos de calidad, ayudando a estructurar de forma más clara los *trade-offs* arquitectónicos del sistema.
-- **Control de calidad humano:** El 100% de los entregables han sido leídos, ajustados y aprobados por los integrantes del equipo, garantizando que reflejen fielmente la lógica real del software.
+- **Control de calidad humano:** Los entregables marcados como aceptados fueron leídos, ajustados y aprobados por integrantes del equipo. Las entradas que aún no tienen esa validación quedan identificadas como pendientes y no se contabilizan como aprobadas.

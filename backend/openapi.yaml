@@ -1652,7 +1652,10 @@ components:
         cantidad:
           type: integer
           minimum: 1
-          description: Unidades totales del pedido.
+          maximum: 500
+          description: >-
+            Unidades totales del pedido. El servidor rechaza un pedido de más de
+            500 unidades o de más de 100 por producto (S14).
         items:
           type: array
           description: Productos del pedido, con el nombre y el precio del momento de la compra (ADR-0032).
@@ -1688,6 +1691,7 @@ components:
         cantidad:
           type: integer
           minimum: 1
+          maximum: 100
         precioUnitario:
           type: number
           minimum: 0
@@ -1732,6 +1736,7 @@ components:
               cantidad:
                 type: integer
                 minimum: 1
+                maximum: 100
             required:
               - productoId
               - cantidad
@@ -1740,6 +1745,7 @@ components:
         cantidad:
           type: integer
           minimum: 1
+          maximum: 100
         clienteId:
           type: string
         tiendaId:

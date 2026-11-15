@@ -12,5 +12,7 @@ out/
 
 # logs
 npm-debug.log*
+# laboratorio local de seguridad (S14): logs y resultados efímeros
+infra/lab/.logs/
 
 lcov.info

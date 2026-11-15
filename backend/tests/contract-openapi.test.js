@@ -67,6 +67,40 @@ test('Pedidos: crearPedido lanza error si cantidad <= 0', () => {
   );
 });
 
+test('S14 · seguridad: crearPedido rechaza más de 100 unidades por línea', () => {
+  assert.strictEqual(pedidos.MAX_UNIDADES_POR_LINEA, 100);
+  assert.throws(
+    () => pedidos.crearPedido({
+      items: [{ productoId: 'prod-001', cantidad: 101 }],
+      clienteId: 'cliente-01',
+      tiendaId: 'tienda-01',
+    }),
+    /hasta 100 unidades/
+  );
+  const alLimite = pedidos.crearPedido({
+    items: [{ productoId: 'prod-001', cantidad: 100 }],
+    clienteId: 'cliente-01',
+    tiendaId: 'tienda-01',
+  });
+  assert.strictEqual(alLimite.cantidad, 100);
+});
+
+test('S14 · seguridad: crearPedido rechaza más de 500 unidades por pedido', () => {
+  assert.strictEqual(pedidos.MAX_UNIDADES_POR_PEDIDO, 500);
+  // El catálogo semilla tiene 5 productos por tienda: 5 × 100 = 500 es el
+  // máximo real por HTTP. La validación pura cubre el caso de un catálogo mayor.
+  const cincoProductos = ['prod-001', 'prod-002', 'prod-004', 'prod-005', 'prod-006']
+    .map((productoId) => ({ productoId, cantidad: 100 }));
+  const alLimite = pedidos.crearPedido({
+    items: cincoProductos,
+    clienteId: 'cliente-01',
+    tiendaId: 'tienda-01',
+  });
+  assert.strictEqual(alLimite.cantidad, 500);
+  const seisLineas = Array.from({ length: 6 }, (_, i) => ({ productoId: `prod-${i}`, cantidad: 100 }));
+  assert.throws(() => pedidos.validarUnidades(seisLineas), /hasta 500 unidades/);
+});
+
 test('Pedidos: crearPedido lanza error si falta tiendaId', () => {
   assert.throws(
     () => pedidos.crearPedido({
@@ -242,6 +276,13 @@ test('S14: el contrato declara /catalogo/tiendas y /tienda/imagen', () => {
   assert.ok(content.includes('  /catalogo/tiendas:'), 'falta /catalogo/tiendas en el contrato');
   assert.ok(content.includes('  /tienda/imagen:'), 'falta /tienda/imagen en el contrato');
   assert.ok(content.includes('    Tienda:'), 'falta el esquema Tienda');
+});
+
+test('S14 · seguridad: el contrato declara los topes de cantidad (100 por línea, 500 por pedido)', () => {
+  const content = readFileSync(new URL('../openapi.yaml', import.meta.url), 'utf-8');
+  const maximos = [...content.matchAll(/^\s+maximum: (\d+)$/gm)].map((m) => Number(m[1]));
+  assert.ok(maximos.includes(pedidos.MAX_UNIDADES_POR_LINEA), 'falta maximum 100 en el contrato');
+  assert.ok(maximos.includes(pedidos.MAX_UNIDADES_POR_PEDIDO), 'falta maximum 500 en el contrato');
 });
 
 test('Entrega: marcarListo genera PIN y cambia estado a Listo', () => {

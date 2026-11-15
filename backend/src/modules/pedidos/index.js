@@ -22,6 +22,11 @@ const ESTADOS = ['Recibido', 'En preparación', 'Listo', 'Entregado'];
 // ADR-0032: tope de productos distintos en un pedido, para acotar el trabajo de
 // una sola petición y el tamaño de la fila.
 const MAX_LINEAS = 20;
+// S14 · seguridad: tope de unidades por línea y por pedido. Sin tope, una
+// cantidad como 1e9 desborda NUMERIC(10,2), agota los reintentos de escritura
+// y responde 503. El tope convierte ese fallo de infraestructura en un 400.
+const MAX_UNIDADES_POR_LINEA = 100;
+const MAX_UNIDADES_POR_PEDIDO = 500;
 
 import { estadoCompartido } from '../../estado-compartido.js';
 
@@ -99,12 +104,23 @@ function lineasDe({ productoId, cantidad, items }) {
   return [...porProducto].map(([id, unidades]) => ({ productoId: id, cantidad: unidades }));
 }
 
-function crearPedido(datos) {
-  const { clienteId, tiendaId } = datos;
-  const lineas = lineasDe(datos);
+function validarUnidades(lineas) {
   if (lineas.some(({ cantidad }) => !Number.isInteger(cantidad) || cantidad <= 0)) {
     throw new Error('La cantidad debe ser mayor a 0');
   }
+  if (lineas.some(({ cantidad }) => cantidad > MAX_UNIDADES_POR_LINEA)) {
+    throw new Error(`Cada producto admite hasta ${MAX_UNIDADES_POR_LINEA} unidades`);
+  }
+  const unidades = lineas.reduce((suma, { cantidad }) => suma + cantidad, 0);
+  if (unidades > MAX_UNIDADES_POR_PEDIDO) {
+    throw new Error(`Un pedido admite hasta ${MAX_UNIDADES_POR_PEDIDO} unidades`);
+  }
+}
+
+function crearPedido(datos) {
+  const { clienteId, tiendaId } = datos;
+  const lineas = lineasDe(datos);
+  validarUnidades(lineas);
   if (!clienteId) {
     throw new Error('clienteId es obligatorio');
   }
@@ -147,7 +163,7 @@ function crearPedido(datos) {
 }
 
 function huella(datos) {
-  return JSON.stringify([lineasDe(datos), datos.clienteId]);
+  return JSON.stringify([lineasDe(datos), datos.clienteId, datos.tiendaId]);
 }
 
 // Sin clave se comporta como `crearPedido` (la cabecera es opcional en v1).
@@ -516,4 +532,8 @@ export {
   confirmarEntrega,
   restaurarEstadoDesde,
   ESTADOS,
+  MAX_LINEAS,
+  MAX_UNIDADES_POR_LINEA,
+  MAX_UNIDADES_POR_PEDIDO,
+  validarUnidades,
 };

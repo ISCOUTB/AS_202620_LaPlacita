@@ -25,12 +25,18 @@ const CABECERAS_SEGURIDAD = [
   { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  // S14 · HSTS. Sin `includeSubDomains`: el borde (Traefik) aún no la emite
+  // (P-1) y no queremos arrastrar otros subdominios. En el laboratorio
+  // (http://127.0.0.1) los navegadores la ignoran.
+  { key: "Strict-Transport-Security", value: "max-age=31536000" },
 ]
 
 /** @type {NextConfig} */
 const nextConfig = {
   output: "standalone",
   cacheComponents: true,
+  // S14 · seguridad: no anunciar el framework en cada respuesta.
+  poweredByHeader: false,
   async headers() {
     return [{ source: "/:path*", headers: CABECERAS_SEGURIDAD }]
   },
