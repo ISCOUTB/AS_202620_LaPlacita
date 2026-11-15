@@ -9,11 +9,11 @@ Cliente, backend y base comparten el mismo host; no equivale a una medición de 
 Perfil de red artificial: delay 50 ms ±10 ms; pérdida 0,5 %; tasa 5 Mbit/s, aplicado a la salida del cliente y backend
 qdisc generador antes:
 qdisc netem 8001: root refcnt 9 limit 1000 delay 50ms  10ms loss 0.5% rate 5Mbit seed 10407826777126281784
- Sent 0 bytes 0 pkt (dropped 0, overlimits 0 requeues 0) 
+ Sent 0 bytes 0 pkt (dropped 0, overlimits 0 requeues 0)
  backlog 0b 0p requeues 0
 qdisc backend antes:
 qdisc netem 8002: root refcnt 9 limit 1000 delay 50ms  10ms loss 0.5% rate 5Mbit seed 11995828321981197504
- Sent 0 bytes 0 pkt (dropped 0, overlimits 0 requeues 0) 
+ Sent 0 bytes 0 pkt (dropped 0, overlimits 0 requeues 0)
  backlog 0b 0p requeues 0
 
 ESC-01 · medir-carga · fase lectura · 200 peticiones × 3 repeticiones · concurrencia 10
@@ -32,9 +32,9 @@ Código de salida del medidor: 0
 
 qdisc generador posterior:
 qdisc netem 8001: root refcnt 9 limit 1000 delay 50ms  10ms loss 0.5% rate 5Mbit seed 10407826777126281784
- Sent 232490 bytes 1402 pkt (dropped 7, overlimits 0 requeues 0) 
+ Sent 232490 bytes 1402 pkt (dropped 7, overlimits 0 requeues 0)
  backlog 0b 0p requeues 0
 qdisc backend posterior:
 qdisc netem 8002: root refcnt 9 limit 1000 delay 50ms  10ms loss 0.5% rate 5Mbit seed 11995828321981197504
- Sent 847958 bytes 1403 pkt (dropped 6, overlimits 0 requeues 0) 
+ Sent 847958 bytes 1403 pkt (dropped 6, overlimits 0 requeues 0)
  backlog 0b 0p requeues 0
