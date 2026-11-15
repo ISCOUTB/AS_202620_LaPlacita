@@ -1,0 +1,25 @@
+LaPlacita · laboratorio local de rendimiento/QoS
+Perfil: C-fallo-recuperacion-bd
+Fecha UTC: 2026-11-15T16:52:51.099Z
+Commit medido: 5f640aaa3a4eda44728014767fd467912b0a05c5
+Configuración: escritura; 600 pedidos; 25 clientes; PostgreSQL interrumpido por unos segundos
+Host: win32; x64; AMD Ryzen 3 7320U with Radeon Graphics         ; 8 núcleos lógicos; 5.7 GiB RAM detectada por Node; Node v24.19.0
+Topes: generador 1 CPU/256m; backend 2 CPU/1024m; PostgreSQL 1 CPU/512m.
+Cliente, backend y base comparten el mismo host; no equivale a una medición de producción.
+Caída programada: +2 s durante 3 s.
+PostgreSQL detenido UTC: 2026-11-15T16:52:54.244Z
+PostgreSQL iniciado UTC: 2026-11-15T16:52:59.533Z
+
+ESC-01 · medir-carga · fase escritura · 600 peticiones × 1 repeticiones · concurrencia 25
+URL base: http://laplacita-qos-backend:3000 · versión: "b20fbafeb09326e9"
+Conciliación contra: postgresql · reintentos con la misma llave: 10 %
+
+#1 · 19.39 s · 34 resp/s · p50 372 · p95 1597 · p99 6086 · máx 6226 ms · estatus {"201":535,"503":125}
+   enviados 600 · 201 484 · procesados 486 (2 tras reintento) · perdidos 0 · duplicados 0 (filas sin 201: 0) · estado distinto 0 · 429 0 · 503 116
+   reintentos con la misma llave 60 → mismo id 49
+   procesado 81 % (umbral ≥ 99 %) · duplicado+perdido 0 % (umbral < 1 %) → NO CUMPLE
+
+Agregado: 600 pedidos · procesado 81 % · duplicado+perdido 0 % · p95 entre corridas 1597–1597 ms (mediana 1597) → NO CUMPLE en al menos una repetición
+Métricas del proceso al final: {"pedidosCreados":5111,"pagosConfirmados":0,"pedidosListos":0,"entregasValidadas":0,"pinesRechazados":0,"pinesBloqueados":0,"escriturasReintentadas":436,"escriturasDescartadas":0,"escriturasFallidas":125,"escriturasEnColaDeFallidos":0}
+Informe JSON: /tmp/C-fallo-recuperacion-bd.json
+Código de salida del medidor: 1

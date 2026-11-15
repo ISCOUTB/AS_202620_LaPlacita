@@ -215,6 +215,23 @@ una lectura en producción ya es ≈ 137 ms.
 
 300/300 procesados, 0 duplicados ni perdidos: **cumple**. El detalle está en §4.1.
 
+### 3.6 Repetición complementaria local del 15/11
+
+El 15/11 se volvieron a ejecutar perfiles que ya estaban medidos en §3.1–§3.4 y §3.3, sobre la revisión `c31545cf6ff749ccd8d355fc5ed9da29565b934c`. **No son escenarios nuevos ni sustituyen las corridas originales.** Se registran como repetición comparativa del mismo protocolo para comprobar el estado posterior del código y dejar visibles tanto la coincidencia como la diferencia observada.
+
+| Perfil existente | Resultado documentado anteriormente | Repetición del 15/11 | Lectura correcta |
+|---|---|---|---|
+| A · carga, 300 pedidos × 5, 25 clientes | 1500/1500 procesados, 0 duplicados/perdidos, p95 mediano 87 ms y rendimiento mediano 378,7 pedidos/s. | 1500/1500 procesados, 0 duplicados/perdidos, p95 mediano 171 ms y rendimiento mediano 209,8 pedidos/s. | Ambos resultados cumplen el umbral de ESC-01 en el perfil A. La latencia y el rendimiento difieren; no se atribuye la diferencia solo al código porque también cambiaron la revisión y la ejecución local. |
+| B · estrés, 1000 pedidos × 3, 100 clientes | 3000/3000 procesados, sin duplicados/perdidos, p95 mediano 329 ms y rendimiento mediano 387,9 pedidos/s. | 2874/3000 procesados (95,8 %), 41 filas persistidas sin respuesta `201` (1,37 %), 0 diferencias de estado, p95 mediano 7350 ms y rendimiento mediano 40,7 pedidos/s. Se observaron 30 respuestas `503` y 109 solicitudes sin respuesta HTTP observada. | La repetición del 15/11 **no cumple** los dos umbrales de procesado e integridad. Es una señal que requiere diagnóstico; no demuestra por sí sola que el cambio de código sea la causa. |
+| D · lectura de catálogo | 600 lecturas desplegadas; p95 mediano 155 ms. | 600 lecturas locales; p95 mediano 64 ms. | Son ubicaciones de ejecución distintas (producción frente a local), por lo que no se comparan como una mejora de latencia. El JSON local se conserva como referencia de lectura del backend actual. |
+| C · interrupción de PostgreSQL | Corrida completa: 413/600 procesados, 2 duplicados, 0 perdidos; el resultado está en §3.3. | Se intentó detener y recuperar el cluster temporal; no se pudo confirmar que la instancia volviera a aceptar conexiones ni concluir la conciliación. | **Repetición inconclusa.** Se conserva como tal y no reemplaza el resultado completo de C. |
+
+La corrida original A/B usó `next start`, Node 24.15.0 y PostgreSQL 18.6; la repetición usó el build standalone, Node 24.19.0 y PostgreSQL 18.6 en otro puerto local. Aunque el protocolo y el equipo son de desarrollo local, las diferencias de runtime y forma de arranque impiden atribuir causalidad o tratar la comparación como un experimento controlado. Durante la repetición B, los logs registraron timeouts al adquirir conexiones; el pool observado está limitado a cinco conexiones con timeout de dos segundos. Es una hipótesis de diagnóstico, no una causa demostrada. Se debe repetir con entorno controlado y métricas del pool antes de decidir ajustes.
+
+Detalle de la repetición: Windows 11, Node.js 24.19.0, build optimizado para producción servido localmente en modo standalone en `127.0.0.1:3100` y PostgreSQL 18.6 nativo en `127.0.0.1:55433`; cliente, backend y base compartieron el mismo equipo. La revisión sometida a la repetición fue `c31545cf6ff749ccd8d355fc5ed9da29565b934c`. El entorno de las corridas originales (Node 24.15.0, `next start`, PostgreSQL 18.6, puerto 55432 y revisión `b37f29e` más el script de medición) queda descrito en §2.3.
+
+Los artefactos nuevos están en [`mediciones/2026-11-15/`](mediciones/2026-11-15/): lectura, carga y estrés en JSON. La suite de seguridad HTTP ya está documentada aparte en [`seguridad-s14.md`](seguridad-s14.md); no se vuelve a contar aquí como evidencia nueva. La batería se volvió a ejecutar durante esta revisión, pero su resultado es una repetición del mismo conjunto de 50 casos ya informado allí.
+
 ## 4. Medición sobre el entorno desplegado (escritura)
 
 La corrida E crea pedidos reales en las cinco tiendas de producción con una cuenta de prueba. La
@@ -269,15 +286,17 @@ la base.
 |---|---|---|---|---|
 | Pico de 300 pedidos, 25 clientes, base disponible (A, ×5) | 100 % | 0 % | 0 diferencias | **Cumple** |
 | 1000 pedidos, 100 clientes, base disponible (B, ×3) | 100 % | 0 % | 0 diferencias | **Cumple** (p95 sube a 308–438 ms) |
+| Repetición local del perfil B el 15/11, revisión `c31545c` | 95,8 % | 1,37 % | 0 diferencias | **No cumple** ambos umbrales; comparación no controlada, ver §3.6 |
 | Base caída ≈ 5,6 s en pleno pico (C) | 68,83 % | 0,33 % | 0 diferencias | **No cumple** el procesado; sí el de duplicados |
 | **Producción**, 100 pedidos × 3, 25 clientes (E) | 100 % | 0 % | 0 diferencias | **Cumple** (p95 221–2056 ms, primera repetición en frío) |
 
-**ESC-01 cumple bajo esta condición:** un solo proceso del backend con PostgreSQL disponible. En
-producción se comprobó con 300 pedidos y 25 clientes simultáneos; en local, hasta 100 clientes y
-≈ 390 pedidos por segundo. Si la base cae,
-el sistema elige no prometer pedidos (`503`) antes que perderlos; el umbral de procesado se incumple
-durante la caída y la integridad se conserva salvo la ventana F-03, que produjo 2 de 600 filas que
-el cliente cree fallidas.
+Las corridas originales A y B cumplieron los umbrales con la base disponible, y E los cumplió en
+producción según la conciliación descrita en §4. La repetición B del 15/11 en la revisión `c31545c`
+no cumplió; como cambió el runtime y el modo de arranque, la diferencia requiere una repetición
+controlada antes de atribuirla al código. Por tanto, **la evidencia disponible no permite afirmar
+que ESC-01 cumpla de forma general bajo alta concurrencia**. En la caída de base C, el sistema
+respondió `503` y no perdió filas confirmadas, pero incumplió el umbral de pedidos procesados; la
+ventana F-03 produjo dos filas que el cliente consideró fallidas.
 
 Límites de validez: A, B y C son locales (sin red entre cliente y servidor, máquina distinta al
 servidor de Dokploy). La tercera medida del escenario («estado almacenado = último estado
@@ -319,3 +338,108 @@ identificaba el commit quedó obsoleto con el PR #37 y se retiró.
 | Cancelación | Admin cancela; caja no; entregado no; la fila se conserva | Pendiente (RV-12) |
 | Aislamiento | Una tienda no ve ni muta pedidos de otra | Medición histórica 0/300 (arc42 §11.4) |
 | Historial del cliente | Los pedidos siguen visibles tras reiniciar | **Cumple**: 6953/6953 pedidos de la cuenta de carga visibles tras reiniciar el backend local (§3.3) |
+
+### 8.1 Complemento de aceptación local (2026-11-07)
+
+Esta comprobación posterior a la medición S14 se ejecutó contra el backend local con cuentas ficticias. `DATABASE_URL` y `GARAGE_*` estuvieron desactivados: los pedidos, cuentas e imágenes vivieron solo en memoria y desaparecieron al detener el proceso. Estos resultados **no sustituyen** la aceptación en Dokploy ni cierran RV-12.
+
+Se ejecutaron 15 comprobaciones HTTP contra `localhost:3000`; las 15 pasaron:
+
+| Flujo | Resultado local | Código HTTP / detalle |
+|---|---|---|
+| Registro de clientes y rol `superadmin` derivado de `ADMINS_GENERALES` | Cumple | `201`; roles `cliente`, `cliente`, `superadmin` |
+| Inicio de sesión de admin de tienda y trabajador | Cumple | `200` para ambos; roles `admin` y `trabajador` |
+| Un pedido con dos productos en una tienda | Cumple | `201`, 2 líneas, estado `Recibido` |
+| Pedidos en dos tiendas y consulta de «Mis pedidos» | Cumple | El historial reúne ambos; cada cola del panel contiene solo pedidos de su tienda |
+| Identidad de pedido | Confirmado | `pedido-1` existe en `tienda-01` y `tienda-02`: el identificador se interpreta junto con `tiendaId` |
+| Cancelación por su dueño antes de Listo | Cumple | `200`; queda `canceladoEn` y sigue en el historial |
+| Cancelación y pago de pedido ajeno | Rechazado como se espera | Cancelación `404`; confirmación de pago `403` |
+| Pago y transición a Listo desde el panel | Cumple | `200` y `200`; la respuesta del panel no incluye el PIN |
+| PIN de entrega | Cumple | Dueño autenticado: `200` y PIN de 4 dígitos; otro cliente: `404`; lectura pública: sin PIN |
+| Cancelación del dueño después de Listo | Rechazada como se espera | `409` |
+| Entrega con PIN correcto | Cumple | `200`, estado `Entregado` |
+| Operación de pedido cuyo ID solo existe en otra tienda | Rechazada como se espera | `404` |
+| Administración general | Cumple | `superadmin`: `200`; cliente: `403` |
+| Imágenes de presentación abierta y cerrada | Cumple en memoria | Dos `POST` con `201`, referencias UUID distintas y ambas lecturas `200` |
+
+El servidor también devolvió `200` para `/api/v1/health` (huella `local`), el catálogo con 5 tiendas y las rutas `/`, `/tiendas`, `/tiendas/el-meson`, `/cuenta`, `/mis-pedidos`, `/panel` y `/admin`. Esto es una comprobación HTTP, no una inspección visual del diseño ni de su comportamiento en distintos anchos.
+
+### 8.2 Comprobaciones de build y suite local (2026-11-07)
+
+Entorno de ejecución: Node `v24.19.0`, npm `11.17.0`, Windows 11. Resultados:
+
+| Comando | Resultado | Alcance / límite |
+|---|---|---|
+| `backend: npm test` | **172 pasan, 0 fallan, 7 omitidas** (179 totales) | Las omitidas requieren PostgreSQL; no había `DATABASE_URL` ni Docker disponible en esta sesión |
+| `backend: npm run contract-test` | **34/34 pasan** | Contrato OpenAPI y rutas |
+| `frontend: npm run lint` | **Pasa** | ESLint terminó con código 0 |
+| `backend: npm run build` | **Pasa con permisos de build ampliados** | Next.js generó 22 rutas API y `/docs`; el primer intento restringido no pudo crear una junction de Windows |
+| `frontend: npm run build -- --webpack` | **Pasa** | Compilación, TypeScript y 20 páginas estáticas |
+| `frontend: npm run build` (Turbopack predeterminado) | **Falla en esta máquina** | Turbopack aborta al crear un proceso hijo al procesar `rubik_1431770f.module.css`; se reprodujo dos veces. El fallback Webpack pasa, pero no reemplaza la verificación del comando predeterminado de CI |
+
+La suite local usa memoria para las pruebas que no requieren base. No se verificó persistencia nueva en PostgreSQL, escritura real en Garage, rotación de `JWT_SECRET`, limitación de tasa, carga bajo concurrencia, ni aceptación visual móvil. La interfaz no se inspeccionó manualmente en el navegador durante esta sesión; los códigos `200` solo acreditan respuesta HTTP.
+
+### 8.3 Repetición local de rendimiento durante indisponibilidad del despliegue (2026-11-10)
+
+Se repitieron las mediciones de ESC-01 contra una instancia local compilada de Next.js (`Node v24.19.0`, `npm 11.17.0`, Windows 11), en `http://127.0.0.1:3100`. No se configuró `DATABASE_URL`: el backend operó en modo memoria y la conciliación de pedidos se hizo mediante `GET /api/v1/pedidos`. La cuenta `carga.local.20261110@utb.edu.co` fue desechable y los datos se mantuvieron únicamente en el proceso local. La huella `local` identifica esta compilación; no es una huella de Dokploy.
+
+| Perfil | Carga | Respuestas | Resultado e integridad | Latencia p95 | Rendimiento mediano |
+|---|---|---|---|---|---|
+| Lectura del catálogo | 200 consultas × 3 repeticiones; 10 concurrentes; cinco tiendas | 600/600 HTTP 200 | Sin escrituras | 37–76 ms; mediana entre repeticiones 51 ms | 278,3 respuestas/s |
+| Carga de creación | 300 pedidos × 5 repeticiones; 25 concurrentes; 10 % reintentos con la misma llave | 1500/1500 HTTP 201 | 100 % procesado; 0 duplicados, pérdidas o estados distintos; 150/150 reintentos devolvieron el mismo ID | 220–926 ms; mediana entre repeticiones 661 ms | 166 respuestas/s |
+| Estrés de creación | 1000 pedidos × 3 repeticiones; 100 concurrentes; 10 % reintentos con la misma llave | 3000/3000 HTTP 201 | 100 % procesado; 0 duplicados, pérdidas o estados distintos; 300/300 reintentos devolvieron el mismo ID | 369–444 ms; mediana entre repeticiones 421 ms | 269 respuestas/s |
+
+Los informes completos por repetición están en [`mediciones/2026-11-10/esc01-memoria-lectura.json`](mediciones/2026-11-10/esc01-memoria-lectura.json), [`esc01-memoria-carga.json`](mediciones/2026-11-10/esc01-memoria-carga.json) y [`esc01-memoria-estres.json`](mediciones/2026-11-10/esc01-memoria-estres.json). Las tres mediciones de aplicación completaron sin errores HTTP. La primera repetición de carga fue más lenta; sus resultados no se reducen a esa corrida y se informan rangos y medianas.
+
+**Interpretación y límites.** Los perfiles locales de escritura alcanzan los umbrales funcionales de ESC-01, pero no son comparables con las mediciones anteriores respaldadas por PostgreSQL: la memoria elimina la latencia de disco y no permite demostrar persistencia, recuperación de reinicio ni conciliación contra la base. La concurrencia también está limitada al backend y al cliente en la misma máquina. Por esa razón, estos resultados no reemplazan la prueba con PostgreSQL ni la corrida desplegada.
+
+La comprobación adicional de 20 paquetes ICMP al host desplegado recibió 0/20 respuestas. Dado que la consulta HTTP de salud sí respondió y las mediciones HTTP anteriores dieron 200, el resultado es compatible con ICMP bloqueado y **no se interpreta como 100 % de pérdida de paquetes de la aplicación**. La corrida del 10/11 no midió ancho de banda, jitter de red, CPU/RAM del servidor ni priorización de tráfico, y tampoco pudo simular una caída de PostgreSQL porque no se obtuvo conexión con un clúster local aislado (intento registrado en §8.4). Estos límites corresponden a aquella ejecución; la medición posterior con red artificial y caída controlada de PostgreSQL está documentada en §8.6. Ninguna de las dos corridas representa telemetría del despliegue ni de la red universitaria.
+
+Para repetir las corridas, se compiló el backend con `npm run build`, se arrancó `.next/standalone/server.js` con `DATABASE_URL` vacío y un `JWT_SECRET` temporal de al menos 32 caracteres, y se ejecutó `scripts/medir-carga.js` contra `127.0.0.1`. Las fases de escritura usaron una cuenta temporal con `--registrar`; el informe JSON se guardó con `--salida`. Al detener el proceso, se descartaron los pedidos y la cuenta en memoria.
+
+En esta misma revisión, `backend: npm test` volvió a dar 172 aprobadas, 0 fallidas y 7 omitidas (PostgreSQL); `backend: npm run contract-test` dio 34/34 y `frontend: npm run lint` pasó. `backend: npm run build` pasó. El build frontend predeterminado de Turbopack volvió a fallar al crear un proceso hijo durante el procesamiento de `rubik_1431770f.module.css`, incluso con permisos ampliados; `frontend: npm run build -- --webpack` pasó, generó 20 páginas y completó la recopilación de trazas. El build con Webpack permite verificar el código, pero no reemplaza el build Turbopack que usa la configuración predeterminada.
+
+### 8.4 Intento de repetir los perfiles con PostgreSQL (2026-11-10)
+
+PostgreSQL 18.6 está instalado. Para no tocar una base ya existente, se inicializó un clúster nuevo bajo `%LOCALAPPDATA%\Temp\laplacita-pg-20261110`, usuario local `laplacita`, autenticación `trust` y puerto exclusivo 55432. `initdb` terminó correctamente. Sin embargo, la conexión de prueba con `pg_isready`/`createdb` no pudo completarse desde el entorno de ejecución de esta sesión (socket local rechazado con `10013`); un segundo arranque informó que el puerto temporal ya estaba ocupado. No se creó la base `laplacita_test`, no se conectó el backend a PostgreSQL y **no se generaron resultados nuevos de rendimiento persistente ni de caída/recuperación de base**. No se modificó ni detuvo ningún servicio o clúster de PostgreSQL preexistente.
+
+Por tanto, los únicos resultados nuevos de escritura de esta fecha son los perfiles A y B de §8.3, ejecutados contra memoria; no reemplazan las corridas A/B/C históricas respaldadas por PostgreSQL de §3. Tampoco se vuelve a afirmar el perfil C como repetido. Para completar una repetición válida, PostgreSQL debe aceptar conexiones en una base vacía aislada y el proceso del backend y el medidor deben poder acceder al mismo puerto; entonces se repiten A/B con `--bd` y C deteniendo solo ese clúster temporal durante la oleada. Los perfiles D/E de S14 eran contra el despliegue y no son pruebas locales; con el servicio desplegado indisponible quedan sin repetición actual.
+
+### 8.5 Verificación automatizada de documentación y aplicación (2026-11-10)
+
+Se repitieron las verificaciones después de revisar esta evidencia. Resultados observados en esta ejecución:
+
+| Comando | Resultado | Alcance y límite |
+|---|---|---|
+| `backend: npm test` | **172 aprobadas, 0 fallidas, 7 omitidas** de 179 | Las siete requieren `DATABASE_URL`; no validan persistencia en esta corrida. |
+| `backend: npm run contract-test` | **34/34 aprobadas** | Consistencia del contrato OpenAPI y las rutas presentes. |
+| `frontend: npm run lint` | **Aprobado** (código de salida 0) | ESLint terminó sin emitir errores. |
+| `backend: npm run build` | **Aprobado al repetir con permisos ampliados** | El primer intento restringido falló al crear una junction en Windows (`Acceso denegado`, error 5); el segundo compiló, pasó TypeScript y generó las rutas de la aplicación. |
+| `frontend: npm run build -- --webpack` | **Aprobado al repetir con permisos ampliados**; compiló, pasó TypeScript y generó 20 rutas/páginas | El primer intento restringido falló durante prerender de `/mis-pedidos` por `EPERM` al crear directorios bajo `frontend/.next`. El segundo completó la recopilación de trazas. |
+| Enlaces y formato Markdown | **70 archivos Markdown bajo `docs/`, 0 destinos de archivo rotos; `git diff --check` limpio** | La validación automática de rutas no interpreta con fidelidad todas las anclas GitHub con tildes y guiones Unicode; las dos referencias corregidas a §8 de S13 se contrastaron con el título real. |
+
+La auditoría confirma además que arc42 contiene §§1–14 y el Glosario, en ese orden; la nota anterior que situaba §§13–14 después del Glosario era errónea y se corrigió en `correcciones.md`. ADR-0036 y ADR-0008 son las ratificaciones aceptadas vigentes; los ADR antecedentes retienen su estado histórico por la regla de inmutabilidad. No se cambiaron estados ni contenido de decisiones arquitectónicas. Los fallos restringidos de build fueron reproducibles como problemas de permisos de Windows al escribir en `.next`; ambos builds terminaron correctamente al repetir con permisos ampliados. El build predeterminado de frontend con Turbopack no se repitió en esta ronda y el fallo previo de Turbopack sigue pendiente de evaluación.
+
+### 8.6 Laboratorio reproducible de rendimiento y QoS
+
+Se incorporó [`infra/qos-lab/`](../../infra/qos-lab/), un arnés que construye el backend del commit actual y lo conecta mediante una red privada de Podman con PostgreSQL efímero y un generador separado. Aplica límites declarados de CPU y memoria, inicia la base sin volumen persistente, crea una cuenta desechable y elimina los contenedores al terminar. No se conecta a Dokploy ni a la base del equipo. La guía y el comando desde PowerShell, Windows Terminal o Visual Studio Code están en [`infra/qos-lab/README.md`](../../infra/qos-lab/README.md): `node infra/qos-lab/run.mjs ejecutar`.
+
+El protocolo está diseñado para producir D (lectura de catálogo), E (red artificial `tc/netem`), A (carga), B (estrés) y C (interrupción/recuperación de PostgreSQL). Cada perfil genera consola `.txt` e informe `.json`; se agregan `protocolo.txt`, `resumen.txt` y una serie temporal CPU/memoria/tráfico `recursos.csv`. La versión del código, topes, host e imagen quedan asociados a la ejecución. La red artificial solo afecta los contenedores efímeros del generador y backend.
+
+**Ejecución controlada del 15/11/2026.** Podman 6.1.4 ejecutó el laboratorio en una máquina WSL con 4 CPU y 2 GiB asignados; el host detectó un AMD Ryzen 3 7320U, 8 hilos lógicos y 5,7 GiB disponibles para Node. Se limitaron cliente/backend/PostgreSQL a 1/2/1 CPU y 256/1024/512 MiB. La imagen del backend se construyó desde el árbol de trabajo cuyo `HEAD` era `5f640aaa3a4eda44728014767fd467912b0a05c5` (`revision-documentacion-s15`); no había cambios en `backend/`. La base PostgreSQL 18.6 fue efímera, sin volumen persistente. Los informes íntegros y la serie de recursos están en [`mediciones/qos-lab-20261115T164840Z/`](mediciones/qos-lab-20261115T164840Z/).
+
+| Perfil | Solicitudes y condición | Resultado observado | Umbral ESC-01 |
+|---|---|---|---|
+| D · lectura | 200 × 3, concurrencia 10 | 600 respuestas HTTP 200; p95 por repetición 266–281 ms (mediana 271 ms); 66,5–70,5 resp/s | No aplica integridad de escritura; lectura completada |
+| E · red artificial | 200 × 3, concurrencia 10; `netem` 50 ±10 ms, 0,5 % de pérdida y 5 Mbit/s | HTTP 200; p95 188–404 ms (mediana 200 ms). `tc` observó 7 paquetes descartados en cliente y 6 en backend | No equivale a una medición de red real; perfil completado |
+| A · carga | 300 pedidos × 5, concurrencia 25, 10 % reintentos | 1.500/1.500 procesados; 0 perdidos, 0 duplicados; 150/150 reintentos devolvieron el mismo ID; p95 564–1.052 ms (mediana 830 ms) | **Cumple** en las cinco repeticiones |
+| B · estrés | 1.000 × 3, concurrencia 100, 10 % reintentos | 2.984/3.000 procesados (99,47 %), 16 duplicados (0,53 %), 0 perdidos. Rep. 1: 984/1.000 (98,4 %), 16 duplicados (1,6 %), 18 errores de transporte; reps. 2–3: 100 % procesado y sin duplicados. p95 1.988–5.682 ms (mediana 2.457 ms) | **No cumple** en la primera repetición; el agregado no sustituye la repetición fallida |
+| C · fallo de PostgreSQL | 600 pedidos, concurrencia 25; interrupción programada durante 3 s | 486/600 procesados (81 %); 116 respuestas 503; 0 perdidos y 0 duplicados observados; p95 1.597 ms. Solo 49/60 reintentos devolvieron el mismo ID | **No cumple** procesado ≥99 %; sí cumple duplicados/perdidos <1 % |
+
+El monitoreo de recursos tomó 169 muestras: máximos reportados por Podman fueron cliente 30,7 % CPU/41,2 MiB, backend 70,5 %/116,8 MiB y PostgreSQL 95,8 %/54,1 MiB. La base fue el recurso con mayor CPU observada; esta métrica corresponde al contenedor local limitado y no predice capacidad del servidor productivo. Los resultados D/E/A/B/C, sus archivos `.txt`/`.json`, el protocolo y la serie `recursos.csv` permiten reproducir y auditar los valores.
+
+**Interpretación.** A valida integridad bajo la carga nominal configurada. B revela un incumplimiento intermitente bajo 100 clientes concurrentes, con errores de transporte y filas creadas sin un `201` asociado en una repetición; requiere diagnóstico antes de afirmar tolerancia a estrés. C demuestra que la interrupción de PostgreSQL produce errores visibles y que el umbral de disponibilidad de pedidos no se cumple durante el fallo, aunque no se detectaron duplicados/pérdidas en esta corrida. Los reintentos no rescataron todos los pedidos dentro de la ventana del perfil. D/E miden latencia HTTP y efecto de una red artificial dentro de la máquina, no priorización DSCP, tráfico móvil ni red Dokploy/universitaria. Todo el sistema compartió el mismo host y los límites de la máquina Podman; por ello estos valores describen este entorno controlado, no capacidad de producción.
+
+El primer intento del mismo día se detuvo por una configuración de escucha que impedía al chequeo de salud alcanzar el backend. Quedó preservado como [`ejecucion-incompleta.txt`](mediciones/qos-lab-20261115T163358Z/ejecucion-incompleta.txt), sin resultados de rendimiento; se corrigió únicamente la configuración del contenedor del laboratorio y se repitió la ejecución. El runner limpió sus contenedores temporales al concluir. `node --check infra/qos-lab/run.mjs` y `git diff --check` finalizaron sin errores.
+
+La tasa, pérdida y variación del perfil E son artificiales; no describen la red universitaria. No se midió priorización DSCP/clases de servicio porque el sistema no declara una política de tráfico diferenciada.

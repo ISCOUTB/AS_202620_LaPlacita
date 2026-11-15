@@ -6,8 +6,8 @@
 [![CI](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/workflows/ci.yml)
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=ISCOUTB_AS_202620_LaPlacita&metric=alert_status)](https://sonarcloud.io/project/overview?id=ISCOUTB_AS_202620_LaPlacita)
 
-Proyecto del curso Arquitecturas de Software, 2026-2. Hoy el proyecto va en la Semana 14
-(evaluación y medición); la entrega final es en la Semana 15.
+Proyecto del curso Arquitecturas de Software, 2026-2. La evidencia de S14 fue entregada en SAVIO;
+la entrega final y sustentación de S15 siguen pendientes.
 
 ## Índice
 
@@ -355,7 +355,7 @@ reescriben; cada trabajo agrega su entrada en `correcciones.md` y en `docs/ia.md
 | S11 | Fallos parciales, idempotencia y decisión de no extraer | [Evidencia S11](docs/evidencias/evidencias-s11.md) |
 | S12 | Consistencia, caché y mensajes | [Evidencia S12](docs/evidencias/evidencias-s12.md) |
 | S13 | Modelado de amenazas, dependencias y privacidad | [Evidencia S13](docs/evidencias/evidencias-s13.md) |
-| S14 | Medición contra umbrales y panel completo | [Evidencia S14 (en curso)](docs/evidencias/evidencias-s14.md) |
+| S14 | Medición ESC-01 y administración general | [Evidencia S14 (entregada en SAVIO)](docs/evidencias/evidencias-s14.md) |
 | S15 | Entrega final y sustentación | Pendiente |
 
 Pendientes de seguridad en [evidencias-s13 §9.5](docs/evidencias/evidencias-s13.md).

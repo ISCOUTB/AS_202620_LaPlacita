@@ -12,6 +12,7 @@ flowchart TD
     subgraph b0 ["Zona de Usuarios y Roles"]
         usuario["<b>Usuario</b><br/>[Person]<br/><i>Estudiante, docente o adm.</i>"]:::person
         establecimiento["<b>Establecimiento</b><br/>[Person]<br/><i>Local de la zona de comidas</i>"]:::person
+        administrador["<b>Administrador general</b><br/>[Person]<br/><i>Cuenta autorizada por ADMINS_GENERALES</i>"]:::person
     end
 
     subgraph b1 ["Núcleo del Sistema"]
@@ -25,6 +26,7 @@ flowchart TD
 
     usuario -->|Ordena y consulta PIN<br/>HTTPS| laPlacita
     establecimiento -->|Gestiona menú y PIN<br/>HTTPS| laPlacita
+    administrador -->|Administra cuentas, tiendas y pedidos<br/>HTTPS| laPlacita
 
     laPlacita -.->|Integración futura, aún no activa| pago
     laPlacita -.->|Canal futuro, aún no activo| push

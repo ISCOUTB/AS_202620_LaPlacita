@@ -1,0 +1,194 @@
+{
+  "escenario": "ESC-01",
+  "fecha": "2026-11-15T16:51:40.894Z",
+  "url": "http://laplacita-qos-backend:3000",
+  "fase": "escritura",
+  "carga": {
+    "peticiones": 1000,
+    "concurrencia": 100,
+    "repeticiones": 3,
+    "calentamiento": 20,
+    "pctReintentos": 10,
+    "tiendas": [
+      "tienda-01",
+      "tienda-02",
+      "tienda-03",
+      "tienda-04",
+      "tienda-05"
+    ]
+  },
+  "fuenteConciliacion": "postgresql",
+  "umbral": {
+    "procesadoMinPct": 99,
+    "duplicadoOPerdidoMaxPct": 1
+  },
+  "version": "b20fbafeb09326e9",
+  "corridas": [
+    {
+      "repeticion": 1,
+      "duracionS": 20.34,
+      "rendimientoRps": 54.1,
+      "latenciaMs": {
+        "p50": 1435,
+        "p95": 5682,
+        "p99": 10038,
+        "max": 10084
+      },
+      "estatus": {
+        "0": 18,
+        "201": 1082
+      },
+      "anomalias": {
+        "filasSinRespuesta201": [
+          "tienda-04:pedido-386",
+          "tienda-02:pedido-391",
+          "tienda-04:pedido-383",
+          "tienda-05:pedido-382",
+          "tienda-03:pedido-391",
+          "tienda-05:pedido-388",
+          "tienda-01:pedido-390",
+          "tienda-03:pedido-395",
+          "tienda-03:pedido-381",
+          "tienda-04:pedido-401",
+          "tienda-04:pedido-392",
+          "tienda-02:pedido-386",
+          "tienda-02:pedido-380",
+          "tienda-02:pedido-399",
+          "tienda-03:pedido-400",
+          "tienda-05:pedido-394"
+        ],
+        "estatusDeLosOriginalesSin201": {
+          "0": 18
+        }
+      },
+      "conciliacion": {
+        "enviados": 1000,
+        "respuestas201": 982,
+        "idsUnicos201": 982,
+        "filasNuevas": 1000,
+        "procesados": 984,
+        "procesadosAlPrimerIntento": 982,
+        "procesadosTrasReintento": 2,
+        "perdidos": 0,
+        "filasSinRespuesta201": 16,
+        "duplicados": 16,
+        "estadoDistinto": 0,
+        "rechazos429": 0,
+        "rechazos503": 0,
+        "reintentosEnviados": 100,
+        "reintentosConMismoId": 98
+      },
+      "resultado": {
+        "procesadoPct": 98.4,
+        "duplicadoOPerdidoPct": 1.6,
+        "cumple": false
+      }
+    },
+    {
+      "repeticion": 2,
+      "duracionS": 16.99,
+      "rendimientoRps": 64.7,
+      "latenciaMs": {
+        "p50": 1541,
+        "p95": 2457,
+        "p99": 3245,
+        "max": 3487
+      },
+      "estatus": {
+        "201": 1100
+      },
+      "anomalias": {
+        "filasSinRespuesta201": [],
+        "estatusDeLosOriginalesSin201": {}
+      },
+      "conciliacion": {
+        "enviados": 1000,
+        "respuestas201": 1000,
+        "idsUnicos201": 1000,
+        "filasNuevas": 1000,
+        "procesados": 1000,
+        "procesadosAlPrimerIntento": 1000,
+        "procesadosTrasReintento": 0,
+        "perdidos": 0,
+        "filasSinRespuesta201": 0,
+        "duplicados": 0,
+        "estadoDistinto": 0,
+        "rechazos429": 0,
+        "rechazos503": 0,
+        "reintentosEnviados": 100,
+        "reintentosConMismoId": 100
+      },
+      "resultado": {
+        "procesadoPct": 100,
+        "duplicadoOPerdidoPct": 0,
+        "cumple": true
+      }
+    },
+    {
+      "repeticion": 3,
+      "duracionS": 15.17,
+      "rendimientoRps": 72.5,
+      "latenciaMs": {
+        "p50": 1376,
+        "p95": 1988,
+        "p99": 3583,
+        "max": 4345
+      },
+      "estatus": {
+        "201": 1100
+      },
+      "anomalias": {
+        "filasSinRespuesta201": [],
+        "estatusDeLosOriginalesSin201": {}
+      },
+      "conciliacion": {
+        "enviados": 1000,
+        "respuestas201": 1000,
+        "idsUnicos201": 1000,
+        "filasNuevas": 1000,
+        "procesados": 1000,
+        "procesadosAlPrimerIntento": 1000,
+        "procesadosTrasReintento": 0,
+        "perdidos": 0,
+        "filasSinRespuesta201": 0,
+        "duplicados": 0,
+        "estadoDistinto": 0,
+        "rechazos429": 0,
+        "rechazos503": 0,
+        "reintentosEnviados": 100,
+        "reintentosConMismoId": 100
+      },
+      "resultado": {
+        "procesadoPct": 100,
+        "duplicadoOPerdidoPct": 0,
+        "cumple": true
+      }
+    }
+  ],
+  "agregado": {
+    "p95MsMin": 1988,
+    "p95MsMediana": 2457,
+    "p95MsMax": 5682,
+    "rendimientoRpsMediana": 64.7,
+    "enviados": 3000,
+    "procesados": 2984,
+    "perdidos": 0,
+    "duplicados": 16,
+    "estadoDistinto": 0,
+    "procesadoPct": 99.47,
+    "duplicadoOPerdidoPct": 0.53,
+    "cumpleTodas": false
+  },
+  "metricasFinales": {
+    "pedidosCreados": 4500,
+    "pagosConfirmados": 0,
+    "pedidosListos": 0,
+    "entregasValidadas": 0,
+    "pinesRechazados": 0,
+    "pinesBloqueados": 0,
+    "escriturasReintentadas": 35,
+    "escriturasDescartadas": 0,
+    "escriturasFallidas": 0,
+    "escriturasEnColaDeFallidos": 0
+  }
+}

@@ -168,7 +168,7 @@ app, y los ids `pedido-N` y `tienda-0X` no hay que adivinarlos.
 | A-19 | **E** | Quien logre ejecutar código en el servidor controla el contenedor | Los Dockerfile corrían como root | Media | `USER node` y `COPY --chown=node:node` en los dos Dockerfile. Falta fijar `node:22-alpine` por digest | ✅ Mitigada (28/10); digest pendiente (P-3) | M |
 | A-20 | **T** | *Clickjacking*: una página ajena incrusta el panel y engaña al cajero | iframe | Baja | `X-Frame-Options: DENY` y `frame-ancestors 'none'`; además `nosniff` y `Permissions-Policy` | ✅ Mitigada (28/10) | G |
 | A-21 | **T / E** | Una acción de GitHub comprometida roba el webhook o el token de Sonar | `actions/checkout@v4` y demás son etiquetas móviles | Baja | Dependabot vigila `github-actions`. Falta fijarlas por SHA | 🟡 Pendiente (P-3) | G |
-| A-22 | **S / E** | Con `JWT_SECRET` filtrado se firma un token de admin de cualquier tienda | Secreto de Dokploy | Baja | ≥32 caracteres obligatorio en producción y `alg: none` rechazado (prueba). Procedimiento de rotación documentado: [§8](#8-procedimiento-de-rotación-de-jwt_secret-p4-28102026) | ✅ Mitigada (28/10) | M |
+| A-22 | **S / E** | Con `JWT_SECRET` filtrado se firma un token de admin de cualquier tienda | Secreto de Dokploy | Baja | ≥32 caracteres obligatorio en producción y `alg: none` rechazado (prueba). Procedimiento de rotación documentado: [§8](#8-procedimiento-de-rotación-de-jwt_secret-p-4-28102026) | ✅ Mitigada (28/10) | M |
 | A-23 | **I** | Un secreto termina en un commit | `.env`, `CUENTAS_TIENDA`, credenciales de Garage | Baja | `.env` ignorado y `.env.example` sin valores. Falta activar *secret scanning* y *push protection* en GitHub | 🟡 Pendiente (P-2) | G |
 | A-24 | **I** | Un XSS ejecuta código en la app | Contenido mostrado en la PWA | Baja | El token ya está fuera del alcance de JavaScript (cookie `httpOnly`) y React escapa el contenido. Sin CSP `script-src`: Next exige nonces por petición | ✅ Aceptada (arc42 §14) | G |
 | A-25 | **I** | Quien obtenga una copia de la base ve PIN y tokens de seguimiento en claro | Copia de PostgreSQL | Baja | La base solo vive en la red interna de Dokploy (ADR-0014); el PIN es de un solo uso | ✅ Aceptada (arc42 §14) | M |
@@ -231,7 +231,7 @@ usa asistentes de código:
 | P-1 | Middleware `rateLimit` de Traefik por IP, con tope de tamaño del cuerpo | A-17 | Dokploy → dominio → Middlewares | M | 04/11/2026 (antes de medir en S14) |
 | P-2 | Activar *secret scanning* y *push protection* | A-23 | GitHub → Settings → Code security | G | 31/10/2026 |
 | P-3 | Fijar las acciones por SHA y `node:22-alpine` por digest | A-19, A-21 | `.github/workflows/*.yml`, `*/Dockerfile` | G | 08/11/2026 |
-| P-4 | Procedimiento de rotación de `JWT_SECRET` — **HECHO el 28/10, se adelantó**: queda en [§8](#8-procedimiento-de-rotación-de-jwt_secret-p4-28102026) de este documento | A-22 | `docs/evidencias/evidencias-s13.md` §8 | M | ✅ 28/10/2026 (comprometía 08/11) |
+| P-4 | Procedimiento de rotación de `JWT_SECRET` — **HECHO el 28/10, se adelantó**: queda en [§8](#8-procedimiento-de-rotación-de-jwt_secret-p-4-28102026) de este documento | A-22 | `docs/evidencias/evidencias-s13.md` §8 | M | ✅ 28/10/2026 (comprometía 08/11) |
 | P-5 | Guardar la versión del aviso aceptada con la cuenta | §7.4 | `usuarios` + `POST /auth/registro` | G | Entrega final |
 | P-6 | Validar ADR-0030 y este complemento en la sesión STRIDE del laboratorio | — | — | Ambos | 31/10/2026 |
 

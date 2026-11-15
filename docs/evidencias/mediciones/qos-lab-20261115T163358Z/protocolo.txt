@@ -1,0 +1,10 @@
+LaPlacita · protocolo reproducible de rendimiento y QoS
+Fecha UTC: 2026-11-15T16:34:01.622Z
+Commit: desconocido
+Rama: desconocida
+Host: win32; arquitectura x64; AMD Ryzen 3 7320U with Radeon Graphics         ; 8 núcleos lógicos; 5.7 GiB RAM detectada por Node; Node v24.19.0; podman version 6.1.4
+Aislamiento: red privada Podman; PostgreSQL 18.6 sin volumen persistente; backend construido desde el commit indicado.
+Topes: generador 1 CPU/256m; backend 2 CPU/1024m; PostgreSQL 1 CPU/512m.
+Calentamiento: 20 lecturas por proceso; pausa entre perfiles 10 s.
+La cuenta y la base son desechables. No se contacta Dokploy ni la base del equipo.
+Imagen PostgreSQL solicitada: postgres:18.6-alpine; digest observado: pendiente de descarga.
