@@ -15,4 +15,8 @@ npm-debug.log*
 # laboratorio local de seguridad (S14): logs y resultados efímeros
 infra/lab/.logs/
 
+# laboratorio QoS: secretos, logs y salida local no versionables
+infra/qos-lab/.env
+infra/qos-lab/.logs/
+
 lcov.info

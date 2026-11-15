@@ -1,0 +1,42 @@
+LaPlacita · laboratorio local de rendimiento/QoS
+Perfil: A-carga-pedidos
+Fecha UTC: 2026-11-15T16:50:46.169Z
+Commit medido: 5f640aaa3a4eda44728014767fd467912b0a05c5
+Configuración: escritura; 300 solicitudes; 25 clientes; 5 repeticiones; 10% reintentos
+Host: win32; x64; AMD Ryzen 3 7320U with Radeon Graphics         ; 8 núcleos lógicos; 5.7 GiB RAM detectada por Node; Node v24.19.0
+Topes: generador 1 CPU/256m; backend 2 CPU/1024m; PostgreSQL 1 CPU/512m.
+Cliente, backend y base comparten el mismo host; no equivale a una medición de producción.
+ESC-01 · medir-carga · fase escritura · 300 peticiones × 5 repeticiones · concurrencia 25
+URL base: http://laplacita-qos-backend:3000 · versión: "b20fbafeb09326e9"
+Conciliación contra: postgresql · reintentos con la misma llave: 10 %
+
+#1 · 8.47 s · 39 resp/s · p50 657 · p95 919 · p99 1662 · máx 2122 ms · estatus {"201":330}
+   enviados 300 · 201 300 · procesados 300 (0 tras reintento) · perdidos 0 · duplicados 0 (filas sin 201: 0) · estado distinto 0 · 429 0 · 503 0
+   reintentos con la misma llave 30 → mismo id 30
+   procesado 100 % (umbral ≥ 99 %) · duplicado+perdido 0 % (umbral < 1 %) → CUMPLE
+
+#2 · 8.92 s · 37 resp/s · p50 697 · p95 1052 · p99 1149 · máx 1162 ms · estatus {"201":330}
+   enviados 300 · 201 300 · procesados 300 (0 tras reintento) · perdidos 0 · duplicados 0 (filas sin 201: 0) · estado distinto 0 · 429 0 · 503 0
+   reintentos con la misma llave 30 → mismo id 30
+   procesado 100 % (umbral ≥ 99 %) · duplicado+perdido 0 % (umbral < 1 %) → CUMPLE
+
+#3 · 7 s · 47.1 resp/s · p50 528 · p95 830 · p99 946 · máx 1045 ms · estatus {"201":330}
+   enviados 300 · 201 300 · procesados 300 (0 tras reintento) · perdidos 0 · duplicados 0 (filas sin 201: 0) · estado distinto 0 · 429 0 · 503 0
+   reintentos con la misma llave 30 → mismo id 30
+   procesado 100 % (umbral ≥ 99 %) · duplicado+perdido 0 % (umbral < 1 %) → CUMPLE
+
+#4 · 6.12 s · 53.9 resp/s · p50 471 · p95 564 · p99 641 · máx 653 ms · estatus {"201":330}
+   enviados 300 · 201 300 · procesados 300 (0 tras reintento) · perdidos 0 · duplicados 0 (filas sin 201: 0) · estado distinto 0 · 429 0 · 503 0
+   reintentos con la misma llave 30 → mismo id 30
+   procesado 100 % (umbral ≥ 99 %) · duplicado+perdido 0 % (umbral < 1 %) → CUMPLE
+
+#5 · 5.81 s · 56.8 resp/s · p50 387 · p95 735 · p99 939 · máx 1176 ms · estatus {"201":330}
+   enviados 300 · 201 300 · procesados 300 (0 tras reintento) · perdidos 0 · duplicados 0 (filas sin 201: 0) · estado distinto 0 · 429 0 · 503 0
+   reintentos con la misma llave 30 → mismo id 30
+   procesado 100 % (umbral ≥ 99 %) · duplicado+perdido 0 % (umbral < 1 %) → CUMPLE
+
+Agregado: 1500 pedidos · procesado 100 % · duplicado+perdido 0 % · p95 entre corridas 564–1052 ms (mediana 830) → CUMPLE en todas las repeticiones
+Métricas del proceso al final: {"pedidosCreados":1500,"pagosConfirmados":0,"pedidosListos":0,"entregasValidadas":0,"pinesRechazados":0,"pinesBloqueados":0,"escriturasReintentadas":0,"escriturasDescartadas":0,"escriturasFallidas":0,"escriturasEnColaDeFallidos":0}
+Informe JSON: /tmp/A-carga-pedidos.json
+
+Código de salida del medidor: 0

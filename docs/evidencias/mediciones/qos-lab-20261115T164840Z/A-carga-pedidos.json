@@ -1,0 +1,254 @@
+{
+  "escenario": "ESC-01",
+  "fecha": "2026-11-15T16:50:47.530Z",
+  "url": "http://laplacita-qos-backend:3000",
+  "fase": "escritura",
+  "carga": {
+    "peticiones": 300,
+    "concurrencia": 25,
+    "repeticiones": 5,
+    "calentamiento": 20,
+    "pctReintentos": 10,
+    "tiendas": [
+      "tienda-01",
+      "tienda-02",
+      "tienda-03",
+      "tienda-04",
+      "tienda-05"
+    ]
+  },
+  "fuenteConciliacion": "postgresql",
+  "umbral": {
+    "procesadoMinPct": 99,
+    "duplicadoOPerdidoMaxPct": 1
+  },
+  "version": "b20fbafeb09326e9",
+  "corridas": [
+    {
+      "repeticion": 1,
+      "duracionS": 8.47,
+      "rendimientoRps": 39,
+      "latenciaMs": {
+        "p50": 657,
+        "p95": 919,
+        "p99": 1662,
+        "max": 2122
+      },
+      "estatus": {
+        "201": 330
+      },
+      "anomalias": {
+        "filasSinRespuesta201": [],
+        "estatusDeLosOriginalesSin201": {}
+      },
+      "conciliacion": {
+        "enviados": 300,
+        "respuestas201": 300,
+        "idsUnicos201": 300,
+        "filasNuevas": 300,
+        "procesados": 300,
+        "procesadosAlPrimerIntento": 300,
+        "procesadosTrasReintento": 0,
+        "perdidos": 0,
+        "filasSinRespuesta201": 0,
+        "duplicados": 0,
+        "estadoDistinto": 0,
+        "rechazos429": 0,
+        "rechazos503": 0,
+        "reintentosEnviados": 30,
+        "reintentosConMismoId": 30
+      },
+      "resultado": {
+        "procesadoPct": 100,
+        "duplicadoOPerdidoPct": 0,
+        "cumple": true
+      }
+    },
+    {
+      "repeticion": 2,
+      "duracionS": 8.92,
+      "rendimientoRps": 37,
+      "latenciaMs": {
+        "p50": 697,
+        "p95": 1052,
+        "p99": 1149,
+        "max": 1162
+      },
+      "estatus": {
+        "201": 330
+      },
+      "anomalias": {
+        "filasSinRespuesta201": [],
+        "estatusDeLosOriginalesSin201": {}
+      },
+      "conciliacion": {
+        "enviados": 300,
+        "respuestas201": 300,
+        "idsUnicos201": 300,
+        "filasNuevas": 300,
+        "procesados": 300,
+        "procesadosAlPrimerIntento": 300,
+        "procesadosTrasReintento": 0,
+        "perdidos": 0,
+        "filasSinRespuesta201": 0,
+        "duplicados": 0,
+        "estadoDistinto": 0,
+        "rechazos429": 0,
+        "rechazos503": 0,
+        "reintentosEnviados": 30,
+        "reintentosConMismoId": 30
+      },
+      "resultado": {
+        "procesadoPct": 100,
+        "duplicadoOPerdidoPct": 0,
+        "cumple": true
+      }
+    },
+    {
+      "repeticion": 3,
+      "duracionS": 7,
+      "rendimientoRps": 47.1,
+      "latenciaMs": {
+        "p50": 528,
+        "p95": 830,
+        "p99": 946,
+        "max": 1045
+      },
+      "estatus": {
+        "201": 330
+      },
+      "anomalias": {
+        "filasSinRespuesta201": [],
+        "estatusDeLosOriginalesSin201": {}
+      },
+      "conciliacion": {
+        "enviados": 300,
+        "respuestas201": 300,
+        "idsUnicos201": 300,
+        "filasNuevas": 300,
+        "procesados": 300,
+        "procesadosAlPrimerIntento": 300,
+        "procesadosTrasReintento": 0,
+        "perdidos": 0,
+        "filasSinRespuesta201": 0,
+        "duplicados": 0,
+        "estadoDistinto": 0,
+        "rechazos429": 0,
+        "rechazos503": 0,
+        "reintentosEnviados": 30,
+        "reintentosConMismoId": 30
+      },
+      "resultado": {
+        "procesadoPct": 100,
+        "duplicadoOPerdidoPct": 0,
+        "cumple": true
+      }
+    },
+    {
+      "repeticion": 4,
+      "duracionS": 6.12,
+      "rendimientoRps": 53.9,
+      "latenciaMs": {
+        "p50": 471,
+        "p95": 564,
+        "p99": 641,
+        "max": 653
+      },
+      "estatus": {
+        "201": 330
+      },
+      "anomalias": {
+        "filasSinRespuesta201": [],
+        "estatusDeLosOriginalesSin201": {}
+      },
+      "conciliacion": {
+        "enviados": 300,
+        "respuestas201": 300,
+        "idsUnicos201": 300,
+        "filasNuevas": 300,
+        "procesados": 300,
+        "procesadosAlPrimerIntento": 300,
+        "procesadosTrasReintento": 0,
+        "perdidos": 0,
+        "filasSinRespuesta201": 0,
+        "duplicados": 0,
+        "estadoDistinto": 0,
+        "rechazos429": 0,
+        "rechazos503": 0,
+        "reintentosEnviados": 30,
+        "reintentosConMismoId": 30
+      },
+      "resultado": {
+        "procesadoPct": 100,
+        "duplicadoOPerdidoPct": 0,
+        "cumple": true
+      }
+    },
+    {
+      "repeticion": 5,
+      "duracionS": 5.81,
+      "rendimientoRps": 56.8,
+      "latenciaMs": {
+        "p50": 387,
+        "p95": 735,
+        "p99": 939,
+        "max": 1176
+      },
+      "estatus": {
+        "201": 330
+      },
+      "anomalias": {
+        "filasSinRespuesta201": [],
+        "estatusDeLosOriginalesSin201": {}
+      },
+      "conciliacion": {
+        "enviados": 300,
+        "respuestas201": 300,
+        "idsUnicos201": 300,
+        "filasNuevas": 300,
+        "procesados": 300,
+        "procesadosAlPrimerIntento": 300,
+        "procesadosTrasReintento": 0,
+        "perdidos": 0,
+        "filasSinRespuesta201": 0,
+        "duplicados": 0,
+        "estadoDistinto": 0,
+        "rechazos429": 0,
+        "rechazos503": 0,
+        "reintentosEnviados": 30,
+        "reintentosConMismoId": 30
+      },
+      "resultado": {
+        "procesadoPct": 100,
+        "duplicadoOPerdidoPct": 0,
+        "cumple": true
+      }
+    }
+  ],
+  "agregado": {
+    "p95MsMin": 564,
+    "p95MsMediana": 830,
+    "p95MsMax": 1052,
+    "rendimientoRpsMediana": 47.1,
+    "enviados": 1500,
+    "procesados": 1500,
+    "perdidos": 0,
+    "duplicados": 0,
+    "estadoDistinto": 0,
+    "procesadoPct": 100,
+    "duplicadoOPerdidoPct": 0,
+    "cumpleTodas": true
+  },
+  "metricasFinales": {
+    "pedidosCreados": 1500,
+    "pagosConfirmados": 0,
+    "pedidosListos": 0,
+    "entregasValidadas": 0,
+    "pinesRechazados": 0,
+    "pinesBloqueados": 0,
+    "escriturasReintentadas": 0,
+    "escriturasDescartadas": 0,
+    "escriturasFallidas": 0,
+    "escriturasEnColaDeFallidos": 0
+  }
+}

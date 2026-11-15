@@ -1,0 +1,72 @@
+{
+  "escenario": "ESC-01",
+  "fecha": "2026-11-15T16:50:17.029Z",
+  "url": "http://laplacita-qos-backend:3000",
+  "fase": "lectura",
+  "carga": {
+    "peticiones": 200,
+    "concurrencia": 10,
+    "repeticiones": 3,
+    "calentamiento": 20,
+    "pctReintentos": 0,
+    "tiendas": [
+      "tienda-01"
+    ]
+  },
+  "fuenteConciliacion": null,
+  "umbral": {
+    "procesadoMinPct": 99,
+    "duplicadoOPerdidoMaxPct": 1
+  },
+  "version": "b20fbafeb09326e9",
+  "corridas": [
+    {
+      "repeticion": 1,
+      "duracionS": 3.71,
+      "rendimientoRps": 53.9,
+      "latenciaMs": {
+        "p50": 140,
+        "p95": 404,
+        "p99": 515,
+        "max": 631
+      },
+      "estatus": {
+        "200": 200
+      }
+    },
+    {
+      "repeticion": 2,
+      "duracionS": 3.1,
+      "rendimientoRps": 64.4,
+      "latenciaMs": {
+        "p50": 145,
+        "p95": 200,
+        "p99": 291,
+        "max": 427
+      },
+      "estatus": {
+        "200": 200
+      }
+    },
+    {
+      "repeticion": 3,
+      "duracionS": 2.88,
+      "rendimientoRps": 69.5,
+      "latenciaMs": {
+        "p50": 131,
+        "p95": 188,
+        "p99": 259,
+        "max": 483
+      },
+      "estatus": {
+        "200": 200
+      }
+    }
+  ],
+  "agregado": {
+    "p95MsMin": 188,
+    "p95MsMediana": 200,
+    "p95MsMax": 404,
+    "rendimientoRpsMediana": 64.4
+  }
+}

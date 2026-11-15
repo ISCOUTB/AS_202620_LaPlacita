@@ -1,0 +1,7 @@
+La ejecución no completó todos los perfiles.
+Fecha UTC: 2026-11-15T16:44:58.756Z
+Detalle: Error: backend no respondió en 120 segundos.
+    at waitForContainer (file:///C:/Users/jorge/OneDrive/Escritorio/Proyecto%20Arquitectura%20de%20Software/AS_202620_LaPlacita/infra/qos-lab/run.mjs:100:9)
+    at async run (file:///C:/Users/jorge/OneDrive/Escritorio/Proyecto%20Arquitectura%20de%20Software/AS_202620_LaPlacita/infra/qos-lab/run.mjs:215:3)
+    at async main (file:///C:/Users/jorge/OneDrive/Escritorio/Proyecto%20Arquitectura%20de%20Software/AS_202620_LaPlacita/infra/qos-lab/run.mjs:269:5)
+    at async file:///C:/Users/jorge/OneDrive/Escritorio/Proyecto%20Arquitectura%20de%20Software/AS_202620_LaPlacita/infra/qos-lab/run.mjs:279:1
