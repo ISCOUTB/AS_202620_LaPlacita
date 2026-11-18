@@ -1,7 +1,11 @@
 ---
-date: 2026-11-03
+date: 2026-11-18
 title: "LaPlacita — Documentación de Arquitectura de Software"
 ---
+
+> Revisión de coherencia con el código de `master` disponible el 18/11/2026. Las evidencias de
+> semanas anteriores y los ADR conservan su fecha, alcance y resultados originales; sus datos son
+> históricos cuando así se indica y no se deben leer como una medición del estado actual.
 
 ## 1. Introducción y Objetivos
 
@@ -175,23 +179,26 @@ graph TD
 
 ### 5.2. Nivel 2 — Módulo `pedidos` (whitebox)
  
-El módulo `pedidos` es el núcleo del corte vertical y aísla su estado por tienda (RES-05). Sus tres capas internas viven en un único archivo (`backend/src/modules/pedidos/index.js`) para mantener la lógica pura y testeable sin framework HTTP:
+El módulo `pedidos` es el núcleo del flujo y mantiene su estado particionado por tienda (RES-05). La lógica del dominio conserva proyecciones en memoria; el adaptador `backend/src/persistencia/` sincroniza pedidos con PostgreSQL cuando existe `DATABASE_URL`. La API espera la confirmación durable al crear un pedido y usa una cola ordenada con reintentos para las mutaciones posteriores (ADR-0026). Sin base configurada, el modo local es solo en memoria y pierde los datos al reiniciar.
  
 ```mermaid
 graph LR
     Intro["Interfaz del módulo\ncrearPedido / obtenerPedido / cambiarEstado\n(todo con tiendaId)"]
     Logic["Capa de lógica\nvalidaciones, máquina de estados,\nids por tienda"]
-    Store["Capa de persistencia\npedidosPorTienda (Map por tienda,\nen memoria)"]
+    Store["Estado de dominio\npedidosPorTienda (Map por tienda)"]
+    DB[("PostgreSQL opcional\nrehidratación y cola de escrituras")]
 
     Intro --> Logic
     Logic --> Store
+    Store --> DB
 ```
  
 | Capa | Archivo | Responsabilidad |
 |---|---|---|
 | Interfaz | `backend/src/modules/pedidos/index.js` | Expone `crearPedido`, `obtenerPedido(pedidoId, tiendaId)`, `cambiarEstado(pedidoId, tiendaId, estado)`, `ESTADOS` |
 | Lógica | `backend/src/modules/pedidos/index.js` | Valida cantidad/cliente/tienda, genera id por tienda, gestiona la máquina de estados y aplica reglas de negocio |
-| Persistencia | `backend/src/modules/pedidos/index.js` | `pedidosPorTienda`: un `Map` por tienda en memoria; interfaz diseñada para sustituirse por PostgreSQL sin cambiar la lógica (ADR-0001) |
+| Estado de dominio | `backend/src/modules/pedidos/index.js` | `pedidosPorTienda`: proyección en memoria particionada por tienda; el módulo publica escrituras al adaptador de persistencia |
+| Adaptador durable | `backend/src/persistencia/index.js`, `cola-escrituras.js` | PostgreSQL opcional vía `DATABASE_URL`; rehidratación al arrancar, creación confirmada por la base y escrituras posteriores con reintentos/DLQ |
  
 **Máquina de estados del pedido**
  
@@ -208,53 +215,35 @@ Solo se permiten transiciones secuenciales; un salto de más de un estado es rec
 ### 6.1 — Flujos de interacción principales
 
 #### Flujo 1: Creación de pedido
-**Actor:** Cliente  
-**Protocolo:** HTTP REST/JSON  
-**Formato:** `POST /api/v1/pedidos` con `CrearPedidoRequest { productoId, cantidad, clienteId, tiendaId }`  
+**Actor:** Cliente; el frontend solicita sesión antes del checkout. El contrato v1 aún admite creación sin sesión por compatibilidad.
+**Protocolo:** HTTP REST/JSON desde el frontend al BFF y desde el BFF al backend.
+**Formato:** `POST /api/v1/pedidos`, con productos, `tiendaId` y `Idempotency-Key` opcional. Si hay sesión, el backend toma el dueño del token e ignora `clienteId` del cuerpo.
 **Secuencia:**
-1. Cliente envía `POST /api/v1/pedidos` → API Backend Central
-2. API delega a `pedidos.crearPedido(...)` — **import ESM síncrono**
-3. `pedidos.crearPedido` llama a `catalogo.obtenerProducto(productoId, tiendaId)` — **import ESM síncrono**
-4. Si el producto es válido, se crea el pedido en estado `Recibido`
-5. Se notifica al cliente con `Pedido` { id, estado, total, ... }
+1. El cliente envía la petición al BFF del frontend; el BFF agrega el bearer token obtenido de la cookie httpOnly, si existe.
+2. La ruta de pedidos espera la rehidratación (`lista()`), valida los datos y crea el pedido mediante `crearPedidoConfirmado`.
+3. El módulo de pedidos valida cada producto y tienda contra Catálogo y genera código y token de seguimiento.
+4. Con PostgreSQL activo, la respuesta `201` espera confirmación durable; si no se confirma, la API devuelve `503` y retira la creación fallida.
+5. La respuesta expone la vista pública sin PIN y entrega el token de seguimiento una sola vez. El PIN se genera al pasar a Listo.
 
-#### Flujo 2: Confirmación de pago
-**Actor:** Pasarela de pagos externa  
-**Protocolo:** HTTP REST/JSON  
-**Formato:** `POST /api/v1/pagos/{pedidoId}/confirmar` con `tiendaId` en query  
-**Secuencia:**
-1. Pasarela de pagos notifica confirmación → API Backend Central
-2. API delega a `pagos.confirmarPago(pedidoId, tiendaId)` — **import ESM síncrono**
-3. `pagos.confirmarPago` valida que el pedido está en `Recibido` y llama al método de intención `pedidos.confirmarPago(pedidoId, tiendaId)`, que es quien aplica `Recibido → En preparación` — **import ESM síncrono**
-4. Se genera notificación: `notificaciones.notificarCambioEstado(...)` — **import ESM síncrono**
-5. Se responde con `Pedido` actualizado
+#### Flujo 2: Confirmación simulada de pago
+**Actor:** Cliente autenticado o personal de la tienda, según el flujo. No hay pasarela externa integrada.
+**Formato:** el cliente usa `POST /api/v1/pagos/{pedidoId}/confirmar`; el panel usa `POST /api/v1/tienda/pedidos/{pedidoId}/pago`.
+La API valida sesión y propiedad, y `pagos` aplica la transición de Recibido a En preparación a través de la interfaz de intención de Pedidos. La confirmación representa el pago simulado; no recibe ni almacena datos de tarjeta. Las rutas productivas no publican automáticamente una notificación de transición.
 
-#### Flujo 3: Marcar pedido como listo (generación de PIN)
-**Actor:** Establecimiento  
-**Protocolo:** HTTP REST/JSON  
-**Formato:** `POST /api/v1/entrega/{pedidoId}/listo` con `tiendaId` en query  
-**Secuencia:**
-1. Establecimiento marca pedido como listo → API Backend Central
-2. API delega a `entrega.marcarListo(pedidoId, tiendaId)` — **import ESM síncrono**
-3. `entrega.marcarListo` valida el estado y genera PIN de 4 dígitos
-4. Se notifica cambio de estado a `Listo`
-5. Se responde con `Pedido` { estado: 'Listo', pin }
+#### Flujo 3: Marcar pedido como listo y generar PIN
+**Actor:** Personal autenticado de la tienda.
+**Formato:** `POST /api/v1/tienda/pedidos/{pedidoId}/listo`.
+La tienda se determina desde el token, no desde un `tiendaId` controlado por el navegador. Entrega valida el estado, genera un PIN de cuatro dígitos y la ruta del panel no devuelve el secreto. El dueño consulta el PIN mediante `GET /api/v1/pedidos/{pedidoId}/pin` solo con sesión y cuando el pedido está Listo.
 
-#### Flujo 4: Validación de PIN y entrega
-**Actor:** Cliente en punto de recolección  
-**Protocolo:** HTTP REST/JSON  
-**Formato:** `POST /api/v1/entrega/{pedidoId}/validar` con `{ pinIngresado }`  
-**Secuencia:**
-1. Cliente ingresa PIN → API Backend Central
-2. API delega a `entrega.validarPin(pedidoId, tiendaId, pinIngresado)` — **import ESM síncrono**
-3. Si el PIN es correcto, el pedido cambia a `Entregado`
-4. Se genera notificación de `Entregado`
-5. Se responde con `Pedido` { estado: 'Entregado' }
+#### Flujo 4: Validar PIN y entregar
+**Actor:** Personal autenticado de la tienda; el cliente dicta el PIN en el mostrador.
+**Formato:** `POST /api/v1/tienda/pedidos/{pedidoId}/entrega`.
+La tienda se obtiene del token. Entrega limita los intentos fallidos y solo cambia a Entregado cuando el PIN coincide. La operación no depende de una petición del cliente ni publica automáticamente un evento de notificación.
 
 #### Flujo 5: Consulta de catálogo
-**Actor:** Cliente  
-**Protocolo:** HTTP REST/JSON  
-**Formato:** `GET /api/v1/catalogo/tiendas/{tiendaId}/productos`  
+**Actor:** Cliente
+**Protocolo:** HTTP REST/JSON
+**Formato:** `GET /api/v1/catalogo/tiendas/{tiendaId}/productos`
 **Secuencia:**
 1. Cliente consulta productos de una tienda → API Backend Central
 2. API delega a `catalogo.listarProductosPorTienda(tiendaId)` — **import ESM síncrono**
@@ -267,7 +256,7 @@ Solo se permiten transiciones secuenciales; un salto de más de un estado es rec
 | Cliente ↔ API (todos los endpoints) | HTTP REST | JSON | Frontend → Next.js App Router |
 | `pedidos` ↔ `catalogo` | import ESM síncrono | Objeto JS en memoria | pedidos, catalogo |
 | `pagos` ↔ `pedidos` | import ESM síncrono | Objeto JS en memoria | pagos, pedidos |
-| `entrega` ↔ `pedidos` | import ESM síncrono | Objeto JS en memoria | entrega, pedidos |
+| `entrega` ↔ `pedidos` | llamada ESM interna | Objeto JS en memoria | entrega, pedidos |
 | Orquestador → módulos | import ESM síncrono | Objeto JS en memoria | corte-vertical.js → todos |
 | Rutas API → Identidad | import ESM síncrono | Usuario de sesión / objeto JS | Registro, ingreso, resolución del token y autorización de roles |
 | Rutas API → Almacén | import ESM síncrono; Garage usa S3 SigV4 por HTTP interno | Bytes y referencia UUID | Subida protegida por sesión; descarga pública de imagen por UUID |
@@ -359,7 +348,7 @@ HTTP lo importa; la respuesta del borde es la vista pública, sin `pin`.
 
 **Evidencia:** `backend/openapi.yaml` (contrato OpenAPI 3.1 v1), `backend/tests/contract-openapi.test.js` (prueba de contrato), `docs/adr/0006-estrategia-integracion-sincrona.md` (ADR de integración) ratificado por `docs/adr/0008-ratificacion-estrategia-integracion-sincrona.md`.
 **Pipeline:** job `contract-test` en `.github/workflows/ci.yml` que ejecuta `node --test backend/tests/contract-openapi.test.js`.
-**Estrategia de integración:** Síncrona in-process mediante importaciones ESM directas (ADR-0006).
+**Estrategia de integración:** síncrona in-process mediante importaciones ESM directas; propuesta en ADR-0006 y ratificada como aceptada por ADR-0008.
 **Implementación HTTP:** 11 operaciones REST (11 paths) implementadas en `backend/app/api/v1/*` siguiendo el contrato: `GET /api/v1/health`, `GET /api/v1/metricas`, `GET /api/v1/catalogo/productos/{productoId}`, `GET /api/v1/catalogo/tiendas/{tiendaId}/productos`, `POST /api/v1/pedidos`, `GET /api/v1/pedidos/{pedidoId}`, `POST /api/v1/pagos/{pedidoId}/confirmar`, `POST /api/v1/entrega/{pedidoId}/listo`, `POST /api/v1/entrega/{pedidoId}/validar`, `POST /api/v1/notificaciones`, `GET /api/v1/notificaciones/{pedidoId}`. Desde S9 el contrato solo declara métodos `get` y `post`: el `PUT /api/v1/pedidos/{pedidoId}` se retiró con ADR-0013.
 **El contrato define 11 paths con 11 operaciones REST** (health, métricas, catalogo, pedidos, pagos, entrega, notificaciones) con esquemas de request/response versionados. La prueba de contrato valida que la implementación de los módulos cumple el contrato, que cada path del `backend/openapi.yaml` tiene su `route.js` en `backend/app/api/v1/`, y **falla ante cambios incompatibles** (ej. si `crearPedido` deja de recibir `tiendaId`). Las rutas delegan en `backend/src/modules/*` (dominio puro, ADR-0001); la capa HTTP (`backend/app/api/v1/`) es solo el adaptador del contrato, no contiene lógica de negocio.
 **Observabilidad (S8):** `GET /api/v1/metricas` expone contadores en memoria (`pedidosCreados`, `pagosConfirmados`, `pedidosListos`, `entregasValidadas`, `pinesRechazados`, `pinesBloqueados`) asociados a ESC-01/ESC-03/ESC-04; las rutas emiten bitácora JSON (`backend/src/logger.js`: `ts`, `level`, `service`, `route`, `tiendaId`, `pedidoId`, `mensaje`) sin registrar PIN ni tarjeta.
@@ -383,10 +372,10 @@ flowchart TB
     CLI["Cliente móvil / navegador<br/>(PWA en el dominio del frontend)"]
 
     DEV -->|push a master| GH
-    GH -->|gate + webhook de redeploy (backend, luego frontend) + huella servida| DK
+    GH -->|"gate, webhook de redeploy backend y frontend, y verificación de huella"| DK
     GH -->|análisis estático| SC
     DK ---|TCP / pg, sin firewall| DB
-    CLI -->|HTTPS: PWA + contrato /api/v1 (BFF)| DK
+    CLI -->|"HTTPS: PWA y API v1 mediante BFF"| DK
 ```
 
 | Pieza | Dónde se ejecuta | Evidencia |
@@ -427,23 +416,25 @@ Proyección a código: `docs/c4/componentes.md`. Decisiones: ADR-0001 (estilo), 
 
 ### 8.3 Reglas transversales
 1. **Cada dato tiene un dueño único** (tabla en `docs/dominio/propiedad-de-datos.md`). Solo el dueño escribe.
-2. **RES-05:** toda operación exige `tiendaId`; 0 accesos cruzados (ESC-02, `backend/scripts/medir-aislamiento.js`).
+2. **RES-05:** las operaciones de una tienda derivan `tiendaId` de la sesión y se limitan a esa tienda. Catálogo público y administración general tienen alcances explícitos distintos; la administración general no debe confundirse con una sesión de tienda (ESC-02, `backend/scripts/medir-aislamiento.js`). La medición de 300 intentos es evidencia de una corrida, no una garantía matemática.
 3. **Frontera de módulo:** comunicación solo vía `index.js` público; prohibido tocar el Map ajeno (violaciones V-01…V-06 en `docs/dominio/auditoria-modularidad.md`).
 4. **RES-01:** nunca tarjeta en el repo; solo confirmación (ACL).
 
 ### 8.4 Consistencia por operación (S12)
 La consistencia se elige por operación, no para todo el sistema. Tabla completa (O-01…O-14) en
 [evidencias-s12 §2](../evidencias/evidencias-s12.md).
-- **Fuerte:** crear pedido (con idempotencia), precio y disponibilidad al pedir, transiciones de
-  estado (pago, listo, entrega), intentos de PIN, edición del menú y registro de cuentas. Se
-  cumple porque hay **un solo proceso** (ADR-0019): cada operación síncrona del dominio corre
-  completa en el event loop sin intercalarse con otra.
+- **Por operación:** el proceso único evita coordinación entre réplicas, pero no convierte todas las
+  operaciones en transacciones atómicas. La creación espera confirmación PostgreSQL; las
+  transiciones posteriores se escriben mediante la cola ordenada y reintentos; cuentas y cambios de
+  catálogo esperan su escritura correspondiente. Las mediciones S14 muestran que los perfiles de
+  estrés y caída de PostgreSQL no cumplen todos los umbrales ESC-01; véase §11.8 y la evidencia S14.
 - **Read-your-writes:** el cliente ve su pedido y su PIN justo después de crearlo; tras un
   reinicio, las lecturas esperan la rehidratación (`persistencia.lista()`).
-- **Eventual con plazo:** seguimiento del pedido (≤ 3 s), cola del panel (≤ 4 s), resumen del
-  día (≤ 15 s), por consulta periódica; `/api` nunca se cachea en el navegador ni en el proxy.
-- **Durabilidad de las transiciones write-behind, ordenada por pedido y at-least-once**
-  (ADR-0014, ADR-0026): reintentos con backoff, cola de fallidos y consumidor idempotente por
+- **Consultas periódicas:** seguimiento cada 3 s, cola del panel cada 4 s y resumen cada 15 s.
+  Son intervalos de actualización implementados, no umbrales de calidad aprobados; `/api` no se
+  cachea en el navegador ni en el proxy.
+- **Durabilidad de las transiciones posteriores, ordenada por pedido y at-least-once**
+  (ADR-0014, ADR-0026): reintentos, cola de fallidos y consumidor idempotente por
   secuencia; riesgo aceptado de perder la última transición si el proceso cae con ella pendiente.
   **La creación sí espera la confirmación de la base** (503 si no llega).
 - **Lectura pública del pedido con llave** (ADR-0025): token de seguimiento o sesión del dueño.
@@ -465,8 +456,8 @@ Diseño completo en [evidencias-s12 §3](../evidencias/evidencias-s12.md).
 ### 8.6 Seguridad (S13)
 Arquitectura de seguridad resumida; análisis completo con la tabla STRIDE
 priorizada en [evidencias-s13](../evidencias/evidencias-s13.md).
-- **Sesión:** token propio firmado HMAC (sin dependencias, ADR-0021) viajando
-  solo entre BFF y backend vía cookie httpOnly/SameSite=Lax/Secure; el
+- **Sesión:** token propio firmado HMAC (sin dependencias, ADR-0021) guardado en cookie
+  httpOnly/SameSite=Lax/Secure en el navegador; el BFF lo convierte en bearer al llamar al backend; el
   `tiendaId` y el rol salen SIEMPRE del token (ESC-02, RES-05).
 - **Superficie pública mínima (ADR-0029):** rutas v1 de entrega retiradas;
   el pago lo confirma su dueño con sesión; `GET /metricas` pública queda
@@ -509,11 +500,15 @@ Esta sección registra el historial de decisiones arquitectónicas significativa
 |---|---|---|---|---|---|
 | ADR-0001 | Adopción de Monolito Modular con Capas Internas frente a Capas Globales y Hexagonal | Aceptado (ratificado por ADR-0002) | 2026-08-23 | ESC-01…ESC-05 | [0001-adopcion-monolito-modular.md](../adr/0001-adopcion-monolito-modular.md) |
 | ADR-0002 | Ratificación de la adopción del Monolito Modular con Capas Internas | Aceptado | 2026-08-24 | ESC-01…ESC-05 | [0002-ratificacion-monolito-modular.md](../adr/0002-ratificacion-monolito-modular.md) |
-| ADR-0003 | Despliegue en contenedor Docker vía Railway y análisis estático en SonarCloud | Aceptado | 2026-08-30 | ESC-01 (disponibilidad), todos | [0003-despliegue-railway-docker-sonarcloud.md](../adr/0003-despliegue-railway-docker-sonarcloud.md) |
+| ADR-0003 | Despliegue Docker vía Railway y análisis SonarCloud | Aceptado históricamente; despliegue reemplazado por ADR-0009 y ADR-0018; análisis precisado por ADR-0010 y ADR-0016 | 2026-08-30 | Histórico | [0003-despliegue-railway-docker-sonarcloud.md](../adr/0003-despliegue-railway-docker-sonarcloud.md) |
 | ADR-0004 | Aislamiento estricto por establecimiento (RES-05) | Aceptado | 2026-09-06 | ESC-02 | [0004-aislamiento-por-establecimiento.md](../adr/0004-aislamiento-por-establecimiento.md) |
-| ADR-0009 | Despliegue de API + sitio en Azure Container Apps con costos por pieza y ruptura (precisa ADR-0003 solo en despliegue) | Aceptado | 2026-09-25 | ESC-01 | [0009-despliegue-azure.md](../adr/0009-despliegue-azure.md) |
-| ADR-0010 | Análisis estático con SonarCloud y Quality Gate (precisa ADR-0003 solo en análisis) | Aceptado | 2026-09-25 | ESC-02…ESC-04 | [0010-analisis-sonarcloud.md](../adr/0010-analisis-sonarcloud.md) |
-| ADR-0011 | Base de datos PostgreSQL en el servidor de la universidad, Neon descartado (precisa proveedor de persistencia) | Aceptado | 2026-09-25 | ESC-01, ESC-02 | [0011-base-de-datos-universidad.md](../adr/0011-base-de-datos-universidad.md) |
+| ADR-0005 | Contextos delimitados y regla de propiedad única | Aceptado | 2026-09-13 | Transversal, ESC-02 | [0005-reajuste-contextos-propiedad.md](../adr/0005-reajuste-contextos-propiedad.md) |
+| ADR-0006 | Estrategia de integración síncrona entre módulos del monolito | Propuesto; la integración se formalizó como aceptada por ADR-0008 | 2026-09-16 | ESC-01…ESC-05 | [0006-estrategia-integracion-sincrona.md](../adr/0006-estrategia-integracion-sincrona.md) |
+| ADR-0007 | Dueño único de `pin` y métodos de intención (V-01/V-03) | Aceptado | 2026-09-13 | Transversal, ESC-02 | [0007-v01-v03-dueno-pin-metodos-intencion.md](../adr/0007-v01-v03-dueno-pin-metodos-intencion.md) |
+| ADR-0008 | Ratificación de la integración síncrona in-process (ADR-0006) | Aceptado | 2026-09-18 | ESC-01…ESC-05 | [0008-ratificacion-estrategia-integracion-sincrona.md](../adr/0008-ratificacion-estrategia-integracion-sincrona.md) |
+| ADR-0009 | Despliegue de API + sitio en Azure Container Apps | Aceptado históricamente; reemplazado por ADR-0018 | 2026-09-25 | Histórico | [0009-despliegue-azure.md](../adr/0009-despliegue-azure.md) |
+| ADR-0010 | Análisis estático con SonarCloud y Quality Gate | Aceptado históricamente; precisado y reemplazado por ADR-0016 | 2026-09-25 | Histórico | [0010-analisis-sonarcloud.md](../adr/0010-analisis-sonarcloud.md) |
+| ADR-0011 | PostgreSQL en el servidor de la universidad; Neon descartado | Aceptado históricamente; proveedor y operación precisados por ADR-0014 y ADR-0018 | 2026-09-25 | ESC-01, ESC-02 | [0011-base-de-datos-universidad.md](../adr/0011-base-de-datos-universidad.md) |
 | ADR-0012 | No incorporar un componente de IA generativa al backend en el corte actual | Aceptado | 2026-10-04 | ESC-01, ESC-03 | [0012-no-incorporar-componente-generativo.md](../adr/0012-no-incorporar-componente-generativo.md) |
 | ADR-0013 | Proyección pública del pedido sin `pin` y retiro del setter genérico de estado en HTTP | Aceptado | 2026-10-04 | ESC-03 | [0013-proyeccion-publica-pedido-sin-pin.md](../adr/0013-proyeccion-publica-pedido-sin-pin.md) |
 | ADR-0014 | PostgreSQL gestionado por Dokploy en la infraestructura de la universidad | Aceptado | 2026-10-11 | ESC-01, ESC-02 | [0014-base-de-datos-postgresql-dokploy.md](../adr/0014-base-de-datos-postgresql-dokploy.md) |
@@ -533,17 +528,21 @@ Esta sección registra el historial de decisiones arquitectónicas significativa
 | ADR-0029 | Superficie pública mínima: retiro de rutas v1 de entrega y pago solo del dueño | Aceptado | 2026-10-25 | ESC-02, S13 | [0029-superficie-publica-minima.md](../adr/0029-superficie-publica-minima.md) |
 | ADR-0030 | `POST /notificaciones` exige la sesión de la tienda y ninguna ruta de escritura queda sin sesión (completa ADR-0029) | Aceptado | 2026-10-28 | ESC-02, ESC-03, S13 | [0030-escrituras-con-sesion-y-notificaciones.md](../adr/0030-escrituras-con-sesion-y-notificaciones.md) |
 | ADR-0031 | Sin ETag ni LISTEN/NOTIFY mientras haya una sola instancia (decisión formal de los entregables S12 no implementados) | Aceptado | 2026-10-28 | ESC-01, S12, S13 | [0031-sin-etag-ni-listen-notify.md](../adr/0031-sin-etag-ni-listen-notify.md) |
-| ADR-0037 | Administración general de todas las tiendas, cuentas y pedidos; excepción de solo lectura a RES-05 | Aceptado | 2026-11-06 | ESC-02, ESC-03, ESC-01 | [0037-administracion-general.md](../adr/0037-administracion-general.md) |
-| ADR-0036 | Ratificación aceptada de las funcionalidades de pedidos ADR-0032–0034 | Aceptado | 2026-11-04 | ESC-02, ESC-03, ESC-05 | [0036-ratificacion-funcionalidades-de-pedidos.md](../adr/0036-ratificacion-funcionalidades-de-pedidos.md) |
 | ADR-0032 | Un pedido por tienda con varios productos, un código y un PIN (precisa ADR-0017 en el carrito) | Ratificado por ADR-0036 | 2026-11-02 | ESC-05, ESC-02, ESC-03 | [0032-un-pedido-por-tienda-con-varios-productos.md](../adr/0032-un-pedido-por-tienda-con-varios-productos.md) |
 | ADR-0033 | El administrador elimina pedidos del panel sin borrar la fila | Ratificado por ADR-0036 | 2026-11-02 | ESC-05, ESC-02, ESC-03 | [0033-eliminar-pedidos-sin-borrar-la-fila.md](../adr/0033-eliminar-pedidos-sin-borrar-la-fila.md) |
 | ADR-0034 | El dueño puede cancelar su pedido antes de que esté Listo; se conserva en el historial | Ratificado por ADR-0036 | 2026-11-03 | ESC-02, ESC-03, ESC-05 | [0034-cancelacion-del-pedido-por-su-dueno.md](../adr/0034-cancelacion-del-pedido-por-su-dueno.md) |
 | ADR-0035 | Imágenes de presentación por estado de atención, almacenadas en Garage | Aceptado | 2026-11-04 | ESC-02, ESC-05 | [0035-imagenes-de-presentacion-por-estado-de-tienda.md](../adr/0035-imagenes-de-presentacion-por-estado-de-tienda.md) |
+| ADR-0036 | Ratificación aceptada de las funcionalidades de pedidos ADR-0032–0034 | Aceptado | 2026-11-04 | ESC-02, ESC-03, ESC-05 | [0036-ratificacion-funcionalidades-de-pedidos.md](../adr/0036-ratificacion-funcionalidades-de-pedidos.md) |
+| ADR-0037 | Administración general de todas las tiendas, cuentas y pedidos; excepción de solo lectura a RES-05 | Aceptado | 2026-11-06 | ESC-02, ESC-03, ESC-01 | [0037-administracion-general.md](../adr/0037-administracion-general.md) |
+
+El inventario de `docs/adr/` contiene los ADR-0001 a ADR-0026 y ADR-0028 a ADR-0037; no hay un
+archivo ADR-0027 en el árbol revisado. Se conserva la numeración existente y no se infiere una
+decisión para ese número.
  
 **Relación con los bloques de construcción:**
 - ADR-0001 y ADR-0002 determinan la estructura: un único proceso con módulos de dominio separados.
-- ADR-0003 determina la infraestructura de despliegue: contenedor Docker en Railway, pipeline con SonarCloud.
-- ADR-0004 refuerza la frontera de módulo declarada en ADR-0001: todo acceso a catálogo, pedidos y entrega queda acotado por `tiendaId` (ESC-02).
+- ADR-0003 conserva la decisión histórica inicial; el despliegue vigente en Dokploy está definido por ADR-0018. SonarCloud y su Quality Gate se describen en ADR-0016.
+- ADR-0004 refuerza la frontera de módulo declarada en ADR-0001: el acceso operativo de cada tienda queda acotado por el `tiendaId` de su sesión. La administración global autorizada está delimitada por ADR-0037 (ESC-02).
 **Principio:** ningún ADR aceptado se edita ni se borra. Si una decisión cambia, se escribe un nuevo ADR que referencia al anterior como «reemplazado».
 
 ### 9.1. Razonamiento resumido
@@ -555,10 +554,11 @@ sin acceso directo a la base de datos de otro módulo), lo que permite una migra
 servicios independientes si el sistema crece.
 
 **ADR-0004 — Aislamiento estricto por establecimiento (RES-05).** La frontera declarada en ADR-0001
-se concreta llevando `tiendaId` a todas las operaciones de catálogo, pedidos y entrega: cada tienda
-dispone de su propio repositorio (`Map` por tienda), de modo que el acceso cruzado es rechazado en
-tiempo de ejecución y verificado por prueba. La alternativa de servicios separados por tienda se
-descartó por RES-02/RES-03 (equipo pequeño y semestre académico).
+se concreta particionando las operaciones de tienda por `tiendaId`, que en las rutas protegidas se
+deriva de la sesión. El estado de dominio está particionado en memoria y se sincroniza con PostgreSQL
+cuando está configurado; el panel de administración general tiene un alcance global explícito
+(ADR-0037). La medición de cero accesos cruzados es evidencia de sus escenarios ejecutados, no una
+garantía universal.
  
 ---
 
@@ -862,7 +862,7 @@ pero aún no hay cambio).
 | RV-03 | Revisor del curso (retrospectiva S11/S12, 03/11) | Idempotencia y Maps en memoria · ESC-01 | La idempotencia vive en memoria: no es durable entre reinicios ni protege varios procesos. Todo el diseño depende de una sola instancia | Compromiso: simplicidad frente a escalado horizontal | **Asumido** | Con una instancia, la medición A dio 150/150 reintentos con el mismo id y la B, 300/300. Si se agrega una segunda instancia, las claves y los contadores pasan a PostgreSQL antes (ADR-0019) |
 | RV-04 | ATAM S14 | Escenario ESC-01 (§10.2) | La medida de respuesta da porcentajes, pero el estímulo («una cantidad elevada de usuarios») no cuantifica la carga, así que «cumple» depende de la carga que se elija | Riesgo de especificación | **Asumido** | El umbral no se cambia. La medición declara su supuesto: 300 pedidos casi simultáneos con 25 clientes, más un estrés de 1000 con 100 ([evidencias-s14 §2.2](../evidencias/evidencias-s14.md#22-carga-y-repeticiones)) |
 | RV-05 | Revisor del curso (05/11) | `evidencias-s14.md` | El documento conservaba un párrafo obsoleto: frontend publicado a mano y health sin huella | — | **Corregido** | Párrafo retirado el 06/11; la versión servida queda en [evidencias-s14 §7](../evidencias/evidencias-s14.md#7-estado-de-las-puertas-del-plan-del-0311) |
-| RV-06 | Revisor del curso (05/11) | ESC-01 sobre la revisión servida | Faltaba la medición de ESC-01 | — | **Corregido** | Corridas A–C en local con PostgreSQL y D–E en producción, con procedimiento, artefactos y conclusión ([evidencias-s14 §5](../evidencias/evidencias-s14.md#5-conclusión-de-la-medición)) |
+| RV-06 | Revisor del curso (05/11) | ESC-01 sobre la revisión servida | Faltaba la medición de ESC-01 | — | **Corregido** | Corridas originales A–C en local con PostgreSQL y D–E en producción ([evidencias-s14 §3–5](../evidencias/evidencias-s14.md#3-resultados-y-contraste-con-el-umbral)); después se añadió una corrida Podman separada el 15/11 ([§8.6](../evidencias/evidencias-s14.md#86-laboratorio-reproducible-de-rendimiento-y-qos)). Las ejecuciones tienen distintos entornos y resultados; no se fusionan. |
 | RV-07 | Revisor del curso (05/11) | ESC-05 · flujo móvil | Falta la medición con cinco personas en celular | — | **Pendiente** | Protocolo y regla de cálculo en [evidencias-s14 §6](../evidencias/evidencias-s14.md#6-esc-05--compra-en-celular). Se mide antes de la sustentación final |
 | RV-08 | Revisor del curso (01/11–05/11) | Despliegue Azure legado (P-7) | La URL de Azure seguía respondiendo 200 aunque ADR-0018 la retiró | — | **Corregido** | El 06/11 a las 19:42 UTC el dominio da NXDOMAIN en el DNS de la UTB y en 8.8.8.8 |
 | RV-09 | Revisor del curso (05/11) | Borde Traefik · ESC-01 y A-17 | Sin rate limit por IP (P-1) | Riesgo | **Pendiente** | [Guía P-1](../despliegue-rate-limit-traefik.md). Después de aplicarlo hay que repetir la corrida E y contar los `429` aparte |
@@ -873,15 +873,16 @@ pero aún no hay cambio).
 | RV-14 | ATAM S14 | Despliegue · trazabilidad | La huella servida del backend (`d7560e44995dcb5e`) no coincide con la que calcula `huella.mjs` sobre `master` en el equipo (`b4dc9fcec77ceac8`) | Riesgo de trazabilidad | **Pendiente** | Comparar con el log del último despliegue que incluyó el backend (`d481238`). Si difieren, forzar un despliegue del backend y registrar la huella |
 | RV-15 | ATAM S14 | ESC-01, tercera medida | «Estado almacenado = último estado confirmado» se midió en la creación (0 diferencias en 5100 pedidos), no en las transiciones de pago, preparación, Listo y entrega bajo carga | — | **Pendiente** | Ampliar `medir-carga.js` con una fase de transiciones usando una cuenta de tienda |
 | RV-16 | ATAM S14 (lectura de código) | Código corto A01–Z99 · ESC-01 | Hay 24 letras × 99 = 2376 códigos por tienda y día. Al agotarse, `POST /pedidos` falla con «No hay códigos de pedido libres» (`backend/src/modules/pedidos/codigo.js`) | Punto de sensibilidad | **Asumido** | Una tienda de La Placita no se acerca a 2376 pedidos diarios. En las mediciones cada tienda llegó a ≈ 1400 en un día sin agotar los códigos |
-| RV-17 | Revisor del curso (05/11) | Dependencias | Siguen abiertos 10 PR de Dependabot (#16, #17, #20, #21, #23, #25–#28, #30) | — | **Pendiente** | Revisar e integrar o cerrar con motivo antes del tag final |
-| RV-18 | ATAM S14 (repetición local) | Pool PostgreSQL y creación de pedidos · ESC-01 | En la repetición local del perfil de 100 clientes, el procesado fue 95,8 % y las filas sin respuesta `201` fueron 1,37 %, fuera de los umbrales. Los logs registraron timeouts al obtener conexiones. La configuración observada usa pool máximo 5 y timeout de conexión de 2 s; la relación causal aún no se aisló | Riesgo | **Pendiente** | [Evidencia S14 §3.6](../evidencias/evidencias-s14.md#36-repetición-complementaria-local-del-1511). Repetir con entorno controlado y medir pool, errores y latencias antes de decidir cambios. Revisar también la idempotencia después de timeout o `503` |
+| RV-17 | Revisor del curso (05/11) | Dependencias | El revisor reportó 10 PR de Dependabot (#16, #17, #20, #21, #23, #25–#28, #30) abiertas en esa fecha | — | **Estado actual no verificado** | Es una captura del 05/11, no un inventario actual. Confirmar el estado en GitHub antes de concluir si siguen pendientes |
+| RV-18 | ATAM S14 (repetición local y laboratorio Podman, 15/11) | Pool PostgreSQL y creación de pedidos · ESC-01 | La repetición local de §3.6 procesó 95,8 % y dejó 1,37 % de filas sin `201`; en el laboratorio Podman de §8.6, el perfil B agregado procesó 99,47 %, pero una de tres repeticiones quedó en 98,4 % con 1,6 % duplicados y errores de transporte. La prueba C procesó 81 % durante la interrupción programada de PostgreSQL. Son dos ejecuciones distintas y ninguna permite afirmar cumplimiento general bajo estrés o caída | Riesgo | **Pendiente de diagnóstico** | Resultados reproducibles y artefactos en [S14 §3.6](../evidencias/evidencias-s14.md#36-repetición-complementaria-local-del-1511), [S14 §8.6](../evidencias/evidencias-s14.md#86-laboratorio-reproducible-de-rendimiento-y-qos) y `docs/evidencias/mediciones/qos-lab-20261115T164840Z/`. Ya existe el entorno controlado; falta aislar el efecto de pool/timeouts e idempotencia y acordar mitigaciones con evidencia antes de cambiar el diseño |
 
 **Non-risks medidos (ATAM).** Son decisiones que la medición confirma y no necesitan acción:
 
-- **Idempotencia** (ADR-0019, S11): 491 reintentos con la misma llave y la base disponible
-  devolvieron el mismo id. No hubo ningún duplicado por reintento.
-- **Creación confirmada** (ADR-0026): de 5100 pedidos locales, ninguno recibió `201` sin quedar en
-  PostgreSQL. Con la base caída el sistema respondió `503`, no prometió el pedido.
+- **Idempotencia** (ADR-0019, escenario S11): en aquella corrida, 491 reintentos con la misma llave
+  y la base disponible devolvieron el mismo id; el resultado describe ese escenario medido.
+- **Creación confirmada** (ADR-0026, corrida local documentada): de 5100 pedidos, ninguno recibió
+  `201` sin quedar en PostgreSQL. Con la base caída el sistema respondió `503`; otras corridas y sus
+  resultados están consignados por separado en S14 §3.6 y §8.6.
 - **Orden de escrituras** (cola FIFO, S11): 0 diferencias entre el estado devuelto y el guardado.
 
 ---
@@ -1041,16 +1042,16 @@ A-19, A-21 y A-23 se cerraron el 01/11 (P-3 y P-2).
 | **ESC-xx** | Escenario de calidad definido en [`docs/arc42/arc42-template-EN.md`](../../docs/arc42/arc42-template-EN.md#102-escenarios-de-calidad) (ej. ESC-01 = Picos de demanda entre clases). |
 | **Click & Collect** | Modalidad de compra en la que el usuario ordena digitalmente de forma anticipada y recoge el producto en el establecimiento fisico. |
 | **Corte vertical** | Implementación ejecutable que atraviesa la arquitectura de extremo a extremo: `backend/src/corte-vertical.js` recorre `catalogo → pedidos → pagos → entrega → notificaciones`, con lógica de negocio, estado por tienda y prueba automatizada. El pago que recorre es simulado. |
-| **RES-05** | Restricción asignada en el corte 1: las operaciones de catálogo, pedidos y entrega exigen `tiendaId` y queda prohibido acceder al estado de otra tienda (0 operaciones cruzadas, ver [ADR-0004](../adr/0004-aislamiento-por-establecimiento.md)). |
-| **Capa de interfaz** | En el módulo `pedidos`, la interfaz pública (`crearPedido`, `obtenerPedido`, `cambiarEstado`) recibe siempre `tiendaId` y delega en la lógica. |
+| **RES-05** | Restricción de aislamiento por tienda: las operaciones del panel de tienda derivan `tiendaId` de la sesión y no pueden acceder al estado de otra tienda. Catálogo público y administración general tienen alcances explícitos propios ([ADR-0004](../adr/0004-aislamiento-por-establecimiento.md), [ADR-0037](../adr/0037-administracion-general.md)). |
+| **Capa de interfaz** | En el módulo `pedidos`, las operaciones de dominio reciben `tiendaId` y delegan en las reglas del agregado. Las rutas administrativas globales están separadas y requieren rol `superadmin`. |
 | **Capa lógica** | En el módulo `pedidos`, aplica reglas de negocio y gestiona la máquina de estados en el contexto de la tienda. |
 | **Capa de persistencia** | El dominio conserva proyecciones en memoria y sincroniza el estado con PostgreSQL cuando `DATABASE_URL` está configurada; sin ella, opera en memoria y no sobrevive al reinicio (ADR-0014, ADR-0026). |
 | **Picos de tráfico** | Intervalo de 5 a 10 minutos en los que se alcanza el valor maximo de clientes simultáneos. |
 | **PIN** | Código numérico de 4 dígitos generado al marcar el pedido como Listo; solo su dueño lo ve y se usa una vez al entregar (A-06). |
-| **SonarCloud** | Plataforma de análisis estático integrada en el pipeline de CI. Detecta bugs, vulnerabilidades de seguridad, duplicación de código y mide la cobertura de pruebas. Decisión registrada en [ADR-0003](../adr/0003-despliegue-railway-docker-sonarcloud.md). |
+| **SonarCloud** | Plataforma de análisis estático integrada en el pipeline de CI; el Quality Gate bloqueante se define en [ADR-0016](../adr/0016-quality-gate-sonarcloud-bloqueante.md). |
 | **Azure Container Apps** | Proveedor histórico, retirado como despliegue vigente por [ADR-0018](../adr/0018-retiro-de-azure-despliegue-en-dokploy.md). Su apagado operativo sigue pendiente de evidencia. |
 | **Servidor de la universidad** | Infraestructura del laboratorio que ejecuta Dokploy y PostgreSQL. Decisión vigente en [ADR-0018](../adr/0018-retiro-de-azure-despliegue-en-dokploy.md). |
-| **Railway** | Plataforma PaaS alternativa, hoy solo ruta de reversión del despliegue (misma imagen). Referencia histórica en [ADR-0003](../adr/0003-despliegue-railway-docker-sonarcloud.md). |
+| **Railway** | Proveedor considerado en la decisión inicial; no es el despliegue vigente ni una ruta de reversión activa. Referencia histórica en [ADR-0003](../adr/0003-despliegue-railway-docker-sonarcloud.md), reemplazado en despliegue por [ADR-0018](../adr/0018-retiro-de-azure-despliegue-en-dokploy.md). |
 | **Quality Gate** | Umbral de SonarCloud bloqueante en los pushes a `master`; el job no se ejecuta en pull requests. El resto de los jobs de CI valida los pull requests. |
 | **Ítem de catálogo** | Producto ofrecido por un establecimiento, con nombre, descripción, precio y estado disponible/agotado. No se administra una cantidad de stock. |
 | **Estado del pedido** | Fase del ciclo de vida de un pedido: `Recibido` → `En preparación` → `Listo` → `Entregado` (`const ESTADOS` en `backend/src/modules/pedidos/index.js`; transiciones solo secuenciales). |

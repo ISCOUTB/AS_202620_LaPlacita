@@ -1,10 +1,18 @@
 # Rate limit por IP con middleware de Traefik (P-1, evidencias-s13 §7.6)
 
 Guía de aplicación para el panel de Dokploy — **amenaza A-17** (credencial
-stuffing por IP que A-07 no cubre: hoy el límite de login es por CORREO, y
-`POST /pedidos` solo con cuenta). Fecha comprometida: **04/11/2026**, antes de
-la medición de carga de S14 (el `medir-carga.js` marcará explícitamente que no
-se corre la fase `escritura` sin esta defensa).
+stuffing por IP que el límite de intentos de inicio de sesión por correo no
+cubre). La ruta de interfaz solicita sesión para comprar, pero el contrato de
+`POST /pedidos` todavía admite solicitudes sin sesión por compatibilidad; la
+protección por IP también busca reducir ese abuso.
+
+**Estado de esta guía:** describe una configuración que se debe aplicar y
+verificar en Dokploy; el archivo no demuestra que el middleware esté activo en
+los dominios. La revisión del 18/11/2026 no tuvo acceso al estado de Traefik.
+La evidencia del curso lo mantiene como pendiente (A-17/RV-09); después de
+aplicarlo deben guardarse la configuración efectiva y una prueba HTTP de los
+`429` en la evidencia correspondiente. No se presenta esta receta como una
+mitigación ya desplegada.
 
 **Quién lo aplica:** Mateo (panel). **Qué mide la corrección:** 429 devuelto
 por Traefik cuando una IP rebase el tope; **por qué nivel**: 1 (borde), no en

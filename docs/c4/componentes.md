@@ -1,6 +1,6 @@
 # Diagrama de Componentes — LaPlacita
 
-> Descompone la API Backend Central del C4 de contenedores. Muestra los cinco contextos de dominio definidos en ADR-0005, los módulos de soporte que aparecen en el código actual y los adaptadores HTTP. Esta vista refleja el código de `master` revisado el 07/11/2026.
+> Descompone la API Backend Central del C4 de contenedores. Muestra los cinco contextos de dominio definidos en ADR-0005, los módulos de soporte que aparecen en el código actual y los adaptadores HTTP. Esta vista se contrastó con el código de `master` disponible el 18/11/2026.
 
 ```mermaid
 flowchart TB

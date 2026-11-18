@@ -20,24 +20,25 @@ flowchart TD
 
     subgraph laPlacita ["Sistema LaPlacita"]
         app["<b>Aplicación web / PWA</b><br/>[Next.js 16]<br/><i>Experiencia de cliente y rutas /panel y /admin en el mismo despliegue</i><br/>IMPLEMENTADO — frontend/, Dokploy"]:::container
-        api["<b>API Backend Central</b><br/>[Next.js / Node.js]<br/><i>Route handlers y módulos de dominio; PostgreSQL con DATABASE_URL, Maps en modo local</i><br/>IMPLEMENTADO — backend/, Dokploy"]:::container
-        db[("<b>Base de Datos Principal</b><br/>[PostgreSQL]<br/><i>Tablas pedidos, usuarios y productos (ADR-0014, ADR-0021, ADR-0023)</i> <br/>IMPLEMENTADO — Dokploy, condicional a DATABASE_URL")]:::container
+        api["<b>API Backend Central</b><br/>[Next.js / Node.js]<br/><i>Route handlers, módulos de dominio y proyecciones en memoria; PostgreSQL se activa con DATABASE_URL</i><br/>IMPLEMENTADO — backend/, Dokploy"]:::container
+        db[("<b>Base de Datos Principal</b><br/>[PostgreSQL]<br/><i>Tablas pedidos, usuarios, productos y tiendas (ADR-0014, ADR-0021, ADR-0023)</i> <br/>IMPLEMENTADO — Dokploy, condicional a DATABASE_URL")]:::container
         garage[("<b>Almacén de Imágenes</b><br/>[Garage S3]<br/><i>Bytes de las fotos del catálogo y tiendas; solo la referencia uuid en PostgreSQL (ADR-0028)</i> <br/>IMPLEMENTADO — Dokploy, red interna, sin exposición pública")]:::container
     end
 
     pago["<b>Pasarela de Pagos</b><br/>[Planeada · no integrada]<br/><i>La confirmación actual es simulada</i>"]:::planned
     push["<b>Servicio Push/Correo</b><br/>[Planeado · no integrado]<br/><i>El cliente consulta por polling</i>"]:::planned
 
-    usuario -->|Ordena y consulta estado<br/>HTTPS (PWA)| app
-    establecimiento -->|Opera pedidos y valida PIN<br/>HTTPS (panel)| app
-    administrador -->|Administra cuentas, tiendas y pedidos<br/>HTTPS (/admin)| app
+    usuario -->|Compra pedidos y consulta estado por HTTPS| app
+    establecimiento -->|Gestiona pedidos y PIN desde el panel| app
+    administrador -->|Gestiona cuentas, tiendas y pedidos| app
 
-    app -->|Contrato /api/v1 mismo origen<br/>BFF / route handler| api
+    app -->|"El BFF reenvía las solicitudes al API usando BACKEND_URL"| api
 
-    api -->|Pedidos: creación confirmada, transiciones write-behind at-least-once (ADR-0026)<br/>Cuentas y menú: espera la confirmación<br/>Rehidratación al arrancar<br/>TCP / pg (SQL, UPSERT)| db
+    api -->|"Creación confirmada; transiciones posteriores con reintentos; SQL interno"| db
+    api -->|S3 por HTTP en red interna para guardar y leer imágenes| garage
 
-    api -.->|Futura integración, no activa| pago
-    api -.->|Canal futuro, no activo (deuda V-05)| push
+    api -.->|Integración futura no activa| pago
+    api -.->|Integración futura no activa| push
 
 ```
 
