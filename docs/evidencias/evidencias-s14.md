@@ -443,3 +443,47 @@ El monitoreo de recursos tomó 169 muestras: máximos reportados por Podman fuer
 El primer intento del mismo día se detuvo por una configuración de escucha que impedía al chequeo de salud alcanzar el backend. Quedó preservado como [`ejecucion-incompleta.txt`](mediciones/qos-lab-20261115T163358Z/ejecucion-incompleta.txt), sin resultados de rendimiento; se corrigió únicamente la configuración del contenedor del laboratorio y se repitió la ejecución. El runner limpió sus contenedores temporales al concluir. `node --check infra/qos-lab/run.mjs` y `git diff --check` finalizaron sin errores.
 
 La tasa, pérdida y variación del perfil E son artificiales; no describen la red universitaria. No se midió priorización DSCP/clases de servicio porque el sistema no declara una política de tráfico diferenciada.
+
+### 8.7 Repetición de lectura en el despliegue y contraste con QoS local (2026-11-18)
+
+Se repitió el perfil de lectura del escenario ESC-01 contra `https://laplacita-test.iscoutb.dev`, servido por el despliegue administrado en Dokploy. Se utilizó `backend/scripts/medir-carga.js`, sin fase de escritura: cada ejecución ejecutó 200 solicitudes GET al catálogo, con concurrencia 10; se calentó con 20 lecturas y se hicieron tres repeticiones por ejecución. El medidor distribuyó las solicitudes entre `tienda-01` y `tienda-05` (incluidas las tiendas intermedias). Por ello no se crearon cuentas ni pedidos. El endpoint de salud informó la huella `886b5dc953968820` en las tres ejecuciones.
+
+Se hicieron tres ejecuciones independientes el mismo día, cada una con 600 solicitudes medidas. Los artefactos completos están en [`mediciones/2026-11-18/`](mediciones/2026-11-18/). La tabla informa la mediana del p95 de las tres repeticiones de cada ejecución; no es el p95 de una muestra combinada.
+
+| Ejecución UTC | Respuestas | p95 por repetición | Mediana del p95 | Rendimiento mediano | p50 por repetición | p99 por repetición | Máximo por repetición |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 20:35 | 600/600 HTTP 200 | 576 / 246 / 209 ms | 246 ms | 50,0 resp/s | 202 / 203 / 204 ms | 1.607 / 254 / 213 ms | 1.628 / 255 / 216 ms |
+| 20:44 | 600/600 HTTP 200 | 594 / 214 / 205 ms | 214 ms | 53,3 resp/s | 205 / 201 / 162 ms | 652 / 326 / 208 ms | 1.666 / 336 / 212 ms |
+| 21:51 | 600/600 HTTP 200 | 519 / 223 / 218 ms | 223 ms | 50,2 resp/s | 205 / 203 / 204 ms | 601 / 243 / 243 ms | 605 / 244 / 244 ms |
+
+En las tres ejecuciones hubo respuestas HTTP 200 para todas las solicitudes medidas. La primera repetición de cada ejecución tuvo la cola de latencia más alta; los p95 de las otras repeticiones quedaron entre 205 y 246 ms. Se conserva esa variación y no se descarta como dato atípico. Las medianas de p95 por ejecución fueron 246, 214 y 223 ms; su mediana es 223 ms. El medidor no declara un umbral de latencia para estas lecturas, así que este resultado no se etiqueta como aprobado o reprobado frente a un SLO de p95 inexistente.
+
+| Entorno y perfil | Configuración comparable | Resultado de lectura | Límites de la comparación |
+|---|---|---|---|
+| Dokploy, 18/11, ejecución 1 | 200 × 3; concurrencia 10; 20 de calentamiento; catálogo de cinco tiendas | 600/600 HTTP 200; mediana del p95 por corrida 246 ms; rendimiento mediano 50,0 resp/s | La latencia incluye la ruta HTTPS desde el equipo cliente y el servicio desplegado. No se recolectó telemetría de CPU/RAM del servidor. |
+| Dokploy, 18/11, ejecución 2 | Mismos parámetros | 600/600 HTTP 200; mediana del p95 por corrida 214 ms; rendimiento mediano 53,3 resp/s | La huella de salud coincide con la ejecución 1; aun así, son muestras breves, no una prueba de capacidad máxima. |
+| Dokploy, 18/11, ejecución 3 | Mismos parámetros | 600/600 HTTP 200; mediana del p95 por corrida 223 ms; rendimiento mediano 50,2 resp/s | Es una repetición adicional, no una nueva capacidad máxima ni un SLO. |
+| Podman local, perfil D | 200 × 3; concurrencia 10; 20 de calentamiento; `tienda-01`; backend y cliente en el mismo host | 600/600 HTTP 200; p95 266–281 ms (mediana 271 ms); 66,5–70,5 resp/s | Backend, cliente y base comparten el host y los topes del laboratorio. Es una referencia local, no producción. |
+| Podman local, perfil E | Igual a D, con `netem`: 50 ±10 ms de retraso, 0,5 % de pérdida configurada y tasa de 5 Mbit/s | 600/600 HTTP 200; p95 188–404 ms (mediana 200 ms); 53,9–69,5 resp/s. `tc` registró 7 paquetes descartados en el cliente y 6 en el backend | Degradación artificial dentro de la red privada del laboratorio; no representa la red real de Dokploy ni de la UTB. |
+
+Las cifras de Dokploy y Podman se contrastan como observaciones, no como una comparación controlada de rendimiento: cambian la topología, el trayecto de red, los recursos del servidor y el conjunto de tiendas consultadas. No se concluye que el despliegue sea más rápido o más lento que el laboratorio. El perfil E tampoco sirve para explicar la latencia de Dokploy: sus límites de red se aplicaron únicamente a contenedores efímeros locales.
+
+Como comprobación complementaria se enviaron 10 pings ICMP al host desplegado; no hubo respuesta a esos paquetes. Esto es compatible con ICMP filtrado o no atendido y no se interpreta como 100 % de pérdida de las solicitudes de la aplicación: las 1.800 lecturas HTTP de las tres ejecuciones respondieron 200. No se obtuvieron jitter de red, ancho de banda extremo a extremo, uso de CPU/RAM en Dokploy ni priorización DSCP. La QoS observada aquí se limita a disponibilidad HTTP y distribución de latencias bajo la carga indicada.
+
+#### Repetir la prueba por primera vez
+
+Dokploy administra el servicio y sus despliegues; el generador de carga se ejecuta desde una terminal del equipo. Para la lectura no hay que desplegar, reiniciar ni modificar servicios:
+
+1. En el panel de Dokploy, abrir **Projects → laplacita → production** y seleccionar el servicio de backend que tenga asociado el dominio `laplacita-test.iscoutb.dev`. En **Deployments**, comprobar que el último despliegue terminó correctamente. En **Domains**, confirmar que ese dominio apunta al backend esperado. El medidor consulta la API pública, no el panel.
+2. Abrir PowerShell o la terminal de Visual Studio Code en la raíz del repositorio. Confirmar que `node --version` responde. Verificar el endpoint y anotar la huella servida con `Invoke-RestMethod https://laplacita-test.iscoutb.dev/api/v1/health`.
+3. Crear una carpeta nueva para no sobrescribir evidencia anterior y ejecutar la fase de lectura:
+
+   ```powershell
+   New-Item -ItemType Directory -Force docs/evidencias/mediciones/AAAA-MM-DD | Out-Null
+   node backend/scripts/medir-carga.js --url https://laplacita-test.iscoutb.dev --fase lectura --peticiones 200 --concurrencia 10 --repeticiones 3 --calentamiento 20 --tiendas tienda-01,tienda-02,tienda-03,tienda-04,tienda-05 --salida docs/evidencias/mediciones/AAAA-MM-DD/dokploy-lectura.json 2>&1 | Tee-Object -FilePath docs/evidencias/mediciones/AAAA-MM-DD/dokploy-lectura.txt
+   ```
+
+   Sustituir `AAAA-MM-DD` por la fecha de ejecución. El JSON contiene p50/p95/p99, rendimiento, estatus y huella; el TXT conserva los parámetros y la salida de consola. Si se desea observar recursos, abrir **Monitoring** del mismo servicio antes de ejecutar y anotar el intervalo de la prueba, sin confundir las métricas del contenedor con la latencia del cliente.
+4. Conservar el resultado aunque haya errores HTTP. Registrar la fecha UTC, la URL, la huella, los parámetros y cualquier variación. Comparar solo corridas con protocolo y topología equivalentes; no cambiar ni borrar despliegues para provocar una condición de fallo.
+
+Esta instrucción reproduce únicamente lecturas. Las fases A/B escriben pedidos persistentes y C detiene PostgreSQL; no se deben ejecutar contra el servicio de producción. Para esas pruebas hace falta un entorno de pruebas desechable, una cuenta de carga y autorización para generar y limpiar datos. El [laboratorio `infra/qos-lab/`](../../infra/qos-lab/README.md) ya crea esos recursos aislados en Podman y no se conecta a Dokploy.

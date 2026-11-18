@@ -9,9 +9,9 @@ graph TB
     Notificaciones["Notificaciones<br/>(Open Host Service)"]
     Orquestador["Corte vertical ejecutable<br/>(backend/src/corte-vertical.js)"]
 
-    Pedidos -->|"Customer/Supplier<br/>obtenerProducto()"| Catalogo
-    Pagos -->|"Customer/Supplier<br/>obtenerPedido(), confirmarPago()"| Pedidos
-    Entrega -->|"Customer/Supplier<br/>obtenerPedido(), asignarPin(), marcarListo(), confirmarEntrega()"| Pedidos
+    Pedidos -->|"Customer/Supplier: obtenerProducto()"| Catalogo
+    Pagos -->|"Customer/Supplier: obtenerPedido(), confirmarPago()"| Pedidos
+    Entrega -->|"Customer/Supplier: obtenerPedido(), asignarPin(), marcarListo(), confirmarEntrega()"| Pedidos
     Orquestador -.->|"invoca tras cada cambio en el corte vertical"| Notificaciones
     Orquestador -.-> Catalogo
     Orquestador -.-> Pedidos

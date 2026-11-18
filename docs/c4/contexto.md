@@ -6,14 +6,17 @@
 flowchart TD
     classDef person fill:#08427b,stroke:#073b6f,color:#fff;
     classDef system fill:#1168bd,stroke:#0e5296,color:#fff;
-    classDef extSystem fill:#999999,stroke:#666666,color:#fff;
     classDef planned fill:#eeeeee,stroke:#888888,color:#444444,stroke-dasharray: 5 5;
 
     subgraph b0 ["Zona de Usuarios y Roles"]
-        usuario["<b>Usuario</b><br/>[Person]<br/><i>Estudiante, docente o adm.</i>"]:::person
-        establecimiento["<b>Establecimiento</b><br/>[Person]<br/><i>Local de la zona de comidas</i>"]:::person
-        administrador["<b>Administrador general</b><br/>[Person]<br/><i>Cuenta autorizada por ADMINS_GENERALES</i>"]:::person
+        usuario@{ shape: person, label: "<b>Usuario</b><br/>[Person]<br/><i>Estudiante, docente o adm.</i>" }
+        establecimiento@{ shape: person, label: "<b>Personal de tienda</b><br/>[Person]<br/><i>Opera una tienda de comidas del campus</i>" }
+        administrador@{ shape: person, label: "<b>Administrador general</b><br/>[Person]<br/><i>Cuenta autorizada por ADMINS_GENERALES</i>" }
     end
+
+    class usuario person
+    class establecimiento person
+    class administrador person
 
     subgraph b1 ["Núcleo del Sistema"]
         laPlacita["<b>Sistema LaPlacita</b><br/>[Software System]<br/><i>Plataforma Click & Collect</i>"]:::system
@@ -24,9 +27,9 @@ flowchart TD
         push["<b>Notificaciones Push/Correo</b><br/>[Planeadas · no integradas]<br/><i>El cliente consulta el estado por polling</i>"]:::planned
     end
 
-    usuario -->|Ordena y consulta PIN<br/>HTTPS| laPlacita
-    establecimiento -->|Gestiona menú y PIN<br/>HTTPS| laPlacita
-    administrador -->|Administra cuentas, tiendas y pedidos<br/>HTTPS| laPlacita
+    usuario -->|"Ordena y consulta PIN por HTTPS"| laPlacita
+    establecimiento -->|"Gestiona menú y PIN por HTTPS"| laPlacita
+    administrador -->|"Administra cuentas, tiendas y pedidos por HTTPS"| laPlacita
 
     laPlacita -.->|Integración futura, aún no activa| pago
     laPlacita -.->|Canal futuro, aún no activo| push
@@ -38,6 +41,7 @@ flowchart TD
 | --- | --- |
 | Azul oscuro (`Person`) | Actor humano que interactúa directamente con el sistema. |
 | Azul brillante (`System`) | El sistema propio — La Placita. |
-| Gris (`System_Ext`) | Sistema externo fuera del control del equipo. |
-| Línea punteada (`Enterprise_Boundary`) | Delimitador visual que agrupa los componentes por capa lógica. |
+| Gris claro (`planned`) | Integración externa prevista, aún sin activar. |
+| Subgraph | Delimitador visual que agrupa actores, sistema propio e integraciones previstas. |
+| Flecha discontinua | Integración prevista que todavía no está activa. |
 | $\rightarrow$ Flechas con etiqueta | Relación de comunicación; la etiqueta indica qué se intercambia y el protocolo. |
