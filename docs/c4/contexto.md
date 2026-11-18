@@ -9,10 +9,14 @@ flowchart TD
     classDef planned fill:#eeeeee,stroke:#888888,color:#444444,stroke-dasharray: 5 5;
 
     subgraph b0 ["Zona de Usuarios y Roles"]
-        usuario@{ shape: person, label: "<b>Usuario</b><br/>[Person]<br/><i>Estudiante, docente o adm.</i>" }:::person
-        establecimiento@{ shape: person, label: "<b>Personal de tienda</b><br/>[Person]<br/><i>Opera una tienda de comidas del campus</i>" }:::person
-        administrador@{ shape: person, label: "<b>Administrador general</b><br/>[Person]<br/><i>Cuenta autorizada por ADMINS_GENERALES</i>" }:::person
+        usuario@{ shape: person, label: "<b>Usuario</b><br/>[Person]<br/><i>Estudiante, docente o adm.</i>" }
+        establecimiento@{ shape: person, label: "<b>Personal de tienda</b><br/>[Person]<br/><i>Opera una tienda de comidas del campus</i>" }
+        administrador@{ shape: person, label: "<b>Administrador general</b><br/>[Person]<br/><i>Cuenta autorizada por ADMINS_GENERALES</i>" }
     end
+
+    class usuario person
+    class establecimiento person
+    class administrador person
 
     subgraph b1 ["Núcleo del Sistema"]
         laPlacita["<b>Sistema LaPlacita</b><br/>[Software System]<br/><i>Plataforma Click & Collect</i>"]:::system

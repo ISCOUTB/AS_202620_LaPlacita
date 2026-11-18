@@ -14,9 +14,13 @@ flowchart TD
     classDef planned fill:#dbeafe,stroke:#0e5296,color:#0e5296;
     classDef extSystem fill:#999999,stroke:#666666,color:#fff;
 
-    usuario@{ shape: person, label: "<b>Usuario</b><br/>[Person]<br/><i>Estudiante, docente o adm.</i>" }:::person
-    establecimiento@{ shape: person, label: "<b>Personal de tienda</b><br/>[Person]<br/><i>Opera los pedidos y el menú de su tienda</i>" }:::person
-    administrador@{ shape: person, label: "<b>Administrador general</b><br/>[Person]<br/><i>Cuenta autorizada por ADMINS_GENERALES, si está configurado</i>" }:::person
+    usuario@{ shape: person, label: "<b>Usuario</b><br/>[Person]<br/><i>Estudiante, docente o adm.</i>" }
+    establecimiento@{ shape: person, label: "<b>Personal de tienda</b><br/>[Person]<br/><i>Opera los pedidos y el menú de su tienda</i>" }
+    administrador@{ shape: person, label: "<b>Administrador general</b><br/>[Person]<br/><i>Cuenta autorizada por ADMINS_GENERALES, si está configurado</i>" }
+
+    class usuario person
+    class establecimiento person
+    class administrador person
 
     subgraph laPlacita ["Sistema LaPlacita"]
         app["<b>Aplicación web / PWA</b><br/>[Next.js 16]<br/><i>Experiencia de cliente y rutas /panel y /admin en el mismo despliegue</i><br/>IMPLEMENTADO — frontend/, Dokploy"]:::container
