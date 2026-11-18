@@ -1,0 +1,26 @@
+LaPlacita — lectura del catálogo en el despliegue administrado por Dokploy
+Fecha: 2026-11-18 (UTC)
+URL: https://laplacita-test.iscoutb.dev
+Huella devuelta por GET /api/v1/health: 886b5dc953968820
+Herramienta: backend/scripts/medir-carga.js
+Fase: lectura; no crea cuentas ni pedidos.
+Protocolo por ejecución: 20 lecturas de calentamiento; 200 solicitudes medidas × 3 repeticiones; concurrencia 10; tiendas tienda-01 a tienda-05.
+Total: dos ejecuciones independientes; 1200 solicitudes medidas y 40 lecturas de calentamiento, además de las consultas de salud.
+
+Ejecución 1 — inicio informado por JSON: 2026-11-18T20:35:04.677Z
+Repetición 1: 200 HTTP 200; 4.99 s; 40.1 resp/s; p50 202 ms; p95 576 ms; p99 1607 ms; máximo 1628 ms.
+Repetición 2: 200 HTTP 200; 3.79 s; 52.8 resp/s; p50 203 ms; p95 246 ms; p99 254 ms; máximo 255 ms.
+Repetición 3: 200 HTTP 200; 4.00 s; 50.0 resp/s; p50 204 ms; p95 209 ms; p99 213 ms; máximo 216 ms.
+Agregado reportado: p95 min/mediana/máx entre repeticiones 209/246/576 ms; rendimiento mediano 50.0 resp/s.
+JSON: dokploy-lectura-repeticion-1.json
+
+Ejecución 2 — inicio informado por JSON: 2026-11-18T20:44:52.208Z
+Repetición 1: 200 HTTP 200; 5.22 s; 38.3 resp/s; p50 205 ms; p95 594 ms; p99 652 ms; máximo 1666 ms.
+Repetición 2: 200 HTTP 200; 3.75 s; 53.3 resp/s; p50 201 ms; p95 214 ms; p99 326 ms; máximo 336 ms.
+Repetición 3: 200 HTTP 200; 3.31 s; 60.4 resp/s; p50 162 ms; p95 205 ms; p99 208 ms; máximo 212 ms.
+Agregado reportado: p95 min/mediana/máx entre repeticiones 205/214/594 ms; rendimiento mediano 53.3 resp/s.
+JSON: dokploy-lectura-repeticion-2.json
+
+Comprobación ICMP complementaria: 10 solicitudes ping al hostname; 0 respuestas ICMP. No se interpreta como pérdida de HTTP, ya que las 1200 solicitudes medidas recibieron HTTP 200. Compatible con ICMP filtrado o no atendido.
+
+Alcance: la medición cubre disponibilidad HTTP, latencia de extremo a extremo observada desde el cliente y rendimiento de lectura bajo 10 solicitudes concurrentes. No mide CPU/RAM del servidor, ancho de banda extremo a extremo, jitter de red ni priorización DSCP. No existe un umbral documentado de p95 de lectura, por lo que no se declara aprobado/reprobado.
