@@ -5,7 +5,7 @@ Huella devuelta por GET /api/v1/health: 886b5dc953968820
 Herramienta: backend/scripts/medir-carga.js
 Fase: lectura; no crea cuentas ni pedidos.
 Protocolo por ejecución: 20 lecturas de calentamiento; 200 solicitudes medidas × 3 repeticiones; concurrencia 10; tiendas tienda-01 a tienda-05.
-Total: dos ejecuciones independientes; 1200 solicitudes medidas y 40 lecturas de calentamiento, además de las consultas de salud.
+Total: tres ejecuciones independientes; 1800 solicitudes medidas y 60 lecturas de calentamiento, además de las consultas de salud.
 
 Ejecución 1 — inicio informado por JSON: 2026-11-18T20:35:04.677Z
 Repetición 1: 200 HTTP 200; 4.99 s; 40.1 resp/s; p50 202 ms; p95 576 ms; p99 1607 ms; máximo 1628 ms.
@@ -20,6 +20,14 @@ Repetición 2: 200 HTTP 200; 3.75 s; 53.3 resp/s; p50 201 ms; p95 214 ms; p99 32
 Repetición 3: 200 HTTP 200; 3.31 s; 60.4 resp/s; p50 162 ms; p95 205 ms; p99 208 ms; máximo 212 ms.
 Agregado reportado: p95 min/mediana/máx entre repeticiones 205/214/594 ms; rendimiento mediano 53.3 resp/s.
 JSON: dokploy-lectura-repeticion-2.json
+
+Ejecución 3 — inicio informado por JSON: 2026-11-18T21:51:32.455Z
+Repetición 1: 200 HTTP 200; 4.79 s; 41.8 resp/s; p50 205 ms; p95 519 ms; p99 601 ms; máximo 605 ms.
+Repetición 2: 200 HTTP 200; 3.90 s; 51.2 resp/s; p50 203 ms; p95 223 ms; p99 243 ms; máximo 244 ms.
+Repetición 3: 200 HTTP 200; 3.99 s; 50.2 resp/s; p50 204 ms; p95 218 ms; p99 243 ms; máximo 244 ms.
+Agregado reportado: p95 min/mediana/máx entre repeticiones 218/223/519 ms; rendimiento mediano 50.2 resp/s.
+Salida original de consola: dokploy-lectura-repeticion-3.txt
+JSON: dokploy-lectura-repeticion-3.json
 
 Comprobación ICMP complementaria: 10 solicitudes ping al hostname; 0 respuestas ICMP. No se interpreta como pérdida de HTTP, ya que las 1200 solicitudes medidas recibieron HTTP 200. Compatible con ICMP filtrado o no atendido.
 

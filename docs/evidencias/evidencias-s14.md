@@ -446,27 +446,29 @@ La tasa, pérdida y variación del perfil E son artificiales; no describen la re
 
 ### 8.7 Repetición de lectura en el despliegue y contraste con QoS local (2026-11-18)
 
-Se repitió el perfil de lectura del escenario ESC-01 contra `https://laplacita-test.iscoutb.dev`, servido por el despliegue administrado en Dokploy. Se utilizó `backend/scripts/medir-carga.js`, sin fase de escritura: cada corrida ejecutó 200 solicitudes GET al catálogo, con concurrencia 10; se calentó con 20 lecturas y se hicieron tres repeticiones por ejecución. El medidor alternó entre `tienda-01` y `tienda-05`. Por ello no se crearon cuentas ni pedidos. El endpoint de salud informó la huella `886b5dc953968820` en ambas ejecuciones.
+Se repitió el perfil de lectura del escenario ESC-01 contra `https://laplacita-test.iscoutb.dev`, servido por el despliegue administrado en Dokploy. Se utilizó `backend/scripts/medir-carga.js`, sin fase de escritura: cada ejecución ejecutó 200 solicitudes GET al catálogo, con concurrencia 10; se calentó con 20 lecturas y se hicieron tres repeticiones por ejecución. El medidor distribuyó las solicitudes entre `tienda-01` y `tienda-05` (incluidas las tiendas intermedias). Por ello no se crearon cuentas ni pedidos. El endpoint de salud informó la huella `886b5dc953968820` en las tres ejecuciones.
 
-Se hicieron dos ejecuciones independientes el mismo día, cada una con 600 solicitudes medidas. Los artefactos completos están en [`mediciones/2026-11-18/`](mediciones/2026-11-18/). La tabla informa la mediana del p95 de las tres repeticiones de cada ejecución; no es el p95 de una muestra combinada.
+Se hicieron tres ejecuciones independientes el mismo día, cada una con 600 solicitudes medidas. Los artefactos completos están en [`mediciones/2026-11-18/`](mediciones/2026-11-18/). La tabla informa la mediana del p95 de las tres repeticiones de cada ejecución; no es el p95 de una muestra combinada.
 
 | Ejecución UTC | Respuestas | p95 por repetición | Mediana del p95 | Rendimiento mediano | p50 por repetición | p99 por repetición | Máximo por repetición |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | 20:35 | 600/600 HTTP 200 | 576 / 246 / 209 ms | 246 ms | 50,0 resp/s | 202 / 203 / 204 ms | 1.607 / 254 / 213 ms | 1.628 / 255 / 216 ms |
 | 20:44 | 600/600 HTTP 200 | 594 / 214 / 205 ms | 214 ms | 53,3 resp/s | 205 / 201 / 162 ms | 652 / 326 / 208 ms | 1.666 / 336 / 212 ms |
+| 21:51 | 600/600 HTTP 200 | 519 / 223 / 218 ms | 223 ms | 50,2 resp/s | 205 / 203 / 204 ms | 601 / 243 / 243 ms | 605 / 244 / 244 ms |
 
-En ambas ejecuciones hubo respuestas HTTP 200 para todas las solicitudes medidas. La primera repetición de cada ejecución tuvo la cola de latencia más alta; el p95 de las dos restantes quedó entre 205 y 246 ms. Se conserva esa variación y no se descarta como dato atípico. El medidor no declara un umbral de latencia para estas lecturas, así que este resultado no se etiqueta como aprobado o reprobado frente a un SLO de p95 inexistente.
+En las tres ejecuciones hubo respuestas HTTP 200 para todas las solicitudes medidas. La primera repetición de cada ejecución tuvo la cola de latencia más alta; los p95 de las otras repeticiones quedaron entre 205 y 246 ms. Se conserva esa variación y no se descarta como dato atípico. Las medianas de p95 por ejecución fueron 246, 214 y 223 ms; su mediana es 223 ms. El medidor no declara un umbral de latencia para estas lecturas, así que este resultado no se etiqueta como aprobado o reprobado frente a un SLO de p95 inexistente.
 
 | Entorno y perfil | Configuración comparable | Resultado de lectura | Límites de la comparación |
 |---|---|---|---|
 | Dokploy, 18/11, ejecución 1 | 200 × 3; concurrencia 10; 20 de calentamiento; catálogo de cinco tiendas | 600/600 HTTP 200; mediana del p95 por corrida 246 ms; rendimiento mediano 50,0 resp/s | La latencia incluye la ruta HTTPS desde el equipo cliente y el servicio desplegado. No se recolectó telemetría de CPU/RAM del servidor. |
 | Dokploy, 18/11, ejecución 2 | Mismos parámetros | 600/600 HTTP 200; mediana del p95 por corrida 214 ms; rendimiento mediano 53,3 resp/s | La huella de salud coincide con la ejecución 1; aun así, son muestras breves, no una prueba de capacidad máxima. |
+| Dokploy, 18/11, ejecución 3 | Mismos parámetros | 600/600 HTTP 200; mediana del p95 por corrida 223 ms; rendimiento mediano 50,2 resp/s | Es una repetición adicional, no una nueva capacidad máxima ni un SLO. |
 | Podman local, perfil D | 200 × 3; concurrencia 10; 20 de calentamiento; `tienda-01`; backend y cliente en el mismo host | 600/600 HTTP 200; p95 266–281 ms (mediana 271 ms); 66,5–70,5 resp/s | Backend, cliente y base comparten el host y los topes del laboratorio. Es una referencia local, no producción. |
 | Podman local, perfil E | Igual a D, con `netem`: 50 ±10 ms de retraso, 0,5 % de pérdida configurada y tasa de 5 Mbit/s | 600/600 HTTP 200; p95 188–404 ms (mediana 200 ms); 53,9–69,5 resp/s. `tc` registró 7 paquetes descartados en el cliente y 6 en el backend | Degradación artificial dentro de la red privada del laboratorio; no representa la red real de Dokploy ni de la UTB. |
 
 Las cifras de Dokploy y Podman se contrastan como observaciones, no como una comparación controlada de rendimiento: cambian la topología, el trayecto de red, los recursos del servidor y el conjunto de tiendas consultadas. No se concluye que el despliegue sea más rápido o más lento que el laboratorio. El perfil E tampoco sirve para explicar la latencia de Dokploy: sus límites de red se aplicaron únicamente a contenedores efímeros locales.
 
-Como comprobación complementaria se enviaron 10 pings ICMP al host desplegado; no hubo respuesta a esos paquetes. Esto es compatible con ICMP filtrado o no atendido y no se interpreta como 100 % de pérdida de las solicitudes de la aplicación: las 1.200 lecturas HTTP de ambas ejecuciones respondieron 200. No se obtuvieron jitter de red, ancho de banda extremo a extremo, uso de CPU/RAM en Dokploy ni priorización DSCP. La QoS observada aquí se limita a disponibilidad HTTP y distribución de latencias bajo la carga indicada.
+Como comprobación complementaria se enviaron 10 pings ICMP al host desplegado; no hubo respuesta a esos paquetes. Esto es compatible con ICMP filtrado o no atendido y no se interpreta como 100 % de pérdida de las solicitudes de la aplicación: las 1.800 lecturas HTTP de las tres ejecuciones respondieron 200. No se obtuvieron jitter de red, ancho de banda extremo a extremo, uso de CPU/RAM en Dokploy ni priorización DSCP. La QoS observada aquí se limita a disponibilidad HTTP y distribución de latencias bajo la carga indicada.
 
 #### Repetir la prueba por primera vez
 
