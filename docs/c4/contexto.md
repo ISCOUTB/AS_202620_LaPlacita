@@ -19,20 +19,17 @@ flowchart TD
     class administrador person
 
     subgraph b1 ["Núcleo del Sistema"]
-        laPlacita["<b>Sistema LaPlacita</b><br/>[Software System]<br/><i>Pedidos anticipados y recolección</i>"]:::system
+        laPlacita["<b>Sistema LaPlacita</b><br/>[Software System]<br/><i>Pedidos y recolección</i>"]:::system
     end
 
     subgraph b2 ["Integraciones Externas"]
-        pago["<b>Pasarela de Pagos</b><br/>[Planeada]<br/><i>Pago simulado actualmente</i>"]:::planned
-        push["<b>Notificaciones</b><br/>[Planeadas]<br/><i>Estado consultado por polling</i>"]:::planned
+        pago["<b>Pasarela de pagos</b><br/>Planeada"]:::planned
+        push["<b>Notificaciones</b><br/>Planeadas"]:::planned
     end
 
-    usuario -->|"Ordena y consulta PIN<br/>HTTPS"| laPlacita
-    establecimiento -->|"Gestiona menú y pedidos<br/>HTTPS"| laPlacita
-    administrador -->|"Gestiona cuentas y tiendas<br/>HTTPS"| laPlacita
-
-    laPlacita -.->|Integración futura, aún no activa| pago
-    laPlacita -.->|Canal futuro, aún no activo| push
+    usuario -->|"Hace pedidos y consulta"| laPlacita
+    establecimiento -->|"Gestiona menú y pedidos"| laPlacita
+    administrador -->|"Administra cuentas y tiendas"| laPlacita
 ```
 
 ## Leyenda de colores
@@ -43,5 +40,5 @@ flowchart TD
 | Azul brillante (`System`) | El sistema propio — La Placita. |
 | Gris claro (`planned`) | Integración externa prevista, aún sin activar. |
 | Subgraph | Delimitador visual que agrupa actores, sistema propio e integraciones previstas. |
-| Flecha discontinua | Integración prevista que todavía no está activa. |
+| Nodos grises | Integraciones futuras no activas; no se dibujan relaciones porque aún no hay comunicación implementada. |
 | $\rightarrow$ Flechas con etiqueta | Relación de comunicación; la etiqueta indica qué se intercambia y el protocolo. |

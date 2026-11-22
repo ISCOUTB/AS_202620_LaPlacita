@@ -33,15 +33,15 @@ flowchart TB
     GARAGE[("Garage S3<br/>Dokploy · red interna")]:::store
     PASARELA["Pasarela de pagos<br/>planeada, no integrada"]:::planned
 
-    HTTP -->|"sesión, roles y cuentas"| ID
+    HTTP -->|"sesión y roles"| ID
     HTTP --> CAT
     HTTP --> PED
     HTTP --> PAG
     HTTP --> ENT
-    HTTP -->|"POST/GET /notificaciones"| NOT
-    HTTP -->|"POST /tienda/imagen; GET /imagenes/{id}"| ALM
+    HTTP -->|"API notificaciones"| NOT
+    HTTP -->|"API imágenes"| ALM
     HTTP -->|"asigna referencias de imagen"| CAT
-    ADMIN -->|"autorización superadmin"| ID
+    ADMIN -->|"valida rol"| ID
     ADMIN --> PED
     ADMIN --> PAG
     ADMIN --> ENT
@@ -51,9 +51,9 @@ flowchart TB
     CV --> PAG
     CV --> ENT
     CV --> NOT
-    PED -->|"obtenerProducto()"| CAT
-    PAG -->|"obtenerPedido(); confirmarPago()"| PED
-    ENT -->|"PIN y transiciones"| PED
+    PED -->|"consulta producto"| CAT
+    PAG -->|"confirma pago"| PED
+    ENT -->|"PIN y estado"| PED
     CAT --> S_CAT
     PED --> S_PED
     PAG --> S_PAG
@@ -61,12 +61,11 @@ flowchart TB
     NOT --> S_NOT
     ID --> S_ID
     ALM --> S_ALM
-    CAT -->|"productos y referencias"| PERS
-    PED -->|"escritura con reintentos"| PERS
+    CAT -->|"datos de catálogo"| PERS
+    PED -->|"escrituras reintentables"| PERS
     ID -->|"usuarios"| PERS
-    PERS -->|"SQL / TCP; rehidratación"| DB
-    ALM -->|"S3 SigV4; si GARAGE_* está configurado"| GARAGE
-    PAG -.->|"integración futura"| PASARELA
+    PERS -->|"SQL · rehidratación"| DB
+    ALM -->|"S3 si está configurado"| GARAGE
 ```
 
 ## Relaciones y límites observables
