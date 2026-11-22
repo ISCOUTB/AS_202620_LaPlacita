@@ -10,16 +10,16 @@ flowchart TB
     classDef planned fill:#dbeafe,stroke:#0e5296,color:#0e5296;
 
     subgraph api ["API Backend Central [Next.js Route Handlers]"]
-        HTTP["Adaptadores HTTP<br/>backend/app/api/v1/"]:::adapter
-        ADMIN["Administración general<br/>/api/v1/admin/<br/>reutiliza módulos existentes"]:::adapter
+        HTTP["Adaptadores HTTP<br/>backend/app/api/v1/*"]:::adapter
+        ADMIN["Rutas de administración general<br/>/api/v1/admin/*<br/>reutilizan módulos existentes"]:::adapter
         CV(["Corte vertical ejecutable<br/>backend/src/corte-vertical.js<br/>flujo de demostración, no ruta HTTP"]):::adapter
-        CAT["Catálogo<br/>src/modules/catalogo/"]:::module
-        PED["Pedidos<br/>src/modules/pedidos/"]:::module
-        PAG["Pagos<br/>src/modules/pagos/"]:::module
-        ENT["Entrega<br/>src/modules/entrega/"]:::module
-        NOT["Notificaciones<br/>src/modules/notificaciones/"]:::module
-        ID["Identidad y sesiones<br/>src/modules/identidad/"]:::module
-        ALM["Almacén de imágenes<br/>src/modules/almacen/"]:::module
+        CAT["Catálogo<br/>backend/src/modules/catalogo/"]:::module
+        PED["Pedidos<br/>backend/src/modules/pedidos/"]:::module
+        PAG["Pagos<br/>backend/src/modules/pagos/"]:::module
+        ENT["Entrega<br/>backend/src/modules/entrega/"]:::module
+        NOT["Notificaciones<br/>backend/src/modules/notificaciones/"]:::module
+        ID["Identidad y sesiones<br/>backend/src/modules/identidad/"]:::module
+        ALM["Almacén de imágenes<br/>backend/src/modules/almacen/"]:::module
         PERS["Adaptador de persistencia<br/>backend/src/persistencia/"]:::adapter
         S_CAT[("productos, imágenes de tienda<br/>Map / caché write-through")]:::store
         S_PED[("pedidosPorTienda<br/>contadores e idempotencia en memoria")]:::store
