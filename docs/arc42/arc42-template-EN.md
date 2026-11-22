@@ -384,7 +384,7 @@ flowchart TB
 | PWA de usuario (Next.js standalone) | Dokploy, contenedor Docker, dominio `laplacita-app.iscoutb.dev`; su BFF proxyea `/api/v1` al backend | `frontend/Dockerfile`, `frontend/app/api/v1/[...path]/route.js`, ADR-0017 |
 | Despliegue continuo | GitHub Actions: un push a `master` despliega solo lo que cambió (backend antes que frontend), tras su gate, y da el despliegue por terminado cuando `/api/v1/health` o `/api/version` devuelven la huella SHA-256 del código de ese commit (`scripts/huella.mjs`) | `.github/workflows/deploy-dokploy.yml`, `backend/src/health.js`, `frontend/app/api/version/route.ts` |
 | Rutas `/api/v1/*` + dominio `backend/src/modules/*` | Dentro del contenedor del backend (mismo proceso, ESM síncrono) | `backend/app/api/v1/**/route.js`, ADR-0001/0006 |
-| Pipeline `test` + `contract-test` + `frontend` | GitHub Actions runners `ubuntu-latest` + Node 22 en cada push/PR a `master` | `.github/workflows/ci.yml` |
+| Pipeline `test` + `contract-test` + `docs` + `audit` + `frontend` | GitHub Actions runners `ubuntu-latest` + Node 22 en push a `master` o `evidencia-semana-15` y PR a `master`; Sonar corre solo al hacer push a `master` | `.github/workflows/ci.yml` |
 | Análisis estático + Quality Gate | SonarCloud, organización `isco-utb`, proyecto `ISCOUTB_AS_202620_LaPlacita` | `sonar-project.properties`, ADR-0016 |
 | Persistencia | PostgreSQL gestionado por Dokploy en la misma red interna (implementado, condicional a `DATABASE_URL`); Redis descartado en S12 (§8.5) | ADR-0014, C4 contenedores, ESC-01 3/3 (evidencias-s10 §6) |
 | Desarrollo local | Puesto del desarrollador (`npm ci` → `npm run dev` → `localhost:3000/3001`) | `README.md`, `backend/.env.example`, `frontend/.env.example` |
