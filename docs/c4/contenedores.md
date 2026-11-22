@@ -14,9 +14,9 @@ flowchart TD
     classDef planned fill:#dbeafe,stroke:#0e5296,color:#0e5296;
     classDef extSystem fill:#999999,stroke:#666666,color:#fff;
 
-    usuario@{ shape: person, label: "<b>Usuario</b><br/>[Person]<br/><i>Estudiante o docente</i>" }
-    establecimiento@{ shape: person, label: "<b>Personal de tienda</b><br/>[Person]<br/><i>Gestiona pedidos y menú</i>" }
-    administrador@{ shape: person, label: "<b>Administrador general</b><br/>[Person]<br/><i>Rol autorizado por configuración</i>" }
+    usuario@{ shape: person, label: "<b>Usuario</b><br/>[Person]" }
+    establecimiento@{ shape: person, label: "<b>Personal tienda</b><br/>[Person]" }
+    administrador@{ shape: person, label: "<b>Admin. general</b><br/>[Person]" }
 
     class usuario person
     class establecimiento person
@@ -26,7 +26,7 @@ flowchart TD
         app["<b>Aplicación web / PWA</b><br/>[Next.js 16]<br/><i>Cliente, panel de tienda y administración</i><br/>IMPLEMENTADO · frontend/ · Dokploy"]:::container
         api["<b>API Backend</b><br/>[Next.js / Node.js]<br/><i>Rutas HTTP y módulos de dominio</i><br/><i>PostgreSQL si existe DATABASE_URL</i><br/>IMPLEMENTADO · backend/ · Dokploy"]:::container
         db[("<b>Base de datos</b><br/>[PostgreSQL]<br/><i>Pedidos, usuarios, productos y tiendas</i><br/><i>Persistencia condicional a DATABASE_URL</i>)]:::container
-        garage[("<b>Almacén de imágenes</b><br/>[Garage S3]<br/><i>Fotos de productos y tiendas</i><br/><i>Referencia UUID en PostgreSQL</i>)]:::container
+        garage[("<b>Almacén de imágenes</b><br/>Garage S3<br/><i>Fotos de productos y tiendas</i><br/><i>Referencia UUID en PostgreSQL</i>)]:::container
     end
 
     pago["<b>Pasarela de Pagos</b><br/>[Planeada]<br/><i>Confirmación simulada</i>"]:::planned

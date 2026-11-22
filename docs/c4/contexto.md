@@ -9,9 +9,9 @@ flowchart TD
     classDef planned fill:#eeeeee,stroke:#888888,color:#444444,stroke-dasharray: 5 5;
 
     subgraph b0 ["Zona de Usuarios y Roles"]
-        usuario@{ shape: person, label: "<b>Usuario</b><br/>[Person]<br/><i>Estudiante o docente</i>" }
-        establecimiento@{ shape: person, label: "<b>Personal de tienda</b><br/>[Person]<br/><i>Gestiona su tienda</i>" }
-        administrador@{ shape: person, label: "<b>Administrador general</b><br/>[Person]<br/><i>Rol autorizado por configuración</i>" }
+        usuario@{ shape: person, label: "<b>Usuario</b><br/>[Person]" }
+        establecimiento@{ shape: person, label: "<b>Personal tienda</b><br/>[Person]" }
+        administrador@{ shape: person, label: "<b>Admin. general</b><br/>[Person]" }
     end
 
     class usuario person
