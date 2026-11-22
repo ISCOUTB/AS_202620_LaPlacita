@@ -9,9 +9,9 @@ flowchart TD
     classDef planned fill:#eeeeee,stroke:#888888,color:#444444,stroke-dasharray: 5 5;
 
     subgraph b0 ["Zona de Usuarios y Roles"]
-        usuario@{ shape: person, label: "<b>Usuario</b><br/>[Person]<br/><i>Estudiante, docente o adm.</i>" }
-        establecimiento@{ shape: person, label: "<b>Personal de tienda</b><br/>[Person]<br/><i>Opera una tienda de comidas del campus</i>" }
-        administrador@{ shape: person, label: "<b>Administrador general</b><br/>[Person]<br/><i>Cuenta autorizada por ADMINS_GENERALES</i>" }
+        usuario@{ shape: person, label: "<b>Usuario</b><br/>[Person]<br/><i>Estudiante o docente</i>" }
+        establecimiento@{ shape: person, label: "<b>Personal de tienda</b><br/>[Person]<br/><i>Gestiona su tienda</i>" }
+        administrador@{ shape: person, label: "<b>Administrador general</b><br/>[Person]<br/><i>Rol autorizado por configuración</i>" }
     end
 
     class usuario person
@@ -19,17 +19,17 @@ flowchart TD
     class administrador person
 
     subgraph b1 ["Núcleo del Sistema"]
-        laPlacita["<b>Sistema LaPlacita</b><br/>[Software System]<br/><i>Plataforma Click & Collect</i>"]:::system
+        laPlacita["<b>Sistema LaPlacita</b><br/>[Software System]<br/><i>Pedidos anticipados y recolección</i>"]:::system
     end
 
     subgraph b2 ["Integraciones Externas"]
-        pago["<b>Pasarela de Pagos</b><br/>[Planeada · no integrada]<br/><i>El pago actual es simulado</i>"]:::planned
-        push["<b>Notificaciones Push/Correo</b><br/>[Planeadas · no integradas]<br/><i>El cliente consulta el estado por polling</i>"]:::planned
+        pago["<b>Pasarela de Pagos</b><br/>[Planeada]<br/><i>Pago simulado actualmente</i>"]:::planned
+        push["<b>Notificaciones</b><br/>[Planeadas]<br/><i>Estado consultado por polling</i>"]:::planned
     end
 
-    usuario -->|"Ordena y consulta PIN por HTTPS"| laPlacita
-    establecimiento -->|"Gestiona menú y PIN por HTTPS"| laPlacita
-    administrador -->|"Administra cuentas, tiendas y pedidos por HTTPS"| laPlacita
+    usuario -->|"Ordena y consulta PIN<br/>HTTPS"| laPlacita
+    establecimiento -->|"Gestiona menú y pedidos<br/>HTTPS"| laPlacita
+    administrador -->|"Gestiona cuentas y tiendas<br/>HTTPS"| laPlacita
 
     laPlacita -.->|Integración futura, aún no activa| pago
     laPlacita -.->|Canal futuro, aún no activo| push

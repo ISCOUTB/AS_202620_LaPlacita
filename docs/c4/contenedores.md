@@ -14,32 +14,32 @@ flowchart TD
     classDef planned fill:#dbeafe,stroke:#0e5296,color:#0e5296;
     classDef extSystem fill:#999999,stroke:#666666,color:#fff;
 
-    usuario@{ shape: person, label: "<b>Usuario</b><br/>[Person]<br/><i>Estudiante, docente o adm.</i>" }
-    establecimiento@{ shape: person, label: "<b>Personal de tienda</b><br/>[Person]<br/><i>Opera los pedidos y el menú de su tienda</i>" }
-    administrador@{ shape: person, label: "<b>Administrador general</b><br/>[Person]<br/><i>Cuenta autorizada por ADMINS_GENERALES, si está configurado</i>" }
+    usuario@{ shape: person, label: "<b>Usuario</b><br/>[Person]<br/><i>Estudiante o docente</i>" }
+    establecimiento@{ shape: person, label: "<b>Personal de tienda</b><br/>[Person]<br/><i>Gestiona pedidos y menú</i>" }
+    administrador@{ shape: person, label: "<b>Administrador general</b><br/>[Person]<br/><i>Rol autorizado por configuración</i>" }
 
     class usuario person
     class establecimiento person
     class administrador person
 
     subgraph laPlacita ["Sistema LaPlacita"]
-        app["<b>Aplicación web / PWA</b><br/>[Next.js 16]<br/><i>Experiencia de cliente y rutas /panel y /admin en el mismo despliegue</i><br/>IMPLEMENTADO — frontend/, Dokploy"]:::container
-        api["<b>API Backend Central</b><br/>[Next.js / Node.js]<br/><i>Route handlers, módulos de dominio y proyecciones en memoria; PostgreSQL se activa con DATABASE_URL</i><br/>IMPLEMENTADO — backend/, Dokploy"]:::container
-        db[("<b>Base de Datos Principal</b><br/>[PostgreSQL]<br/><i>Tablas pedidos, usuarios, productos y tiendas (ADR-0014, ADR-0021, ADR-0023)</i> <br/>IMPLEMENTADO — Dokploy, condicional a DATABASE_URL")]:::container
-        garage[("<b>Almacén de Imágenes</b><br/>[Garage S3]<br/><i>Bytes de las fotos del catálogo y tiendas; solo la referencia uuid en PostgreSQL (ADR-0028)</i> <br/>IMPLEMENTADO — Dokploy, red interna, sin exposición pública")]:::container
+        app["<b>Aplicación web / PWA</b><br/>[Next.js 16]<br/><i>Cliente, panel de tienda y administración</i><br/>IMPLEMENTADO · frontend/ · Dokploy"]:::container
+        api["<b>API Backend</b><br/>[Next.js / Node.js]<br/><i>Rutas HTTP y módulos de dominio</i><br/><i>PostgreSQL si existe DATABASE_URL</i><br/>IMPLEMENTADO · backend/ · Dokploy"]:::container
+        db[("<b>Base de datos</b><br/>[PostgreSQL]<br/><i>Pedidos, usuarios, productos y tiendas</i><br/><i>Persistencia condicional a DATABASE_URL</i>)]:::container
+        garage[("<b>Almacén de imágenes</b><br/>[Garage S3]<br/><i>Fotos de productos y tiendas</i><br/><i>Referencia UUID en PostgreSQL</i>)]:::container
     end
 
-    pago["<b>Pasarela de Pagos</b><br/>[Planeada · no integrada]<br/><i>La confirmación actual es simulada</i>"]:::planned
-    push["<b>Servicio Push/Correo</b><br/>[Planeado · no integrado]<br/><i>El cliente consulta por polling</i>"]:::planned
+    pago["<b>Pasarela de Pagos</b><br/>[Planeada]<br/><i>Confirmación simulada</i>"]:::planned
+    push["<b>Notificaciones</b><br/>[Planeadas]<br/><i>Consulta periódica del estado</i>"]:::planned
 
-    usuario -->|Compra pedidos y consulta estado por HTTPS| app
-    establecimiento -->|Gestiona pedidos y PIN desde el panel| app
-    administrador -->|Gestiona cuentas, tiendas y pedidos| app
+    usuario -->|"Compra y consulta estado<br/>HTTPS"| app
+    establecimiento -->|"Gestiona pedidos y PIN<br/>HTTPS"| app
+    administrador -->|"Gestiona cuentas y tiendas<br/>HTTPS"| app
 
-    app -->|"El BFF reenvía las solicitudes al API usando BACKEND_URL"| api
+    app -->|"BFF reenvía solicitudes<br/>BACKEND_URL"| api
 
-    api -->|"Creación confirmada; transiciones posteriores con reintentos; SQL interno"| db
-    api -->|S3 por HTTP en red interna para guardar y leer imágenes| garage
+    api -->|"Escrituras SQL y reintentos<br/>red interna"| db
+    api -->|"API S3 por HTTP<br/>red interna"| garage
 
     api -.->|Integración futura no activa| pago
     api -.->|Integración futura no activa| push
