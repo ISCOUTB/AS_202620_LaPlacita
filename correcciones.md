@@ -1667,3 +1667,28 @@ una CSP con `script-src`, para obligar a revisar el riesgo y arc42 §14.
   `JWT_SECRET`: bloqueados por el panel caído.
 - No se mergea nada que toque `backend/**` o `frontend/**` hasta que vuelva el panel: el push
   dispara el despliegue de las dos apps.
+
+## Contraste de observaciones de retroalimentación con el repositorio (22/11/2026)
+
+Este apartado distingue las observaciones históricas de la retroalimentación de las evidencias
+que existen actualmente en la rama revisada. Se registra como atendido únicamente aquello que
+puede localizarse en el repositorio o en una ejecución identificable. La retroalimentación
+histórica conserva su valor para el corte en que fue emitida; esta comparación no cambia notas,
+no sustituye la revisión del docente y no implica que el sistema completo esté terminado.
+
+| Observación registrada | Estado comprobable en el repositorio | Evidencia y alcance |
+|---|---|---|
+| Semana 3: faltaba un pipeline para que las pruebas no dependieran solo de la bitácora. | **Atendido.** Hay un flujo de integración continua que ejecuta pruebas del backend, contrato OpenAPI, validación de documentación, auditoría de dependencias y verificación del frontend. | [`.github/workflows/ci.yml`](.github/workflows/ci.yml). La ejecución [45068855198](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/45068855198) terminó con `test`, `frontend`, `docs`, `audit` y `contract-test` aprobados en el commit `b288ec2`; Sonar se omitió porque la rama no era `master`. Ese resultado no representa la ejecución de todos los jobs en `master`. |
+| Semana 3: ADR-0001 seguía como propuesto. | **Atendido.** La decisión figura aceptada y la ratificación se conserva en un ADR independiente. | [ADR-0001](docs/adr/0001-adopcion-monolito-modular.md) registra «aceptado (ratificado por ADR-0002)» y [ADR-0002](docs/adr/0002-ratificacion-monolito-modular.md) registra la aceptación. |
+| Semana 3: faltaban enlaces entre requisitos, aspectos y escenarios. | **Atendido para los aspectos con escenario definido; A-03 continúa parcial.** La tabla enlaza A-01, A-02, A-04, A-05 y A-06 con requisitos y escenarios. A-03 declara expresamente que todavía no tiene escenario de calidad asociado. | [`docs/aspectos.md`](docs/aspectos.md), tabla de trazabilidad. No se presenta A-03 como cumplido: las notificaciones automáticas de las transiciones de pedido siguen pendientes de decisión e implementación. |
+| Semana 4: no se habían podido verificar las secciones 5–12 de arc42 y la coherencia del C4 con el sistema. | **Hay contenido y diagramas documentados en la versión actual; la renderización visual de Mermaid no queda certificada por esta revisión.** | [arc42 §§5–12](docs/arc42/arc42-template-EN.md) contiene las vistas, conceptos, decisiones, requisitos de calidad y riesgos; [`docs/c4/contexto.md`](docs/c4/contexto.md), [`docs/c4/contenedores.md`](docs/c4/contenedores.md) y [`docs/c4/componentes.md`](docs/c4/componentes.md) contienen los niveles documentados. El job actual valida enlaces y anclas Markdown, pero no valida sintaxis Mermaid ni su presentación en GitHub. |
+| Semanas 1 y 4: la bitácora de IA debía hacer explícitos los rechazos y sus motivos. | **Atendido en la estructura y en las entradas actuales.** La bitácora incluye una columna de rechazo y motivos concretos por interacción. | [`docs/ia.md`](docs/ia.md), tabla de interacciones y «Resumen de aceptación, ajustes y rechazos». Esto documenta el uso de herramientas; no reemplaza la aprobación del equipo sobre las decisiones del proyecto. |
+| Se solicita evidencia de calidad, resiliencia y seguridad. | **Existe evidencia ejecutada, con resultados mixtos y límites explícitos; no todos los umbrales se cumplen.** | [Evidencias S14](docs/evidencias/evidencias-s14.md) registra perfiles de rendimiento/QoS locales y lectura GET en el servicio desplegado; [seguridad S14](docs/evidencias/seguridad-s14.md) registra la batería local de 50 pruebas. El perfil B no cumplió en una repetición y el perfil C documenta degradación ante caída de PostgreSQL; permanecen riesgos y controles pendientes. Los resultados no deben resumirse como «todo cumple». |
+
+### Pendientes que no se clasifican como falsos negativos
+
+- La implementación de notificaciones automáticas de cambios de estado no se considera terminada; A-03 carece de escenario de calidad aprobado.
+- Los perfiles de rendimiento y QoS contienen resultados que no alcanzan todos los criterios definidos. La existencia de una prueba no equivale a aprobar su umbral.
+- La revisión entre pares no se realizó y no se presenta como evidencia.
+- La validación automatizada de diagramas Mermaid, la inspección visual de su renderización y las comprobaciones de seguridad pendientes no se infieren del job de enlaces.
+- Esta comparación se limita a las observaciones históricas que se pudieron contrastar con los archivos actuales. La retroalimentación pública consultable no expone las revisiones recientes, por lo que los estados de una rúbrica vigente deben verificarse con la publicación más reciente del curso.
