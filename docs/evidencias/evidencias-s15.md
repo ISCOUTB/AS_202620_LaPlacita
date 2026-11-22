@@ -15,6 +15,7 @@
 | `frontend: npm run build` (Turbopack predeterminado) | Falló en Windows al procesar `rubik_1431770f.module.css`; Turbopack no pudo conectar con un proceso auxiliar que terminó con código 0. | El error no identifica un fallo de TypeScript o de una ruta. Se repitió fuera del sandbox y volvió a ocurrir. |
 | `frontend: next build --webpack` | Compiló, completó TypeScript, generó 20 páginas estáticas y recopiló trazas; al final terminó con `SecurityFatalError` por la versión vulnerable de Next.js. | En el intento dentro del sandbox, la fase final de copia también mostró `EPERM` bajo `.next/standalone`. En la repetición fuera del sandbox no se repitió ese error, pero el CLI detuvo el build por seguridad. No se declara build completo exitoso. |
 | `node scripts/validate-doc-links.mjs` | 73 archivos Markdown y 481 enlaces locales verificados; 0 errores. | Se validan destinos de archivo y anclas Markdown locales, no la sintaxis semántica de Mermaid. |
+| GitHub Actions, commit `b288ec2` | Run [45068855198](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/45068855198) completó con `test`, `frontend`, `docs`, `audit` y `contract-test` exitosos. `sonar` fue omitido por la condición de ejecutarse solo en `master`. | El job `test` usa el servicio PostgreSQL de CI, por lo que la suite con persistencia sí corrió en GitHub. El build del frontend pasó en el runner Ubuntu; el fallo local de Windows no se reprodujo allí. |
 | PostgreSQL local | El puerto `localhost:5432` no aceptó conexiones. No se encontró `psql`, `pg_ctl` ni `initdb` en la ruta inspeccionada de PostgreSQL 18. | No se ejecutaron las siete pruebas persistentes. La carpeta de datos existente no acredita que haya un servidor instalado y activo. |
 | Podman | El comando `podman` no está disponible en esta sesión. | No se ejecutó una nueva corrida de laboratorio QoS en esta revisión. |
 
@@ -36,8 +37,8 @@ Se añadió `scripts/validate-doc-links.mjs`, un verificador sin dependencias ex
 
 ## 5. Pendientes y condiciones de cierre
 
-1. Revisar e integrar de forma no duplicada la actualización de Next.js que ya aparece en la rama remota agrupada, y obtener un build completo exitoso.
-2. Habilitar una instancia temporal de PostgreSQL y repetir las siete pruebas omitidas.
+1. Revisar el PR o rama remota agrupada que incluye Next.js 16.4.6, sin duplicar sus otras actualizaciones. El CI pasó, pero la verificación local de Windows mostró el aviso de seguridad y no terminó el build completo.
+2. Si se necesita reproducir el CI en el equipo local, habilitar una instancia temporal de PostgreSQL para que las siete pruebas omitidas localmente se ejecuten también ahí.
 3. Volver a ejecutar el laboratorio de QoS en un entorno controlado accesible; investigar los incumplimientos B/C sin atribuirles una causa no medida.
 4. Medir las transiciones de pedidos bajo carga y contrastar el último commit desplegado con la huella mostrada por la API y el log de Dokploy.
 5. Mantener explícitos los pendientes RV-07, RV-09, RV-10, RV-11, RV-14, RV-15 y RV-18 de arc42. La revisión entre pares no se presenta como hecha.
