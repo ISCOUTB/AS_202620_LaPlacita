@@ -1,7 +1,7 @@
 name: CI LaPlacita
 
-# El código vive en backend/ desde la reestructuración del 12/10/2026:
-# backend = API Next.js + dominio; frontend/ es la división planeada (placeholder).
+# La aplicación se organiza en backend/ (API Next.js + dominio) y frontend/
+# (PWA Next.js para los usuarios); la documentación está bajo docs/.
 defaults:
     run:
         working-directory: backend
@@ -10,6 +10,7 @@ on:
     push:
         branches:
             - master 
+            - evidencia-semana-15
     pull_request:
         branches:
             - master
@@ -78,6 +79,22 @@ jobs:
         - name: Ejecutar pruebas de contrato
           run: node --test tests/contract-openapi.test.js
           working-directory: backend
+
+    docs:
+        runs-on: ubuntu-latest
+
+        steps:
+        - name: Descargar código
+          uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+        - name: Configurar Node.js
+          uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+          with:
+            node-version: '22'
+
+        - name: Validar enlaces y anclas de la documentación
+          run: node scripts/validate-doc-links.mjs
+          working-directory: .
 
     # S13 (plan de ejecución): análisis de dependencias en el CI. Se corre en
     # los dos paquetes y bloquea el merge si hay vulnerabilidades high+. Los
@@ -162,9 +179,9 @@ jobs:
         # GitHub) y bloqueaba merges de dependencias cuyo test, audit y
         # contract-test sí pasaban. La cobertura de un PR queda cubierta por
         # el resto del pipeline y el gate final siempre se registra en el
-        # push a master.
-        if: github.event_name == 'push'
-        needs: [test, contract-test]
+        # push a master; tampoco se ejecuta en la rama de evidencia S15.
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        needs: [test, contract-test, docs]
         env:
             SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
             # Las pruebas de persistencia (ESC-01, ADR-0014) necesitan base
@@ -213,4 +230,3 @@ jobs:
                     -Dsonar.projectBaseDir=${{ github.workspace }}/backend
           env:
                 GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        

@@ -238,12 +238,13 @@ un PostgreSQL real. Para correrlas en local, define esa variable antes de `npm t
 
 ### Pipeline
 
-[`ci.yml`](.github/workflows/ci.yml) corre en cada push y pull request a `master`:
+[`ci.yml`](.github/workflows/ci.yml) corre en cada push a `master` o a `evidencia-semana-15`, y en cada pull request a `master`:
 
 | Job | Qué hace |
 |---|---|
 | `test` | Pruebas del backend con PostgreSQL |
 | `contract-test` | Contrato OpenAPI |
+| `docs` | Enlaces y anclas locales de los Markdown en `README.md` y `docs/` |
 | `frontend` | Lint y build de la PWA |
 | `audit` | `npm audit --audit-level=high` y SBOM de los dos paquetes |
 | `sonar` | Análisis de SonarCloud y Quality Gate; solo en push a `master` |
