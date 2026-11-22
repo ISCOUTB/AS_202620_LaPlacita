@@ -1,0 +1,1669 @@
+# Registro de correcciones - LaPlacita
+> Este archivo documenta, semana a semana, las correcciones y ajustes realizados al proyecto durante el semestre, asi como los hallazgos del profesor/sistema de revisión y lo que el sistema automatizado **no puede detectar automaticamente** pero fue efectivamente corregido por el equipo.
+
+--- 
+
+## Semana 1 - Equipo, problema y repositorio 
+**Commit revisado:** `37f1deb8` · 2026-08-08 · Resultado: **8/9 criterios cumplidos**
+
+### Hallazgos del revisor 
+| # | Hallazgo | Detectado por el sistema |
+|---|---|---|
+| 1 | Ficha del problema sin dos tensiones de calidad declaradas (solo criterios de éxito) | Sí |
+| 2 | `docs/ia.md` sin columna de lo rechazado y su motivo | Sí |
+
+### Correcciones realizadas 
+| Corrección | Commit | ¿El sistema lo detecta? | Observación |
+|---|---|---|---|
+| Estructura completa de directorios desde el día 1 (`docs/arc42/`, `docs/adr/`, `docs/c4/`, `docs/aspectos.md`, `docs/ia.md`) | `37f1deb8` | Sí — cumple en S1 | Sin hallazgos de montaje |
+| Tabla de aspectos con 6 filas (A-01 a A-06) con ID y Aspecto definidos | `37f1deb8` | Sí | Más de lo pedido |
+| Cuatro integrantes con commits antes del cierre S1 | `37f1deb8` | Sí | Verificado por historial |
+
+### Pendiente trasladado a siguiente semana
+- Declarar explícitamente dos tensiones de calidad enfrentadas en `docs/ficha_del_problema.md`.
+- Añadir columna de "qué se rechazó y por qué" en `docs/ia.md`.
+
+--- 
+
+## Semana 2 - Escenarios de calidad y restricciones 
+**Commit revisado:** `fa7e13bc` · 2026-08-15 · Resultado: **5/9 criterios cumplidos**
+ 
+### Hallazgos del revisor
+| # | Hallazgo | Detectado por el sistema |
+|---|---|---|
+| 1 | Restricciones separadas de los requisitos: "Plataforma multi-establecimiento" y "Validación de entrega con PIN de 4 dígitos" tipadas como funcionales cuando son requisitos funcionales del sistema | Sí |
+| 2 | Escenarios ESC-01 a ESC-05 sin la parte «Artefacto» (5 de 6 partes presentes) | Sí |
+| 3 | C4 de contexto sin leyenda y guardado dentro de `docs/arc42/arc42-template-EN.md` en vez de `docs/c4/` | Sí |
+| 4 | `docs/aspectos.md` sin enlaces a los escenarios (la sección de enlaces existió en commit `a484f1a` y fue retirada en `b1f8da2`) | Sí |
+| 5 | `docs/ia.md` sin columna de lo rechazado (continúa desde S1) | Sí |
+ 
+### Correcciones realizadas
+| Corrección | Commit (aprox.) | ¿El sistema lo detecta? | Observación |
+|---|---|---|---|
+| arc42 secciones 1, 2, 3 y 10 redactadas con contenido real | `fa7e13bc` | Sí | Objetivo de negocio, stakeholders, restricciones y árbol de utilidad presentes |
+| 5 escenarios (ESC-01 a ESC-05) con medidas numéricas | `fa7e13bc` | Sí | Medidas: 99%, <1%, 0 registros, 2 minutos |
+| Árbol de utilidad con prioridades Alta/Media | `fa7e13bc` | Sí | Diagrama Mermaid con pares importancia/dificultad en cada escenario |
+| C4 de contexto con flechas etiquetadas (actores y sistemas externos) | `fa7e13bc` | Parcial | Flechas etiquetadas pero sin leyenda de colores; guardado en arc42 no en `docs/c4/` |
+ 
+### Pendiente trasladado a siguiente semana
+- Completar los 6 campos de cada escenario (agregar «Artefacto»).
+- Añadir leyenda al diagrama C4 y moverlo a `docs/c4/`.
+- Restaurar o reenlazar los escenarios desde `docs/aspectos.md`.
+- Depurar las dos restricciones que en realidad son requisitos funcionales.
+- Completar `docs/ia.md` con lo rechazado y su motivo.
+
+---
+
+## Semana 3 - Estrategia de solución y primer ADR
+**Commit revisado:** `014751df` · 2026-08-23 · Resultado: **9/9 criterios cumplidos**
+ 
+### Hallazgos del revisor
+| # | Hallazgo | Detectado por el sistema |
+|---|---|---|
+| 1 | ADR-0001 en estado «propuesto» (no «aceptado») | Sí |
+| 2 | Sin pipeline `.github/workflows/`; el verde descansa en declaración del equipo en `docs/ia.md` | Sí |
+| 3 | Columna Requisito (RF-xx) de `docs/aspectos.md` sin enlazar a los escenarios | Sí (parcial) |
+ 
+### Correcciones realizadas (S3 cierra la mayoría de los arrastres de S1 y S2)
+| Corrección | Commit | ¿El sistema lo detecta? | Observación |
+|---|---|---|--------|
+| `docs/ia.md` actualizado con entradas del 23/08 que registran rechazos y sus motivos técnicos | `014751df` | **No automáticamente** | El sistema detecta si el archivo creció, pero **no valida si el contenido incluye motivos de rechazo**. El equipo añadió: (1) rechazo de ampliar el C4 a mayor detalle porque el nivel de abstracción actual es suficiente; (2) rechazo de restaurar sección en `aspectos.md` por riesgo de duplicación |
+| C4 movido a `docs/c4/contexto.md` con leyenda de colores y flechas etiquetadas | `340c22a` | Sí | Cierra el hallazgo de S2 |
+| Escenarios ESC-01 a ESC-05 completados con el campo «Artefacto» | `014751df` | **No automáticamente** | El sistema verifica si el escenario existe, pero **no lee el contenido para confirmar que el campo «Artefacto» está presente**. El equipo añadió el módulo receptor en cada escenario |
+| `docs/aspectos.md` con tabla de 8 columnas y enlaces al ADR y al código desde cada fila | `014751df` | Sí (parcial) | Los enlaces a ADR y código existen; la columna **Requisito (RF-xx) sigue sin enlazar a los escenarios** |
+| ADR-0001 creado con contexto, alternativas descartadas con motivo, decisión y consecuencias | `bf94244` | Sí | Pasa el filtro de nombre y estructura |
+| Esqueleto de módulos por dominio coherente con el ADR (`src/modules/{catalogo,entrega,notificaciones,pagos,pedidos}/index.js`) | `014751df` | Sí | Estructura verificable en el árbol de archivos |
+| `npm test` en verde declarado en `docs/ia.md` (pass 1 / fail 0) antes de subir | `014751df` | **No automáticamente** | Sin pipeline todavía; el verde descansa en la declaración del equipo. **Corrección que el sistema no puede verificar de forma independiente** |
+ 
+### Pendiente trasladado a siguiente semana
+- Ratificar ADR-0001 como «aceptado» (cambiar estado o crear ADR de ratificación).
+- Añadir pipeline `.github/workflows/ci.yml`.
+- Enlazar columna Requisito (RF-xx) a los escenarios en `docs/aspectos.md`.
+
+--- 
+
+## Semana 4 - Corte vertical y C4 nivel 2
+**Commit revisado:** `745e799` · 2026-08-30 · Resultado del sistema: **4/10 criterios cumplidos** (nota sugerida: 2.6) · **Verificación manual posterior: 8/10 criterios cumplidos** (nota sugerida: 4.2)
+ 
+### Hallazgos del revisor
+| # | Hallazgo | Detectado por el sistema |
+|---|---|---|
+| 1 | C4 nivel 2 dibuja contenedores (Redis, PostgreSQL, App/Web Cliente, Portal) sin código en el repositorio | Sí |
+| 2 | `docs/ia.md` sin columna de rechazo (motivo técnico) | Sí (falso positivo) — descartado en verificación manual: los rechazos con motivo técnico ya constan en la columna «Validación» desde S3 (`docs/ia.md`, entradas del 23/08) |
+| 3 | Secciones 5, 6, 9, 10 y 12 de arc42 no verificadas (el extracto del sistema se cortó en §4.4) | **No automáticamente** — verificado manualmente el archivo completo: las secciones están redactadas con contenido propio (no texto de plantilla) |
+| 4 | ADR-0001 y ADR-0003 dejan implementación como «Pendiente» en la sección de trazabilidad | Sí (parcial) |
+| 5 | Sin SonarCloud configurado pese a lo declarado en ADR-0003 | Sí |
+ 
+### Correcciones realizadas
+| Corrección | Commit | ¿El sistema lo detecta? | Observación |
+|---|---|---|---|
+| Pipeline `.github/workflows/ci.yml` añadido y ejecutando `npm test` en Node 22 | Entre S3 y S4 | Sí — CI en verde en run `33352046552` | Cierra el hallazgo de S3 sobre verde sin pipeline |
+| ADR-0001 ratificado mediante ADR-0002 («aceptado» en fecha 2026-08-24) | `745e799` | **No automáticamente** | El sistema lee `ADR-0001.md` y ve estado «propuesto». **La ratificación se documentó en el ADR-0002**, que sí dice «aceptado». El sistema automatizado no correlaciona los dos ADRs para inferir que la decisión está ratificada |
+| ADR-0003 creado (despliegue Railway + Docker + SonarCloud) con alternativas y trazabilidad | `745e799` | Sí (parcial) | El ADR existe y pasa el filtro de nombre; la implementación de `sonar-project.properties` y `Dockerfile` figura como pendiente |
+| Fila A-01 de `docs/aspectos.md` completa hasta columna Pruebas, con rutas verificables | `745e799` | Sí | Enlaza RF-01, ESC-01, C4, ADR-0001, ADR-0003, código y tests |
+| Corte vertical con prueba automatizada (`tests/corte-vertical.test.js`) en CI verde | `745e799` | Sí | Run `33352046552` success |
+| arc42 secciones 5-6, 9, 10 y Glosario (12) redactadas con contenido propio, sin texto de plantilla | `745e799` | **No automáticamente** | Verificado manualmente en `docs/arc42/arc42-template-EN.md`: s.5 (5.1/5.2 whitebox), s.6 (6.1-6.3), s.9 (tabla de ADR + §9.1 «Razonamiento resumido» en HEAD), s.10 (árbol de utilidad + ESC-01..05) y §12 Glosario con términos del dominio; filtro de plantilla sin coincidencias |
+| Migración de Node.js nativo (`http`) a Next.js App Router para el backend | `745e799` | Parcial | El `README.md` actualiza los comandos; `app/health/route.js` existe en el árbol (histórico S4; hoy `app/api/v1/health/route.js` desde S7) |
+| Módulos migrados a JavaScript ESM (`import`/`export`); suite de 8 tests en verde | `745e799` | Sí | `npm test` pasa en CI |
+ 
+### Pendiente trasladado a Corte 1 (Semana 5)
+- Crear etiqueta `corte-1` en Git.
+- Declarar la restricción asignada al equipo y su diagnóstico.
+- Crear ADR del reto de corte 1.
+- Completar celdas «Pruebas» (A-02 a A-06) y «Evidencia» (todas las filas) en `docs/aspectos.md`.
+- Registrar en `docs/ia.md` al menos una salida de IA rechazada con motivo técnico de este corte.
+- Configurar SonarCloud: crear `sonar-project.properties` y añadir el paso al pipeline.
+- Aportar medición reproducible (herramienta + carga + procedimiento).
+- Alinear arc42 §5/§6 con el código real: describen archivos inexistentes (`src/index.js`, `src/modules/pedidos/store.js`, rutas `/pedidos*`).
+- Arc42 §10: corregir la categoría de ESC-04/05 (intercambiadas entre Usabilidad y Rendimiento) y usar artefactos con los nombres de los módulos reales (`pedidos`, `pagos`) en vez de inglés.
+- Glosario: eliminar entradas duplicadas («corte vertical») y pegar el listado de estados del pedido a la máquina de estados real (`Recibido → En preparación → Listo → Entregado`).
+
+---
+
+## Semana 5 · Primer Corte (CORTE 1)
+**Commit revisado:** `812d227` · 2026-09-02 · Resultado: **0/12 criterios cumplidos**
+ 
+### Cumplimiento del corte 1 (trabajo previo al re-etiquetado `corte-1`)
+| # | Casilla (orden de prioridad) | Estado | Evidencia |
+|---|---|---|---|
+| 1 | Etiqueta `corte-1` con CI en verde | Pendiente de revisión del equipo | **Sin commit/push/tag hasta la revisión**; el cierre oficial es 2026-09-07. Se crearán los commits de este corte, se verificará CI en verde y luego se creará la etiqueta sobre un commit anterior al cierre |
+| 2 | Restricción del equipo declarada | OK | **RES-05 — Aislamiento estricto por establecimiento** (todo flujo exige `tiendaId`; 0 accesos cruzados) |
+| 3 | Diagnóstico con línea base | OK | arc42 §11.2-11.3: sobre `812d227` se midieron **2/2 accesos cruzados logrados** (incumple ESC-02, umbral `0`) |
+| 4 | ADR del reto | OK | [`docs/adr/0004-aislamiento-por-establecimiento.md`](docs/adr/0004-aislamiento-por-establecimiento.md) — alternativas A/B/C, decisión B (repositorio particionado por tienda), consecuencias y trazabilidad |
+| 5 | Implementación sobre el corte vertical con prueba nueva en CI | OK | `tiendaId` obligatorio en `src/modules/{catalogo,pedidos,pagos,entrega,notificaciones}/index.js` y `src/corte-vertical.js`; [`tests/aislamiento.test.js`](backend/tests/aislamiento.test.js) (4 pruebas) que corren en `npm test` dentro del CI |
+| 6 | Medición vs umbral | OK | [`scripts/medir-aislamiento.js`](backend/scripts/medir-aislamiento.js): 100 ciclos × 3 accesos cruzados = 300 intentos; **0 logrados**, cumple umbral (`exit 0`) |
+| 7 | Trazabilidad | OK | ADR-0001 → ADR-0002 → ADR-0004; RF-02 → A-02 → ESC-02 en `docs/aspectos.md`; arc42 §5/§6/§9/§10/§11 alineados al código real |
+| 8 | `docs/ia.md` | OK | Entrada del 06/09/2026 registrada (resultado + validación pendiente del equipo) |
+| 9 | PDF de 2 páginas | Pendiente (del equipo) | Se genera tras la revisión y se sube a Moodle (no se commitea) |
+| 10 | Sustentación (5to criterio) | Pendiente | Evidencia del dominio: línea base 2/2 → post-cambio 0/300 (reproducible) |
+
+### Correcciones aplicadas en el corte 1
+| Corrección | Estado | Observación |
+|---|---|---|
+| ADR-0001 marcado «aceptado (ratificado por ADR-0002)» y su trazabilidad con commits reales (`f0d869b`, `26a9210`, `ce1676c`) | OK | Cierra el arrastre de S3/S4 (el ADR-0002 ya decía aceptado, ahora el 0001 lo refleja) |
+| ADR-0003: `Dockerfile` (Next standalone), `sonar-project.properties` y paso SonarCloud en `ci.yml` | Config OK; activación pendiente | Falta `SONAR_TOKEN` y org/projectKey reales para el análisis en vivo |
+| C4 de contenedores: App/Web, Portal, Redis y PostgreSQL marcados `planeado (Corte 2)` | OK | Cierra el hallazgo S4#1 (contenedores sin código) |
+| A-02 en `docs/aspectos.md`: ADR-0004, código (`tiendaId`/`pedidosPorTienda`) y evidencia 0/300 | OK | Cierra el pendiente de corte 1 |
+| Celdas Pruebas (A-02..A-06) y Evidencia (A-01..A-06) completadas | OK | Con rutas verificables a código y tests reales |
+| Columna Requisito (RF-xx) enlazada a los escenarios | OK | RF-01→ESC-01 … RF-06→ESC-03 (cierra el hallazgo S3#3) |
+| arc42 §5/§6 alineados al código real (`app/health/route.js` — histórico S4, hoy `app/api/v1/health/route.js` —, `src/corte-vertical.js`, módulos con `tiendaId`) | OK | Cierra el arrastre del corte 1 (archivos inexistentes) |
+| arc42 §10: ESC-04/05 con categoría y artefactos correctos (módulos `pedidos`, `pagos`, … en español) | OK | Cierra el arrastre del corte 1 |
+| Glosario: duplicado de «corte vertical» eliminado y estados pegados a `ESTADOS` real | OK | Cierra el arrastre del corte 1 |
+| arc42 §11 «Reto RES-05» añadida (restricción, diagnóstico, línea base 2/2 y post-cambio 0/300, procedimiento) | OK | Casillas 2, 3 y 6 documentadas |
+| `README.md` actualizado (árbol, C4, estado del proyecto) | OK | Reconcilia el árbol con los archivos reales |
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Semana | Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|---|
+| S3 | Escenarios ESC-01 a ESC-05 con campo «Artefacto» añadido | Leer cada escenario en `docs/arc42/arc42-template-EN.md` y confirmar que la sección «Artefacto» está presente |
+| S3 | `docs/ia.md` con entradas del 23/08 que incluyen rechazo del C4 detallado y rechazo de restaurar sección en aspectos.md, con motivo técnico | Leer las filas del 23/08 en `docs/ia.md` y confirmar que la columna «Validación» incluye «Se Rechazó» + justificación |
+| S3 | `npm test` en verde localmente antes de subir (sin pipeline aún) | El equipo declaró pass 1/fail 0 en `docs/ia.md`; verificable en el historial del pipeline que se añadió en S4 |
+| S4 | ADR-0001 ratificado por ADR-0002 (el ADR-0002 tiene estado «aceptado») | Leer `docs/adr/0002-ratificacion-monolito-modular.md`, que dice estado «aceptado» y referencia al ADR-0001 |
+| S4 | arc42 secciones 5-6, 9, 10 y Glosario (12) redactadas en el archivo (el sistema no leyó el archivo completo) | Leer `docs/arc42/arc42-template-EN.md` y confirmar que las secciones 5-6, 9, 10 y 12 tienen contenido propio (no texto de plantilla) |
+| S4 | Módulos migrados a ESM con imports/exports válidos | Revisar `src/modules/*/index.js` y confirmar que usan `export` en vez de `module.exports` |
+| Corte 1 | Línea base 2/2 fugas y post-cambio 0/300 de RES-05 | Reproductible: verificar el estado en `812d227` (2/2) y luego ejecutar `node scripts/medir-aislamiento.js` en HEAD (0/300) |
+| Corte 1 | Contenedores C4 «planeados» sin infraestructura implementada | Leer `docs/c4/contenedores.md` y confirmar que Redis/PostgreSQL/App/Portal no levantan servicios reales |
+| Corte 1 | Aislamiento estructural (mapas por tienda) más allá de «corrección de una fuga» | `tests/aislamiento.test.js` demuestra que ids coincidentes entre tiendas no colisionan (`pedido-1` en tienda-01 vs tienda-02) |
+
+---
+
+---
+
+## Semana 6 · Evidencia S6 — Contextos delimitados y propiedad de datos (2026-09-13)
+**Commit base revisado por pipeline:** `50b92f8` (2026-09-06) · **0/8** · **HEAD tras este plan:** por etiquetar.
+
+### Hallazgos del revisor (pasada temprana `semana-06-evidencia-s6.md`)
+| # | Hallazgo | Detectado por el sistema |
+|---|---|---|
+| 1 | Sin mapa de contextos con relaciones tipificadas (C4 técnico no vale como mapa DDD) | Sí |
+| 2 | Sin tabla módulo→datos con dueño único | Sí |
+| 3 | Sin cobertura tabla↔código | Sí |
+| 4 | ADR-0004 es aislamiento por tienda, no auditoría de propiedad entre módulos | Sí |
+| 5 | Sin plan de corrección por violación | Sí |
+| 6 | Sin §8 arc42 con lenguaje ubicuo + mapa | Sí (busca `docs/arc42/08*`) |
+| 7 | Sin C4 nivel 3 (`docs/c4/componentes.md`) ni ADR de reajuste | Sí |
+| 8 | `docs/aspectos.md` sin relación a contextos | Sí |
+| T-1 | Archivo se llamaba `correciones.md`, debe ser `correcciones.md` (arrastre S5) | Sí (`git show HEAD:correcciones.md` → null) |
+| T-2 | `docs/ia.md` con validaciones "pendiente" y sin fila S6 | Sí |
+| T-3 | SonarCloud sin `SONAR_TOKEN` (arrastre S5) | Sí |
+
+### Correcciones realizadas 
+| Corrección | Archivo(s) | ¿El sistema lo detecta? | Observación |
+|---|---|---|---|
+| Renombrado exacto `correciones.md` → `correcciones.md` + esta sección S6 datada | `correcciones.md` | Sí — `git log --follow -- correcciones.md` | Cierra arrastre S5 de nombre |
+| Mapa de contextos con 5 contextos + 6 relaciones tipificadas (Customer/Supplier ×3, OHS, ACL futura, Shared Kernel `tiendaId`) + diagrama Mermaid | `docs/dominio/mapa-de-contextos.md`, `docs/arc42/08-conceptos-transversales.md`, `docs/arc42/arc42-template-EN.md` §8 | Sí (contenido + `docs/arc42/08*`) | No es diagrama técnico: usa vocabulario DDD |
+| Tabla módulo→datos con dueño único + columnas Quién escribe/lee + cobertura de los 6 almacenes reales (Maps/array) | `docs/dominio/propiedad-de-datos.md` | Parcial — verificar leyendo la tabla | Cubre `productos`, `pedidosPorTienda`, `contadoresPorTienda`, `pagosConfirmados`, `pin`, `notificacionesEnviadas`, `tiendaId` |
+| Auditoría de modularidad sobre código actual: V-01…V-06 con ruta:línea + plan por violación + comandos de verificación | `docs/dominio/auditoria-modularidad.md` | **No automáticamente** — requiere leer rutas:líneas citadas y correr `git grep` | Incluye recorrido documentado |
+| arc42 §8 con lenguaje ubicuo (10 términos) + mapa incorporado + regla "cada dato tiene un dueño" | `docs/arc42/arc42-template-EN.md` §8 + `docs/arc42/08-conceptos-transversales.md` | Sí (`docs/arc42/08*` existe) | El template enlaza al 08; el 08 es canónico |
+| C4 nivel 3 (componentes dentro de API Backend Central = los 5 módulos + orquestador + stores) | `docs/c4/componentes.md` | Sí | Nivel 3 nuevo, niveles 1-2 intactos |
+| ADR-0005 de reajuste: contenedores no cambian, componentes se precisan como Bounded Contexts + reglas de propiedad | `docs/adr/0005-reajuste-contextos-propiedad.md` | Sí | Referencia ADR-0001/0004, no los reescribe |
+| `docs/aspectos.md` relacionable: tabla Aspecto→Contexto(s) + columna Contexto | `docs/aspectos.md` | Sí | A-01→Pedidos, A-02→todos (SK), A-03→Notificaciones, A-04→Pagos, A-05→orquestador, A-06→Entrega+Pedidos |
+| `docs/ia.md` al día: cierre de "pendientes" 30/08 y 06/09 + filas 13/09 con Rechazado y motivo | `docs/ia.md` | Parcial | Columna Validación incluye "Se rechazó … porque …" |
+| `README.md`: árbol + estado S6 + enlaces | `README.md` | Sí | Enlace `correcciones.md` ya no roto |
+| SonarCloud | `sonar-project.properties` | Config parcial | Org/projectKey reales (`isco-utb` / `ISCOUTB_AS_202620_LaPlacita`); falta el secreto `SONAR_TOKEN` para el análisis en vivo. No bloquea S6 pero resta en transversal. |
+
+### Pendiente trasladado (fuera de S6)
+- **SonarCloud:** `sonar-project.properties` ya usa los datos reales (`isco-utb` / `ISCOUTB_AS_202620_LaPlacita`), por lo que solo falta el secreto `SONAR_TOKEN` en GitHub Actions. Requiere que alguien del equipo genere el token en sonarcloud.io con su cuenta de GitHub — no es algo que se pueda completar sin esas credenciales.
+
+### Actualización (13/09/2026) — cierre de deuda de código V-01/V-03
+Lo que en la fila anterior estaba planificado para S7 se implementó el mismo día, sin romper `corte-1`:
+- V-01: `pedidos.asignarPin` como único escritor de `pin`; `obtenerPedido` retorna copia frozen. Test nuevo: *"pin inmutable desde fuera"* en `tests/modulos.test.js`.
+- V-03: métodos de intención `confirmarPago/marcarListo/confirmarEntrega` en Pedidos; Pagos/Entrega ya no invocan `cambiarEstado` con el nombre del estado.
+- `npm test`: 14/14 verde. `node scripts/medir-aislamiento.js`: 0/300 (sin regresión de RES-05).
+- Detalle completo en `docs/dominio/auditoria-modularidad.md` (V-01, V-03) y en `docs/adr/0007-v01-v03-dueno-pin-metodos-intencion.md` (decisión registrada como ADR propio para preservar la inmutabilidad de ADR-0005).
+- SonarCloud sigue pendiente (ver arriba): fuera del alcance de lo que se puede corregir sin acceso a la cuenta del equipo.
+
+---
+ 
+## Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Semana | Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|---|
+| S3 | Escenarios ESC-01 a ESC-05 con campo «Artefacto» añadido | Leer cada escenario en `docs/arc42/arc42-template-EN.md` y confirmar que la sección «Artefacto» está presente |
+| S3 | `docs/ia.md` con entradas del 23/08 que incluyen rechazo del C4 detallado y rechazo de restaurar sección en aspectos.md, con motivo técnico | Leer las filas del 23/08 en `docs/ia.md` y confirmar que la columna «Validación» incluye «Se Rechazó» + justificación |
+| S3 | `npm test` en verde localmente antes de subir (sin pipeline aún) | El equipo declaró pass 1/fail 0 en `docs/ia.md`; verificable en el historial del pipeline que se añadió en S4 |
+| S4 | ADR-0001 ratificado por ADR-0002 (el ADR-0002 tiene estado «aceptado») | Leer `docs/adr/0002-ratificacion-monolito-modular.md`, que dice estado «aceptado» y referencia al ADR-0001 |
+| S4 | arc42 secciones 5-6, 9, 10 y Glosario (12) redactadas en el archivo (el sistema no leyó el archivo completo) | Leer `docs/arc42/arc42-template-EN.md` y confirmar que las secciones 5-6, 9, 10 y 12 tienen contenido propio (no texto de plantilla) |
+| S4 | Módulos migrados a ESM con imports/exports válidos | Revisar `src/modules/*/index.js` y confirmar que usan `export` en vez de `module.exports` |
+
+
+
+---
+
+## Semana 7 · Evidencia S7 — Contrato de API y prueba de contrato (2026-09-16)
+**Commit base:** `90f510e` (2026-09-17) · **Entrega incremental calificada una sola vez.**
+
+### Hallazgos del revisor
+| # | Hallazgo | Detectado por el sistema |
+|---|---|---|
+| 1 | Sin contrato OpenAPI/AsyncAPI version v1 | Si (busca openapi.yaml o openapi.json) |
+| 2 | Sin prueba de contrato en el pipeline | Si (busca job contract-test en .github/workflows/ci.yml) |
+| 3 | Sin ADR que justifique la estrategia de integracion | Si (busca docs/adr/0006-*.md) |
+| 4 | C4 nivel 2 sin etiquetas de protocolo/formato | Si (busca HTTP REST/JSON o import ESM sincrono en docs/c4/componentes.md) |
+| 5 | arc42 seccion 6 sin flujos de interaccion | Si (busca secciones 6.1 — 6.6 con protocolo) |
+| 6 | Rutas HTTP de la API no implementadas | Si (busca app/api/v1/*/route.js) |
+
+### Correcciones realizadas
+| Correccion | Archivo(s) | Detectado? | Observacion |
+|---|---|---|---|
+| openapi.yaml creado — contrato OpenAPI 3.1 version v1 | openapi.yaml | Si | 10 paths / 11 operaciones REST con schemas |
+| docs/adr/0006-estrategia-integracion-sincrona.md creado | docs/adr/0006-estrategia-integracion-sincrona.md | Si | ADR con alternativas A/B/C |
+| tests/contract-openapi.test.js creado — 23 tests | tests/contract-openapi.test.js | Si | Modulos + validacion openapi.yaml + mapeo path→route.js |
+| .github/workflows/ci.yml actualizado — job contract-test | .github/workflows/ci.yml | Si | sonar depende de test y contract-test |
+| docs/arc42/arc42-template-EN.md seccion 6 actualizado | docs/arc42/arc42-template-EN.md | Si | Flujos con protocolo/formato |
+| docs/c4/componentes.md actualizado — protocolos | docs/c4/componentes.md | Si | HTTP REST/JSON |
+| docs/c4/contenedores.md actualizado — protocolos consistentes | docs/c4/contenedores.md | Si | HTTPS / REST API |
+| docs/aspectos.md actualizado — fila A-07 | docs/aspectos.md | Si | Trazabilidad completa |
+| docs/ia.md actualizado — entradas S7 | docs/ia.md | Parcial | 4 nuevas entradas |
+| package.json actualizado — script contract-test | package.json | Si | npm run contract-test |
+| app/api/v1/*/route.js creados — 10 endpoints REST | app/api/v1/*/route.js | Si | Todos los endpoints |
+| app/health/route.js movido a app/api/v1/health/route.js | app/api/v1/health/route.js | Si | Ruta anterior eliminada |
+| correcciones.md actualizado — seccion S7 | correcciones.md | Si | Documenta proceso S7 |
+
+### Actualización (17/09/2026) — cierre y alineación de la evidencia S7
+Al integrar los cambios llegados del remoto se completó la evidencia y se corrigió el desfase entre el contrato y las rutas:
+
+**Pipeline verificado (18/09/2026):** en el commit evaluado `90f510e` (run [35181554516](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/35181554516)) los jobs `test` y `contract-test` pasan; en el commit intermedio `63141232` (run [35383329950](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/35383329950)) también. Conteos locales verificados: `npm test` **37/37** y `npm run contract-test` **23/23**.
+| Correccion | Archivo(s) | Detectado? | Observacion |
+|---|---|---|---|
+| Rutas alineadas al contrato — `pedidoId`/`productoId` desde el path param y `tiendaId` desde el query | app/api/v1/*/route.js | Si | Antes se leían del query/body |
+| Catalogo con rutas dinamicas reales de Next.js | app/api/v1/catalogo/tiendas/[tiendaId]/productos/route.js | Si | Ya no reimplementa el enrutado a mano |
+| openapi.yaml sin servidor de Railway | openapi.yaml | Si | Railway no esta desplegado (no declarar produccion inexistente) |
+| docs/adr/0007-v01-v03-dueno-pin-metodos-intencion.md creado | docs/adr/0007-v01-v03-dueno-pin-metodos-intencion.md | Si | Registra V-01/V-03 sin reescribir ADR-0005 |
+| ADR-0005 restaurado a su estado aceptado | docs/adr/0005-reajuste-contextos-propiedad.md | Si | Se retiro la seccion "Actualización" (ADR inmutable) |
+| docs/evidencia-fallo-contrato-s7.md creado | docs/evidencia-fallo-contrato-s7.md | Si | Run en rojo reproducible del contrato |
+| Conteos al día en documentacion (37/37 test, 23/23 contrato) | README.md, docs/aspectos.md, docs/ia.md | Si | A-07 y README alineados |
+| Prueba de contrato ajustada por V-01 (`obtenerPedido` devuelve copia `Object.freeze`) | tests/contract-openapi.test.js | Si | Se lee el PIN con `pedidos.obtenerPedido(...)` |
+
+### Entrega S7 completa
+| Que se entrega | Estado | Evidencia |
+|---|---|---|
+| Contrato OpenAPI 3.1 version v1 | Listo | openapi.yaml |
+| Prueba de contrato en pipeline | Listo | tests/contract-openapi.test.js + job contract-test en .github/workflows/ci.yml |
+| ADR que justifica estrategia de integracion | Listo | docs/adr/0006-estrategia-integracion-sincrona.md |
+| C4 nivel 2 con protocolo/formato | Listo | docs/c4/componentes.md |
+| C4 nivel 2 con protocolos consistentes | Listo | docs/c4/contenedores.md |
+| arc42 seccion 6 con flujos de interaccion | Listo | docs/arc42/arc42-template-EN.md seccion 6 |
+| Rutas HTTP implementadas | Listo | app/api/v1/*/route.js |
+| Alineacion con repositorio | Listo | Todos los archivos corresponden al codigo actual |
+
+### Pendiente trasladado
+- **SonarCloud (PENDIENTE REAL — provoca CI en rojo):** el secreto `SONAR_TOKEN` **ya está cargado** (el paso "Análisis estático con SonarCloud" se ejecuta y no se omite), pero el job `sonar` **falla en ~11 s** en `90f510e` y en el commit intermedio `63141232`. Causa más probable: la organización/proyecto `isco-utb` / `ISCOUTB_AS_202620_LaPlacita` no está creado o no está vinculado a la cuenta dueña del token en sonarcloud.io. Acción del equipo (ver `docs/evidencia-contrato-s7.md` §11): (1) crear/vincular el proyecto en sonarcloud.io con org `isco-utb`; (2) instalar la GitHub App de SonarCloud en el repo; (3) regenerar `SONAR_TOKEN` desde esa cuenta; (4) re-correr y citar el run verde + URL del Quality Gate.
+- V-01/V-03 ya implementados el 13/09 en código (`pedidos.asignarPin` + copia `Object.freeze`; métodos de intención) — decisión en `docs/adr/0007-v01-v03-dueno-pin-metodos-intencion.md`.
+
+### Resumen de correcciones que el sistema automatizado no detecta automaticamente
+| Semana | Correccion invisible al sistema | Como verificarla manualmente |
+|---|---|---|
+| S7 | openapi.yaml es un contrato OpenAPI 3.1 valido | Validar con npx @stoplight/prism o similar |
+| S7 | tests/contract-openapi.test.js falla ante cambio incompatible | Descomentar escenarios CONTRATO ROTO al final y verificar que npm test falla — evidencia capturada en [docs/evidencia-fallo-contrato-s7.md](docs/evidencia-fallo-contrato-s7.md) |
+| S7 | El job contract-test en CI falla si la prueba de contrato falla | Verificar en GitHub Actions que el job contract-test existe |
+| S7 | Las rutas HTTP responden correctamente | Ejecutar npm run dev y hacer fetch a http://localhost:3000/api/v1/health |
+
+---
+
+## Semana 8 · Evidencia S8 — Despliegue, operación y costos (2026-09-24)
+
+Evidencia: [`docs/semana-08.md`](docs/semana-08.md) (Lista B — Pestaña Auditora, Pestaña 3).
+
+### Hallazgos y estado declarado
+
+| # | Ítem Lista B | Estado | Evidencia |
+|---|---|---|---|
+| B1 | Evidencia S8 commiteada y citada | OK (este commit) | `docs/semana-08.md` + cita en `README.md` (estado S8) + esta sección; trazabilidad §8 con `Dockerfile:1-17`, `ci.yml:1-79`, `src/health.js:5-7`, `app/api/v1/health/route.js:1-6`, `openapi.yaml:33-44,493-498` |
+| B2 | URLs públicas verificables | Parcial — T1 en diagnóstico y plan | Run [35181554516](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/35181554516) (`90f510e`: test ✅ contract ✅ sonar ❌) y [35383329950](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/35383329950) (`63141232`: igual); pendiente run con sonar verde + URL Quality Gate `https://sonarcloud.io/project/overview?id=ISCOUTB_AS_202620_LaPlacita` |
+| B3 | §5-logs con compromiso | OK | Tabla de prefijos `[catalogo]/[pedidos]/[pagos]/[entrega]/[notificaciones]` + formato `{ error }` 400/404/409 por operación + deuda explícita logger JSON `{ts,level,service,route,tiendaId,pedidoId,latencyMs,requestId}` + enmascarar PIN |
+| B4 | Costos fijados a fecha de contratación | OK | Tabla 0–5 USD/mes + supuestos S-1…S-5 + sensibilidad PostgreSQL/Redis/dominio; precios consultados en `railway.app/pricing` el 24/09/2026 — estimación, no factura |
+| B5 | Referencias stale a `app/health/route.js` depuradas | OK | `correcciones.md:106,149`, `entregablesemana4.md:37`, `docs/presentacion-corte1.md:45`, `docs/ia.md:20` marcadas como histórico S4 (hoy `app/api/v1/health/route.js` desde S7); `git ls-files app/` solo lista `app/api/v1/**/route.js` (10 archivos) |
+
+### Pendiente trasladado
+
+- **SonarCloud (T1):** criterio en "diagnóstico y plan", no en cumplido — requiere credenciales del equipo (§4.3 de `docs/semana-08.md`).
+- **Despliegue Railway:** decidido (ADR-0003), no desplegado — sin URL pública (§2 de `docs/semana-08.md`).
+
+---
+
+## Post-cierre S10 · Cierre de arrastres y reestructuración del monorepo (12/10/2026)
+**Commit base:** `46fefed` (12/10/2026 — ADR-0015 y registro IA en voz impersonal)
+
+### 1. Hallazgos de la planilla del revisor (2026-10-06) y su cierre
+
+| # | Hallazgo (matriz transversal / overall) | Cierre aplicado |
+|---|---|---|
+| 1 | ADR aceptados editados sin reemplazo declarado (0003/0009/0010) — **No cumple** desde S8 | [ADR-0015](docs/adr/0015-ratificacion-ediciones-post-aceptacion.md) ratifica las ediciones post-aceptación (ninguna cambió la decisión) y declara el reemplazo de ADR-0003 por ADR-0009 en despliegue. [ADR-0016](docs/adr/0016-quality-gate-sonarcloud-bloqueante.md) registra la decisión vigente del análisis estático (Quality Gate obligatorio y bloqueante) y reemplaza al ADR-0010. Cabeceras de ADR-0003 y ADR-0010 anotadas con «Reemplazado» y enlaces; contenido histórico intacto |
+| 2 | Pipeline/SonarCloud/Quality Gate — **No cumple** transversal | El trío del CONTRATO §8 está acreditado desde `cbd4cf0`: configuración ([`backend/sonar-project.properties`](backend/sonar-project.properties), `sonar.qualitygate.wait=true`), runs en verde (`e01991d`, `cbd4cf0`, `d25bef4`, `fda91fd`) y Quality Gate público en OK (`https://sonarcloud.io/project/overview?id=ISCOUTB_AS_202620_LaPlacita`). Menciones residuales «informativo» de README y `docs/semana-08.md` anotadas como superadas en S10 (los registros históricos no se reescriben) |
+| 3 | Completar C4 y enlaces de evidencia en A-06 | Aplicado en `8ca0404` (llegó después del cierre de S10): fila A-06 enlaza vista C4, pruebas negativas de contrato y medición 0/300 de [`docs/evidencias/evidencias-s10.md`](docs/evidencias/evidencias-s10.md) §7; verificado tras el pull |
+| 4 | Identidad de tenant y persistencia antes de declarar seguridad integral | Persistencia: resuelta en S10 (ESC-01, ADR-0014). Identidad de tenant: plan declarado más abajo (§3), pendiente de ADR en el corte 3 — **la seguridad integral sigue sin declararse** |
+| 5 | Sin credenciales en el repositorio ni en el historial — No verificado (limitación del revisor) | Barrido propio del equipo según CONTRATO §9 documentado más abajo (§4): limpio en HEAD y sin claves en el historial; la verificación independiente corresponde al revisor |
+| 6 | Contribución de todos los integrantes | No arreglable desde el repositorio: se resuelve en sustentación; las 5 firmas del historial quedan como evidencia de trabajo repartido |
+
+### 2. Reestructuración del monorepo: división backend / frontend
+
+Con `git mv` (historial preservado), todo el código del sistema vive en `backend/` y `frontend/`
+es el placeholder de la aplicación de usuario (planeada para el corte 3, sin código todavía):
+
+| Ruta anterior (S1–S10) | Ruta vigente |
+|---|---|
+| `src/**` | `backend/src/**` |
+| `app/api/v1/**` | `backend/app/api/v1/**` |
+| `tests/**` | `backend/tests/**` |
+| `scripts/**` | `backend/scripts/**` |
+| `openapi.yaml` | `backend/openapi.yaml` |
+| `package.json`, `package-lock.json`, `next.config.mjs`, `jsconfig.json`, `Dockerfile`, `sonar-project.properties`, `.env.example`, `.dockerignore` | `backend/…` |
+
+Ajustes derivados: `ci.yml` con `working-directory: backend` y el scanner invocado con
+`-Dsonar.projectBaseDir`; `.gitignore` con patrones no anclados; docs vivos reenlazados
+(README, `docs/aspectos.md`, `docs/c4/*`, arc42 §1–§10, comandos de `docs/dominio/auditoria-modularidad.md`).
+
+> **Nota sobre citas históricas.** Las rutas citadas en evidencias fechadas
+> (`docs/evidencias/`, `docs/semana-08.md`, `docs/evidencia-contrato-s7.md`, secciones S1–S10 de
+> este archivo, §11 del arc42 y los archivos de entregables) **quedan congeladas al hash de su
+> revisión**: describían el estado real de su fecha y reescribirlas falsificaría la evidencia.
+> Para leerlas contra el código actual, aplique el mapa de rutas de arriba.
+
+### 3. Plan declarado — identidad del establecimiento (tenant) [pendiente, corte 3]
+
+**Problema:** el `tiendaId` lo suministra el llamante (query o body); nada verifica que quien
+llama sea el establecimiento dueño del pedido. El aislamiento RES-05 es estructural (partición
+de almacenes), no autenticación: retirar el PIN del GET (ADR-0013) tampoco resuelve la identidad
+del establecimiento.
+
+**Opciones evaluadas para el ADR del corte 3:**
+
+| Opción | Idea | Consecuencia principal |
+|---|---|---|
+| A. Token/API-key por tienda, emitido fuera de banda | El backend valida la credencial en middleware e inyecta el `tiendaId` verificado al dominio | Requiere emisión y rotación de credenciales por establecimiento |
+| B. JWT con emisor propio | El establecimiento inicia sesión y recibe un token firmado con su `tiendaId` | Introduce identidad de usuario además de la de tienda; más superficie |
+| C. Aislamiento de red (IP/mTLS por tienda) | El despliegue restringe el origen por establecimiento | No escala en el campus (redes compartidas) |
+
+**Mientras tanto:** la seguridad integral **no se declara cerrada**; el límite queda anotado en
+el dominio (`pedidos` exige `tiendaId` explícito) y en este registro.
+
+### 4. Barrido de secretos propio (CONTRATO §9, 12/10/2026)
+
+```bash
+git grep -nIE '(AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY|ghp_[A-Za-z0-9]{36}|xox[baprs]-|sk-[A-Za-z0-9]{20,}|(password|passwd|secret|token|api_?key)\s*[:=]\s*.{6,})' HEAD   # sin coincidencias en código (los .env.example declaran variables vacías)
+git ls-files | grep -E '(^|/)\.env$'        # sin salida
+git log --oneline -S'BEGIN PRIVATE KEY'     # 7a68487, e0542ce: solo el patrón de búsqueda documentado en evidencias, ninguna clave
+```
+
+Resultado: limpio en HEAD y sin claves privadas en el historial. La comprobación independiente
+del revisor sigue siendo la que cierra la fila de la matriz.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| ADR-0003/0010 reemplazados con contenido histórico intacto (solo cabecera anotada) | `git log --follow -- docs/adr/0003-*.md docs/adr/0010-*.md`: el commit de este cierre solo añade la línea de estado; ADR-0015 y ADR-0016 declaran los reemplazos |
+| División backend/frontend sin perder historial | `git log --follow -- backend/src/modules/pedidos/index.js` muestra los commits anteriores a la reestructuración |
+| Identidad de tenant declarada como plan, no como resuelta | Leer §3 de esta sección: la seguridad integral sigue sin declararse |
+
+---
+
+## Despliegue automático · CI/CD a Azure Container Apps (12/10/2026)
+
+El despliegue del backend era **manual** (Podman + push a ACR + `az containerapp update`,
+registrado en S8): producción corría la imagen `s8-2` del 27/09. Desde este cambio,
+`.github/workflows/deploy-backend.yml` despliega automáticamente:
+
+| Aspecto | Decisión |
+|---|---|
+| Disparo | Push a `master` que toque `backend/**` o el propio workflow; también `workflow_dispatch` manual |
+| Autenticación | OIDC federado (`id-token: write` + `AZURE_CLIENT_ID/TENANT_ID/SUBSCRIPTION_ID`): sin secretos de password en GitHub |
+| Build | `docker build` en el runner de GitHub con contexto `backend/` — **no ACR Tasks**, deshabilitados en Azure for Students (`TasksOperationsNotAllowed`, `docs/evidencia-despliegue-azure.md`) |
+| Etiqueta | `laplacitaacr.azurecr.io/laplacita-app:<SHA>` — tag inmutable por commit, nunca reutilizado (regla de ADR-0009) |
+| Publicación | `az containerapp update -n laplacita-app -g rg-laplacita --image <SHA>`: conserva los secretos/env del app (`DATABASE_URL` del Dokploy, `HOSTNAME`) |
+| Verificación | Health check con 12 reintentos contra `/api/v1/health`; el job falla si la revisión nueva no responde |
+| Concurrencia | Un despliegue a la vez (`concurrency` sin cancelación) |
+
+### Cómo verificar el despliegue
+
+1. Run verde en **Actions → Deploy backend** (run citable por hash de commit, CONTRATO §8).
+2. `curl https://laplacita-app.graymoss-fdd72159.canadacentral.azurecontainerapps.io/api/v1/health` → `{"status":"ok"}`.
+3. `az containerapp revision list -n laplacita-app -g rg-laplacita` → revisión activa con imagen tag `<SHA>`.
+
+### Requisitos previos (ajustes de una sola vez, fuera del repo)
+
+- Secrets de GitHub: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` + credencial
+  federada en el app registration para `repo:ISCOUTB/AS_202620_LaPlacita` (creados desde el
+  portal de Azure).
+- Permisos de la identidad: `Contributor` en `rg-laplacita` y `AcrPush` en `laplacitaacr`.
+- **Persistencia en producción:** el app solo conecta a PostgreSQL (Dokploy) si el firewall del
+  servidor universitario permite el puerto al tráfico de Azure. Mientras siga cerrado, el
+  despliegue funciona pero el app arranca en modo memoria (límite ya declarado en ADR-0014 y
+  evidencias-s10 §6 Fase D). El health check no depende de la base.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| El build ocurre en el runner (no ACR Tasks) y el tag es el SHA del commit | Log del run: paso «Build y push de la imagen» muestra `docker build -f backend/Dockerfile`; `az acr repository show-tags` lista el SHA |
+| El update conserva `DATABASE_URL` sin que el workflow lo conozca | El workflow no contiene la variable en ninguna línea; el app sigue conectado tras el despliegue (o en modo memoria con bitácora de fallos de escritura) |
+
+---
+
+## Entorno de pruebas · Dokploy (rama `dokploy-test`) (12/10/2026)
+
+El firewall de la universidad sigue bloqueando el puerto externo del PostgreSQL (Dokploy) hacia
+Azure, así que el despliegue de producción arranca en modo memoria (límite declarado en
+[ADR-0014](docs/adr/0014-base-de-datos-postgresql-dokploy.md) y evidencias-s10 §6 Fase D). Para
+probar la API contra una base de datos real **sin esperar el firewall**, el equipo habilitó un
+entorno de pruebas donde el backend corre **en el mismo servidor que la base**:
+
+| Aspecto | Decisión |
+|---|---|
+| Rama | `dokploy-test` (auxiliar; el estado calificado del curso sigue siendo `master`) |
+| Destino | Application de Dokploy en el mismo servidor/proyecto que el PostgreSQL |
+| Conexión BD | `DATABASE_URL` por la **red interna de Docker** (host interno, puerto 5432): sin firewall de por medio |
+| Pipeline | `.github/workflows/deploy-dokploy-test.yml`: gate de pruebas (`npm test` + `contract-test` con PostgreSQL) → webhook de redeploy → health check con reintentos |
+| URL del entorno | Secret `DOKPLOY_TEST_URL` (dominio sslip.io generado por Dokploy; va como secret porque incrusta la IP del servidor y el repo es público) |
+| Producción | Intacta: `deploy-backend.yml` sigue disparándose solo con `master` y despliega a Azure |
+
+### Límites declarados
+
+- Este entorno **no sustituye** la evidencia de despliegue del curso (Azure/master) ni el
+  experimento Fase D contra Azure: lo documenta como verificación intermedia de la persistencia
+  contra PostgreSQL real. El experimento contra producción queda pendiente del firewall.
+- Datos de prueba: misma API, datos sintéticos (`tienda-01`, `prod-001`); sin credenciales
+  reales en ningún secret de este flujo (el webhook va como secret de GitHub).
+
+### Cómo verificar
+
+1. Run verde de **Deploy dokploy-test** (gate → webhook → health).
+2. `curl <DOKPLOY_TEST_URL>/api/v1/health` → `{"status":"ok"}`.
+3. Experimento ESC-01 contra este entorno — **ejecutado el 12/10/2026** (detalle y horas en
+   [`docs/evidencias/evidencias-s10.md`](docs/evidencias/evidencias-s10.md) §6): la primera
+   pasada **reveló un defecto real** (colisión de ids y pérdida silenciosa de pedidos en la
+   ventana de arranque: las rutas de escritura no esperaban la rehidratación); corregido en
+   `105bb4b` con regresión en la prueba de contrato, y la segunda pasada dio
+   **3/3 supervivientes, 0 perdidos, cumple=true**.
+4. Flujos de la API contra BD real — **ejecutados el 12/10/2026**: pedido → pago → listo
+   (PIN de 4 dígitos) → entrega validada; reuso del PIN rechazado por estado `Entregado`
+   (protección A-06 activa). Notificaciones vacías en el flujo HTTP: deuda declarada V-05.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| El gate corre con PostgreSQL real antes de redesplegar | Log del run: job `test` con servicio postgres y 51 pruebas (no 50: las de persistencia corren) |
+| La URL del entorno no está versionada | `git grep -i sslip` sobre el repo → sin resultados; solo el secret la contiene |
+
+---
+
+## Documentación interactiva de la API · `/docs` (12/10/2026)
+
+El backend expone una UI estilo FastAPI para explorar y **probar** los endpoints desde el
+navegador (rama `dokploy-test`; sale en Azure al fusionarse a master):
+
+| Ruta | Qué sirve |
+|---|---|
+| `/docs` | Swagger UI 5 con Try it out (CDN, sin dependencias npm) |
+| `/api/v1/openapi` | El contrato OpenAPI 3.1 (`backend/openapi.yaml`) servido tal cual — única fuente, el mismo archivo que valida la prueba de contrato |
+| `/` | Redirect a `/docs` (antes 404) |
+
+Notas de implementación:
+
+- El `servers` del contrato es relativo (`/api/v1`): el Try it out apunta al host que sirve la
+  página — desarrollo, entorno test (`dokploy-test`) o Azure — sin configuración.
+- El Dockerfile copia `openapi.yaml` al standalone (`COPY --from=build`): el build de Next no
+  incluye archivos que nadie importa y la ruta lo lee con `fs` en runtime.
+- Impacto en las pruebas: nulo por diseño — el escaneo de rutas del contrato no mira `/docs`, y
+  `/api/v1/openapi` no importa módulos de dominio (pasa las aserciones S9 y ESC-01).
+- **No es el frontend**: herramienta de documentación y prueba del backend; `frontend/` sigue
+  reservado a la aplicación de usuario.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| `/api/v1/openapi` sirve el contrato real, no una copia | Modificar temporalmente una descripción en `backend/openapi.yaml`, `npm run dev` y ver el cambio en `/docs` sin tocar la ruta |
+| El Try it out no requiere CORS | Los requests salen del mismo origen que la página; `curl -s -o /dev/null -w '%{http_code}' <host>/docs` → 200 |
+
+---
+
+## Frontend PWA de usuario · rama `frontend-mvp` (12/10/2026, sin commit)
+
+Arranque de la aplicación de usuario con la división del monorepo: Next.js 16 + TypeScript +
+Tailwind + shadcn/ui + service worker propio, decisión registrada en
+[ADR-0017](docs/adr/0017-frontend-nextjs-pwa-shadcn.md) (propuesto). Flujo MVP verificado en
+local de punta a punta (catálogo → pedido → pago → listo con PIN → validación con rechazo de
+PIN errado) a través del patrón BFF.
+
+### Huecos del contrato v1 que el frontend expone (deuda declarada, no oculta)
+
+| # | Hueco | Consecuencia en la app | Vía de cierre |
+|---|---|---|---|
+| 1 | No existe `GET /catalogo/tiendas` | El selector usa los 5 ids canónicos del dominio | Nuevo endpoint + versión del contrato (decisión del equipo) |
+| 2 | El pedido es de UN producto (`productoId` + `cantidad`) | No hay carrito multi-item real | Extender el contrato a `items[]` (v2) |
+| 3 | El PIN no es legible por el usuario (ADR-0013, correcto por A-06) | El código de retiro de la app es el `pedidoId`; el PIN lo maneja el mostrador | Decisión de diseño: entrega del PIN al usuario (p. ej. en el pago) |
+
+### Defecto de backend revelado y corregido (entorno de desarrollo)
+
+**Turbopack en desarrollo compila los módulos por ruta:** el estado en memoria del monolito
+era inconsistente entre rutas (un pedido creado en `POST /pedidos` no aparecía en `GET
+/pedidos/{id}` ni en métricas; cada copia del módulo tenía su propio `Map`). Corregido anclando
+el estado del dominio a `globalThis` (`backend/src/estado-compartido.js`) — no-op en
+producción, cuyo grafo de módulos es único (verificado: el flujo completo funcionó en el
+despliegue `dokploy-test` antes de este fix). Suites: 51 tests + 28 contrato en verde.
+
+### Decisiones de implementación (detalle en ADR-0017)
+
+- Serwist descartado frente a Turbopack (Next 16): service worker propio sin dependencias,
+  con exclusión explícita de `/api/v1` (los estados del pedido son frescos por diseño).
+- CORS descartado (Turbopack dev no ejecuta `proxy.js`): patrón BFF con rewrites de `/api/v1`
+  en el frontend — el navegador nunca cruza orígenes.
+- CI: job `frontend` nuevo (lint + build de producción).
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| El estado del monolito es único por proceso también en dev | Crear un pedido por `POST /api/v1/pedidos` y leerlo inmediatamente por `GET /api/v1/pedidos/{id}` en el backend local: la lectura lo encuentra |
+| La PWA no cachea datos del pedido | `public/sw.js` excluye `/api/` explícitamente; el seguimiento siempre consulta la red |
+| El BFF mantiene un solo origen | El navegador solo ve `:3001`; ninguna llamada va a `:3000` (pestaña Network) |
+
+---
+
+## Frontend adopta el proyecto v0 · rama `frontend-mvp` (13/10/2026, sin commit)
+
+El equipo rechazó el MVP propio de frontend (visual deficiente) y trajo un proyecto generado con
+**v0.dev** (`frontend/landinepage/` → raíz de `frontend/`). La decisión y sus consecuencias están
+en [ADR-0017](docs/adr/0017-frontend-nextjs-pwa-shadcn.md) (propuesto). El MVP descartado quedó
+archivado en el commit WIP `157c9f3`.
+
+### Lo que se portó y lo que se limpió del proyecto v0
+
+| Acción | Detalle |
+|---|---|
+| Se conserva | Estética papel/tinta/rojo, landing, páginas de tienda con filtro, carrito con drawer agrupado por tienda, las 5 tiendas con nombres/ubicaciones/horarios reales del campus |
+| Se conecta al contrato | `lib/api.ts` (cliente tipado), catálogo real por `tiendaId`, checkout del carrito → un `POST /pedidos` por línea (contrato v1: un pedido por producto) |
+| Se elimina | `@vercel/analytics`, ~55 componentes `ui/` sin uso, theme-provider, mock de productos (`lib/products.ts`), `typescript.ignoreBuildErrors` (v0 lo traía desactivado), lock de pnpm (se usa npm) |
+| Pantallas nuevas (no existían en v0) | `/pedidos/[pedidoId]` (seguimiento con polling 3 s, código de retiro, historial) y `/mis-pedidos` (estado en vivo) — en el estilo papel/tinta de v0 |
+| PWA | manifest + service worker propio + `~offline` (requisito original: instalable en teléfonos) |
+
+### Huecos del contrato v1 que este frontend expone (deuda declarada)
+
+1. Sin `GET /catalogo/tiendas`: las tiendas son estáticas con mapeo slug↔`tiendaId`.
+2. Carrito multi-item ≠ un pedido: el checkout emite N pedidos (uno por producto). Unificarlos
+   exigiría extender el contrato a `items[]` (v2).
+3. El PIN no es legible por el usuario (ADR-0013, correcto por A-06): el código de retiro es el
+   `pedidoId`; la entrega del PIN al usuario es decisión de diseño pendiente.
+
+### Defecto de despliegue revelado: los rewrites se hornean en build
+
+El primer intento de BFF usó `rewrites()` de `next.config` con `BACKEND_URL` — al construir la
+imagen Docker el destino quedó **horneado con el valor del build** y el env del contenedor
+(`BACKEND_URL` interno de Dokploy) era ignorado: el proxy apuntaba al localhost de la propia
+imagen. Corregido con un route handler catch-all (`frontend/app/api/v1/[...path]/route.js`) que
+lee `BACKEND_URL` en runtime. Validado con Podman: contenedor con `BACKEND_URL` interno →
+landing 200, `sw.js` 200, `GET /api/v1/health` y catálogo real a través del BFF.
+
+### Despliegue del frontend en Dokploy (13/10/2026)
+
+El frontend está desplegado en `https://laplacita-app.iscoutb.dev` (mismo servidor que el
+backend de pruebas y la BD). Tres defectos en cadena durante el primer intento, todos
+corregidos:
+
+| # | Error | Corrección |
+|---|---|---|
+| 1 | `Github Provider not found` — el app apuntaba al proveedor GitHub sin integración | Proveedor Git genérico con la URL pública de clonado (el repo es público) |
+| 2 | `frontend/frontend/.env: Directory nonexistent` — ruta de build duplicada (raíz + Dockerfile path concatenados) | Una sola convención, espejo del backend de pruebas (Dockerfile path `frontend/Dockerfile`) |
+| 3 | Build falla en `npm run build`: `next/font/google` necesita fonts.gstatic.com, inalcanzable desde el servidor de la universidad | Fuentes auto-hospedadas (`app/fonts/`, `next/font/local`) — el build ya no depende de Google; verificado con Podman |
+
+Verificado post-deploy: landing 200, `/tiendas/[slug]` 200, mis-pedidos 200, `sw.js` 200,
+`manifest.webmanifest` 200 y el BFF respondiendo el catálogo real. Pendiente declarado: el fix
+del bucle del BFF (`dcf6422`) se pusheó después de ese deploy — requiere un Redeploy; y la URL
+del webhook de redeploy no aparece en Advanced (plan B: API de Dokploy con API key).
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| El checkout crea un pedido por línea y no pierde nada si una llamada falla | Carrito con 2 productos → "Hacer pedido" → 2 POSTs en la pestaña Network; forzar un error (backend caído) conserva el ítem en el carrito |
+| El catálogo es el del backend, no el mock | `git grep products.ts frontend/` → sin resultados; el menú cambia al editarlo en `backend/src/modules/catalogo/index.js` |
+| El fix `estado-compartido.js` sigue vigente con cualquier frontend | Crear pedido por POST y leerlo por GET en el backend local: la lectura lo encuentra |
+| El BFF lee `BACKEND_URL` en runtime (no horneado) | Levantar la imagen con `-e BACKEND_URL=<otra-url>` y ver el proxy apuntar allí sin recompilar |
+| El proxy se autodetecta si apunta a sí mismo | Dejar `BACKEND_URL` sin definir en el contenedor: `/api/v1/health` responde 502 "Bucle de proxy" en segundos, sin colgar |
+
+---
+
+## Retiro de Azure · todo el sistema en Dokploy (13/10/2026)
+
+Decisión del equipo: el **servidor del laboratorio de la universidad** pasa a ser el único
+despliegue. Registrada en [ADR-0018](docs/adr/0018-retiro-de-azure-despliegue-en-dokploy.md),
+que reemplaza al ADR-0009 (cabecera anotada, contenido histórico intacto).
+
+| Acción | Detalle |
+|---|---|
+| Eliminado | `.github/workflows/deploy-backend.yml` (despliegue a Azure Container Apps) y el workflow de rama `deploy-dokploy-test.yml` |
+| Nuevo | `.github/workflows/deploy-dokploy.yml`: push a `master` que toque `backend/**` → gate (pruebas con PostgreSQL + contrato) → webhook de Dokploy → health check |
+| URLs de producción | Backend `https://laplacita-test.iscoutb.dev` · PWA `https://laplacita-app.iscoutb.dev` (renombrar el dominio del backend es tarea cosmética opcional) |
+| C4 al día (fix D1 de la auditoría S10) | `docs/c4/contenedores.md` y `componentes.md`: PostgreSQL y App/Web Cliente pasan a **implementados** (pg/TCP, condicional a `DATABASE_URL`); Redis y Portal Establecimiento siguen planeados |
+| arc42 §7 | Vista de despliegue reescrita: Dokploy como único host, red interna con la BD, BFF de la PWA |
+| Pendiente S10 | El experimento "Fase D contra Azure" queda **sin objeto** (nota datada en `evidencias-s10.md` §6): ESC-01 está acreditado contra Dokploy (3/3), que es la producción desde esta decisión |
+
+**Ramas fusionadas a `master`:** `frontend-mvp` (7 commits: PWA v0, fixes de despliegue, docs,
+tutorial) y `dokploy-test` (catálogo de 5 tiendas). Todo lo desplegado y sustentado queda ahora
+en la rama calificada.
+
+**Panel Dokploy (tarea del equipo):** el app del backend debe pasar a observar la rama
+**`master`** (hasta entonces, el webhook redesplegaría la rama vieja). Opcional: el app de la PWA
+también puede pasarse a `master`. Los recursos de Azure y los secrets `AZURE_*` de GitHub quedan
+sin uso y pueden eliminarse.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| El firewall dejó de ser un factor | Backend y PostgreSQL en la misma red interna: `GET /api/v1/catalogo/...` desde la PWA funciona sin ningún puerto externo de BD |
+| ESC-01 acreditado contra la producción real | El experimento de `evidencias-s10.md` §6 (3/3) corrió contra Dokploy, no contra un entorno efímero |
+| C4 coincide con el código | `docs/c4/contenedores.md`: PostgreSQL implementado (ADR-0014) y protocolo TCP/pg, no REST |
+
+---
+
+## Cierre S11 · validación de propuestas y fix D2 (17/10/2026)
+
+La auditoría de deriva del cierre S10 (hallazgo D2, prioridad media) y la mitigación parcial de
+F-03 quedaron cerradas: **el orden de escrituras por pedido ahora está garantizado y probado**.
+
+| Acción | Detalle |
+|---|---|
+| Fix D2 | `backend/src/persistencia/cola-escrituras.js`: cola FIFO por clave `(tienda, pedido)` con instantánea inmutable congelada al encolar. Antes, cada UPSERT se disparaba inmediatamente y el pool podía solaparlos: la fila podía quedar con un estado atrasado **sin caída del proceso** (hallazgo D2 de la auditoría S10) |
+| Prueba pedida por el revisor | `backend/tests/cola-escrituras.test.js`: escritura lenta + escritura rápida sobre la misma clave — sin la cola, la rápida termina primero y el estado final guardado es el viejo (falla); con la cola, orden de mutación exacto. Más: claves distintas en paralelo, fallo de un eslabón no rompe la cola, instantánea congelada |
+| Aserción de integración | `tests/persistencia.test.js`: crear → confirmar → listo rápido → esperar escrituras → la fila final es `Listo` (la última mutación) |
+| Validación S11 | ADR-0019 (no extracción) pasa a **aceptado**; §11.6/§13 del arc42 marcadas como validadas por el equipo; F-03 con la mitigación de orden implementada y probada |
+| Suite | 55 pruebas + 28 de contrato en verde |
+
+**Deuda que sigue declarada (no implementada):** idempotencia de `POST /pedidos` (F-01/F-02),
+outbox (persistir antes del 201), circuit breaker (F-04), reintento del scanner (F-05). El
+límite fire-and-forget se conserva documentado.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| El orden de escrituras es estructural (cola FIFO), no un artefacto de timing | `tests/cola-escrituras.test.js`: escritura lenta (40 ms) + rápida sobre la misma clave — con la implementación vieja (paralela) la rápida ganaba y la fila quedaba vieja |
+| La instantánea se congela al encolar | El test 4 muta el objeto vivo después de encolar y la escritura persiste el estado anterior |
+| El fire-and-forget se conserva (la respuesta no espera la BD) | La ruta responde 201 sin `await` de la escritura; el orden lo garantiza la cola, no la espera |
+
+---
+
+## Cierre S11 · idempotencia y alineación documental (18/10/2026)
+
+Revisión de la entrega S11 (tabla de modos de fallo con mitigación, diseño de idempotencia o
+saga, ADR de extracción) contra el estado de `master` en `9b816f1`. Los tres entregables
+existían; se corrigieron inconsistencias y se cerró el único defecto demostrado (F-01/F-02).
+
+### Hallazgos propios y su cierre
+
+| # | Hallazgo | Cierre aplicado |
+|---|---|---|
+| 1 | arc42 §13.2 citaba «ADR-0017 (propuesto)»: tras la renumeración del 17/10 el 0017 es el ADR del frontend | Referencia a [ADR-0019](docs/adr/0019-no-extraccion-a-servicios.md) (aceptado) |
+| 2 | arc42 §11.6/§13 y `evidencias-s11.md` seguían rotulados «propuesta / pendiente de validación» pese a la validación del 17/10 | Rótulos al día; la propuesta fechada del 12/10 se conserva sin reescribir |
+| 3 | ADR-0019 aceptado conserva «Decisión (propuesta)» y menciones a Azure | **No se edita** (criterio ADR-0015): aclaración en arc42 §13.2 |
+| 4 | Duplicación de pedidos por reintento (F-01/F-02) demostrada el 12/10 y sin mitigar | `Idempotency-Key` en `POST /pedidos`: `crearPedidoIdempotente` (`backend/src/modules/pedidos/index.js`), ruta con `201` + `Idempotent-Replayed` y `409`, prueba `backend/tests/idempotencia.test.js` |
+| 5 | Diseño de idempotencia sin alcance, conflicto, concurrencia ni retención; afirmaba «contrato sin cambios» | `evidencias-s11.md` §3.1 completo; cabecera opcional y `409` declarados en `backend/openapi.yaml` (cambio compatible con v1) |
+| 6 | `evidencias-s11.md` con dos secciones «## 7» | La actualización del 17/10 pasa a §8; nueva §9 con la evidencia del 18/10 |
+| 7 | README sin bloque de estado S11 | Bloque «Semana 11» añadido |
+| 8 | `docs/ia.md`: línea en blanco que cortaba la tabla y fila del 17/10 fuera de la bitácora (§3) | Tabla continua; fila del 17/10 reubicada en §1 y fila del 18/10 añadida |
+
+Suites tras el cambio (local, sin `DATABASE_URL`): `npm test` 61 pruebas (59 pasan, 2
+omitidas que requieren PostgreSQL) y `npm run contract-test` 28/28.
+
+**Deuda que sigue declarada:** persistencia de las claves de idempotencia, envío de la cabecera
+desde la PWA, outbox (F-03), circuit breaker (F-04), reintento del scanner (F-05) y medición de
+latencia p95 con reintentos.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| La prueba de idempotencia falla sin la mitigación | Hacer que `crearPedidoIdempotente` devuelva siempre `crearPedido(datos)` y correr `node --test tests/idempotencia.test.js`: 2/4 en rojo (`pedido-1` vs `pedido-2`); evidencia en `evidencias-s11.md` §9 |
+| El contrato v1 sigue siendo compatible | `POST /api/v1/pedidos` sin cabecera crea un pedido nuevo en cada llamada, como antes (prueba «sin clave se conserva el comportamiento v1») |
+| La confirmación de pago no necesita idempotencia | Confirmar dos veces el mismo pedido: la segunda responde 400 (`Transición inválida`), sin duplicar efectos |
+| El ADR-0019 aceptado no se reeditó | `git log --follow -- docs/adr/0019-no-extraccion-a-servicios.md`: sin commits del 18/10 |
+
+### Actualización (18/10/2026) — SonarCloud: PIN generado con CSPRNG
+
+Quality Gate en **OK** sobre `01c62f5` (código nuevo: cobertura 94 %, 0 bugs, 0 code smells,
+duplicación 0 %, hotspots revisados 100 %). Quedaba un issue abierto desde el 30/08:
+`javascript:S2245` (vulnerabilidad MAJOR) — el PIN del mostrador, credencial de A-06, se generaba
+con `Math.random` (predecible). `backend/src/modules/entrega/index.js` usa ahora
+`crypto.randomInt(1000, 10000)`: mismo rango, sin dependencias nuevas. Suites: 61 pruebas (2
+omitidas sin base de datos) y 28/28 de contrato.
+
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| El PIN sale de un generador criptográfico | `git grep -n "Math.random" backend/src` → sin resultados; en SonarCloud el proyecto queda con 0 vulnerabilidades tras el análisis |
+
+### Actualización (18/10/2026) — producción en `master` y ADR pendientes aceptados
+
+**Dokploy observa `master`.** La tarea del equipo anotada en «Retiro de Azure» queda hecha: las
+apps del backend y de la PWA en Dokploy pasaron de las ramas `dokploy-test` / `frontend-mvp` a
+`master`. Antes del cambio, el workflow `deploy-dokploy.yml` terminaba en verde pero el webhook
+reconstruía la rama vieja: el contrato servido en producción no traía `Idempotency-Key` tras dos
+despliegues (el health check del workflow solo mira `/health` y no lo detecta). Verificado tras
+el cambio: `GET /api/v1/openapi` en `laplacita-test.iscoutb.dev` incluye `Idempotency-Key` y la
+respuesta `409`; `/health`, `/docs` y el catálogo en 200; la PWA (`/`, tienda, mis-pedidos,
+`sw.js`, manifest) en 200 y su BFF responde `/api/v1/health`.
+
+**ADR-0015 y ADR-0017 aceptados por el equipo.** Seguían en «propuesto». Pasar de propuesto a
+aceptado es el ciclo normal del ADR, no una edición post-aceptación: solo cambian las líneas
+`Estado` y `Decide`; contexto, alternativas y decisión quedan intactos. Referencias vivas
+alineadas: tabla de ADR del arc42 (ADR-0015 → Aceptado; ADR-0017 ya figuraba aceptado y el ADR
+decía propuesto), `README.md`, `frontend/README.md` y `docs/c4/contenedores.md` (ya no cita la
+rama `frontend-mvp`). Las secciones fechadas de este archivo que dicen «propuesto» se conservan
+como registro de su fecha.
+
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Producción construye `master`, no la rama vieja | `curl -s https://laplacita-test.iscoutb.dev/api/v1/openapi \| grep -c Idempotency-Key` → mayor que 0 |
+| La aceptación no reescribió los ADR | `git diff` del commit: en ADR-0015 y ADR-0017 solo cambian las líneas `Estado` y `Decide` |
+
+---
+
+## Frontend · fase 1: identidad visual UTB (18/10/2026)
+
+Primera fase del plan S12–S15 (Miguel, Front): la PWA deja la estética de la plantilla v0
+(papel, tinta y rojo) y adopta la **identidad actual de la UTB**. Solo toca `frontend/`; el
+contrato y el backend no cambian.
+
+| Cambio | Detalle |
+|---|---|
+| Marca | Colores de la marca renovada en sept. 2023 (estilos de utb.edu.co): azul `#093AD8`, azul noche `#15295A`, violeta `#3B0DC1`, celeste `#6EC1E4`. El manual de 2021 (verde y morado) ya no es la cara pública. Sin logo oficial de la UTB (requiere permiso de Comunicaciones) |
+| Tipografía | DM Sans (títulos) y Rubik (texto), las del sitio de la UTB, **auto-hospedadas** en `frontend/app/fonts/` por el mismo motivo del defecto del 13/10 (el build en Dokploy no alcanza Google) |
+| Sistema visual | Tokens en `frontend/app/globals.css` sobre Tailwind (reemplazan 1.816 líneas de CSS de v0); componentes base en `frontend/components/utb/`; cada estado del pedido con su color y su palabra |
+| Pantallas | Inicio con saludo y tiendas abiertas primero (hora de Colombia, `lib/stores.ts`), nueva ruta `/tiendas`, menú con agotados al final, carrito, seguimiento con línea de tiempo y mis pedidos. Patrones de la UTB App: degradado azul, tarjetas redondeadas y barra inferior en el celular |
+| PWA | Íconos y manifest nuevos; caché del service worker a `laplacita-v5` para que los íconos viejos no queden guardados |
+| Limpieza | Se retiraron componentes, imágenes, íconos y fuentes de v0 sin uso |
+
+Verificado en local: lint y build sin errores; recorrido completo en celular y escritorio contra
+el backend local (crear pedido, avanzarlo a Listo y seguirlo), sin desborde horizontal.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Las fuentes no dependen de Google en el build | `grep -r "next/font/google" frontend/` → sin resultados; `frontend/app/layout.tsx` usa `next/font/local` |
+| «Abierta/Cerrada» usa la hora de Colombia, no la del dispositivo | `estaAbierta` en `frontend/lib/stores.ts` calcula con `timeZone: "America/Bogota"` |
+| El PIN no se muestra todavía | Llega con la fase 2 (endpoint autenticado, S13); hoy el seguimiento muestra el código de retiro |
+
+---
+
+## Código corto de pedido · A01 … Z99 (18/10/2026)
+
+Pedido del docente: los pedidos deben poder nombrarse de forma corta para el mostrador, no como
+`pedido-347`. Decisión en [ADR-0020](docs/adr/0020-codigo-corto-de-pedido.md).
+
+| Cambio | Detalle |
+|---|---|
+| Regla | Campo nuevo `codigo`: letra + dos dígitos (A01 → A99 → B01 … Z99), sin I ni O; por tienda; se reinicia cada día en hora de Colombia; nunca repite el código de un pedido no entregado. El `pedidoId` no cambia |
+| Backend | `backend/src/modules/pedidos/codigo.js` (reglas puras) y asignación en `crearPedido`; rehidratación del cursor para que un reinicio a mitad del día no vuelva a A01 |
+| Base de datos | Columnas `codigo` y `creado_en` con `ADD COLUMN IF NOT EXISTS`: la tabla de Dokploy se migra sola al arrancar, sin perder filas (las viejas quedan con NULL) |
+| Contrato | `codigo` y `creadoEn` en el schema `Pedido` (cambio compatible) |
+| Frontend | El seguimiento muestra el código en grande («Tu pedido A07») y Mis pedidos lo muestra como etiqueta; pedidos viejos muestran su `pedidoId` |
+
+**Defecto encontrado y corregido durante la prueba con PostgreSQL local.** La prueba nueva
+reiniciaba el estado en memoria y creaba pedidos con la base activa: en CI, donde todos los
+archivos de prueba comparten la misma base, eso pisaba filas de `persistencia.test.js`. La
+prueba ahora desactiva la persistencia en su propio proceso. Además, el UPSERT conservaba el
+código viejo con `COALESCE` cuando un `pedidoId` se reutilizaba; ahora guarda siempre el del
+pedido actual, igual que el resto de las columnas.
+
+Suites: `npm test` 71 pruebas (70 con PostgreSQL local; 2 omitidas sin base) y
+`npm run contract-test` 28/28. Migración probada sobre una tabla con el esquema anterior y una
+fila vieja: la fila se conserva y los pedidos nuevos reciben A01, A02…
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| La migración no borra pedidos existentes | Arrancar el backend contra una tabla con el esquema anterior: las filas viejas siguen y tienen `codigo` NULL |
+| El código no se repite entre pedidos activos de una tienda | `tests/codigo-pedido.test.js`: «salta los códigos de pedidos que aún no se entregan» |
+| El día se cuenta en hora de Colombia | `tests/codigo-pedido.test.js`: 04:59 UTC del 19/10 todavía es 18/10 |
+
+---
+
+## Login y PIN visible para su dueño (18/10/2026)
+
+Cierra el pendiente de seguridad declarado en «Post-cierre S10 §3» (identidad, opción B: JWT)
+para el lado del cliente, y hace real el flujo «dicta tu PIN en el mostrador». Decisiones en
+[ADR-0021](docs/adr/0021-identidad-cuentas-y-sesion-jwt.md) y
+[ADR-0022](docs/adr/0022-pin-visible-para-su-dueno.md).
+
+| Cambio | Detalle |
+|---|---|
+| Cuentas | Módulo `identidad` y tabla `usuarios`: registro con correo @utb.edu.co, contraseñas con scrypt, sesión JWT HS256 de 7 días, 5 intentos fallidos en 15 min bloquean, mismo mensaje y mismo tiempo para correo inexistente o contraseña errada. Sin dependencias nuevas (`node:crypto`) |
+| API | `POST /auth/registro`, `POST /auth/sesion`, `GET /auth/yo`, `GET /pedidos` (pedidos de la cuenta) y `GET /pedidos/{pedidoId}/pin` (solo el dueño, solo en Listo). Con sesión, `POST /pedidos` toma al dueño del token |
+| Frontend | Página `/cuenta` (ingresar, crear cuenta, perfil), pestaña «Cuenta» en la barra, el carrito exige sesión, Mis pedidos de la cuenta y tarjeta «Tu PIN de retiro» en el seguimiento |
+| Seguridad del navegador | Token en cookie httpOnly que maneja el BFF (`/api/sesion`); el proxy la traduce a `Authorization: Bearer`, no reenvía cookies y no deja pasar las rutas que devuelven el token |
+| Contrato | Rutas nuevas, esquema de seguridad `sesion` (Bearer JWT) y esquemas `Usuario`, `Sesion`, `PinPedido`. Las aserciones S9 siguen en verde: la vista pública del pedido no tiene PIN |
+
+**Configuración requerida en Dokploy (backend):** variable `JWT_SECRET` con al menos 32
+caracteres aleatorios. Sin ella, en producción el inicio de sesión responde error a propósito
+(no se firma con un secreto adivinable).
+
+Verificado: `npm test` 80 pruebas (79 con PostgreSQL 18 local) y `npm run contract-test` 28/28;
+lint y build del frontend; recorrido completo en local (crear cuenta → pedir → Listo → PIN en
+pantalla → validar ese PIN en el mostrador → Entregado, y el PIN desaparece). Pruebas
+negativas por HTTP: otra cuenta (404), sin sesión (401), token falso (401), lectura pública
+sin PIN, correo de otro dominio rechazado y `document.cookie` vacío en el navegador.
+
+**Pendiente declarado:** las rutas de tienda (confirmar pago, marcar listo, validar PIN) aún no
+exigen sesión, y `POST /entrega/{id}/listo` todavía devuelve el PIN al mostrador; ambas cosas
+se cierran con el panel de tiendas (S14). Sin recuperación de contraseña (requiere correo).
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| El navegador nunca ve el token | Con sesión iniciada, en la consola del navegador `document.cookie` no muestra `lp_sesion` (es httpOnly) |
+| Otra cuenta no puede ver un PIN ajeno | Con otra cuenta, `GET /api/v1/pedidos/{id}/pin?tiendaId=…` responde 404 |
+| La base nunca guarda contraseñas | `SELECT hash FROM usuarios` → solo valores `scrypt$16384$…` |
+| No se puede adivinar qué correos tienen cuenta | Correo inexistente y contraseña errada devuelven el mismo mensaje 401 |
+
+
+### Actualización (18/10/2026) — defecto del registro sin JWT_SECRET
+
+En el primer despliegue, `JWT_SECRET` quedó en *Build-time Secrets* de Dokploy (solo existe
+durante el build) y no en las variables de entorno de ejecución. El registro guardaba la cuenta,
+fallaba al firmar el token y el reintento respondía «Ya existe una cuenta con ese correo». Ahora
+la sesión se firma **antes** de guardar: sin secreto, la cuenta no queda creada a medias. Prueba
+nueva en `backend/tests/identidad.test.js` («sin JWT_SECRET en producción el registro falla sin
+dejar la cuenta creada»). La variable va en **Environment** de la app del backend.
+
+---
+
+## Panel de tienda (18/10/2026)
+
+El «Portal Establecimiento», planeado desde el corte 1 en el C4, queda implementado como la
+ruta `/panel` de la misma app web. Decisión en [ADR-0023](docs/adr/0023-panel-de-tienda.md).
+
+| Cambio | Detalle |
+|---|---|
+| Cuentas de tienda | Roles `trabajador` y `admin` ligados a un `tiendaId`; se declaran en la variable `CUENTAS_TIENDA` (secreto de Dokploy) y se crean al arrancar si no existen. Sin registro abierto |
+| Identidad de la tienda | Las rutas `/tienda/*` toman la tienda **del token**, no de la petición: una cuenta no puede operar otra tienda (cierre de ESC-02 para el panel; pendiente de identidad del corte 3) |
+| Pedidos en vivo | `GET /tienda/pedidos` (cola en orden de llegada, sin PIN, con el primer nombre del cliente), `POST …/pago`, `…/listo` (ya **no** devuelve el PIN) y `…/entrega` con el PIN que dicta el cliente |
+| Menú editable | Catálogo en la tabla `productos` (sembrada con el menú del código); el Map en memoria es su caché con invalidación write-through. Agotado: cualquier cuenta; precio: solo admin (403 al trabajador) |
+| Resumen del día | Pedidos de hoy por estado; ventas solo para el admin |
+| Frontend | `/panel`: ingreso del personal, columnas Por pagar / En preparación / Listos, aviso sonoro opcional para pedidos nuevos, entregados de hoy, pestañas Menú y Resumen del día |
+| Rutas v1 de tienda | `/pagos/…/confirmar`, `/entrega/…/listo` y `/entrega/…/validar` siguen sin sesión por compatibilidad (mediciones S9, `/docs`) y quedan marcadas `deprecated` en el contrato: retirarlas es una mitigación para S13 |
+
+**Configuración en Dokploy (backend):** variable `CUENTAS_TIENDA` con al menos un admin por
+tienda (formato en `backend/.env.example`). Requiere también `JWT_SECRET`.
+
+Verificado: `npm test` 89 pruebas (88 con PostgreSQL 18 local) y contrato 28/28; lint y build
+del frontend; recorrido en local: un cliente pide (A21), el trabajador lo ve en «Por pagar»,
+confirma el pago, lo marca listo, un PIN equivocado muestra «PIN incorrecto» y el PIN que el
+cliente ve en su app lo entrega. Por HTTP: el cliente recibe 403 en el panel, el trabajador 403
+al cambiar un precio, una tienda 404 al editar un producto de otra, y las ventas solo las ve el
+admin.
+
+**Pendiente declarado:** gestión del equipo desde el panel (hoy las cuentas se declaran en la
+variable de entorno); tiempo promedio de preparación (requiere guardar la hora de cada
+transición); las rutas v1 de tienda sin sesión.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| El panel nunca recibe el PIN | `POST /api/v1/tienda/pedidos/{id}/listo` responde sin campo `pin`; el PIN solo lo ve el cliente en su app |
+| La tienda sale del token | Con la cuenta de El Mesón, `PATCH /api/v1/tienda/productos/prod-003` (de El Asa'o) responde 404 |
+| El menú editado sobrevive al reinicio | `tests/persistencia.test.js`: «un cambio de menú del panel sobrevive al reinicio» |
+
+
+---
+
+## Evidencia S12 — Estrategia de datos y eventos (22/10/2026)
+
+Documento [evidencias-s12](docs/evidencias/evidencias-s12.md) y
+[ADR-0024](docs/adr/0024-identidad-del-pedido.md), pendientes de validación del equipo. Sin
+cambios de código.
+
+| Cambio | Detalle |
+|---|---|
+| Tabla operación → garantía | 14 operaciones reales (O-01…O-14) con garantía, qué pasa si el dato llega tarde y dónde se cumple en el código |
+| Caché | Catálogo: write-through con invalidación por escritura, sin TTL, válida con un proceso. Pedidos: la memoria es una caché write-behind de PostgreSQL. `/api` nunca se cachea |
+| ADR-0024 | La identidad del pedido (`tiendaId`, `pedido-N`) es la decisión de datos más costosa de revertir: salió del sistema (URLs, contrato, `localStorage` de los celulares). Se compara con ADR-0014 y con el motor |
+| C4 nivel 2 | Se retira el contenedor Redis planeado; PostgreSQL con sus tres tablas y el tipo de escritura; se declara que no hay broker. Componentes: catálogo → PostgreSQL write-through |
+| arc42 | §8.4 Consistencia por operación, §8.5 Caché y fila de ADR-0024 en §9 |
+
+**Hallazgos de la evidencia:** un `pedidoId` podía reutilizarse si el proceso caía entre crear
+el pedido y guardarlo; los ids consecutivos permitían recorrer la vista pública (estado, total y
+`clienteId`). Ambos se corrigieron el mismo día (sección siguiente).
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Cada fila de la tabla corresponde a código real | Abrir la ruta o función citada en la columna «Cómo se cumple» de evidencias-s12 §2 |
+| El C4 ya no promete Redis | `docs/c4/contenedores.md` y `docs/c4/componentes.md` no tienen el nodo Redis; el estado lo explica |
+| El costo de reversión está argumentado, no solo afirmado | ADR-0024, tabla «Candidatas comparadas»: qué haría falta para revertir cada decisión y qué queda fuera de nuestro control |
+
+---
+
+## Taller S12 y corrección de los hallazgos (22/10/2026)
+
+Taller en [taller-s12-mensajes](docs/evidencias/taller-s12-mensajes.md). Decisiones en
+[ADR-0025](docs/adr/0025-token-de-seguimiento-del-pedido.md) y
+[ADR-0026](docs/adr/0026-escrituras-at-least-once-y-creacion-confirmada.md), pendientes de
+validación del equipo.
+
+| Cambio | Detalle |
+|---|---|
+| Escrituras como mensajes (Taller) | `persistencia/despachador.js`: contrato `pedido.instantanea` v1, entrega at-least-once con 4 intentos y backoff exponencial, orden por pedido, cola de fallidos en memoria que se reprocesa cuando la base vuelve, trazas con `mensajeId` y `correlacion` |
+| Consumidor idempotente | Columna `pedidos.secuencia`: el UPSERT solo aplica si la secuencia es mayor; duplicados y mensajes viejos se descartan |
+| Métricas | `escriturasReintentadas`, `escriturasDescartadas`, `escriturasFallidas` y `escriturasEnColaDeFallidos` en `GET /metricas` |
+| Creación confirmada (hallazgo 1) | `POST /pedidos` espera a PostgreSQL; si no confirma, retira el pedido y responde 503 con `Retry-After` (`src/http/crear-pedido.js`) |
+| Token de seguimiento (hallazgo 2) | `POST /pedidos` devuelve `seguimiento` (128 bits); `GET /pedidos/{id}` y `GET /notificaciones/{id}` lo exigen salvo al dueño con sesión; 404 igual que un id inexistente. Columna `pedidos.seguimiento` |
+| Frontend | Guarda el token con el pedido local y lo envía en el seguimiento y en «Mis pedidos» |
+| Contrato | Esquema `PedidoCreado`, parámetro `seguimiento`, respuestas 404 y 503, campos nuevos de métricas |
+| Scripts de medición | `medir-exposicion-pin.js` y `medir-persistencia.js` envían el token (las evidencias fechadas no se reescriben) |
+| Defecto de paso | `cola-escrituras.js` nunca liberaba la clave al terminar (comparaba con otra promesa); ahora se libera sola |
+| Defecto de paso | La ruta v1 `POST /entrega/{id}/listo` devolvía la instantánea completa: se le quita el token |
+
+Verificado:
+- `npm test` con PostgreSQL 18 local: 112 pruebas, 111 en verde y 1 omitida. Sin base: 106 en
+  verde y 6 omitidas.
+- Contrato: 28/28.
+- `npm run build` del backend; `npm run lint` y `npm run build` del frontend.
+- Recorrido HTTP local:
+  - Sin token, 404; con el token, 200 sin `seguimiento` ni `pin`.
+  - Al recorrer 30 ids sin token, ninguno fue visible.
+  - Con la base detenida, crear respondió 503 en 767 ms.
+  - Un pago hecho con la base caída pasó a la DLQ y se aplicó al volver la base (traza en el
+    documento del taller).
+- `medir-exposicion-pin.js --url`: 0/100 lecturas con PIN y 0/100 lecturas sin respuesta 200.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| La DLQ se vacía cuando la base vuelve | Detener PostgreSQL, confirmar un pago, encender la base, crear otro pedido: `GET /metricas` muestra `escriturasEnColaDeFallidos: 0` y la fila queda en «En preparación» |
+| Crear con la base caída no deja un id huérfano | Con la base detenida, `POST /pedidos` responde 503 y `GET /pedidos/{id}` de ese id responde 404 |
+| El token solo se entrega una vez | Solo la respuesta de `POST /pedidos` trae `seguimiento`; la vista pública, el panel y la ruta v1 `…/listo` no |
+| Tras desplegar, los pedidos sin cuenta anteriores al token pierden el seguimiento | Esperado (ADR-0025): solo su dueño con sesión los ve |
+
+---
+
+## Dependencias y SonarCloud (22/10/2026)
+
+Revisión de las 73 alertas de **Dependabot** del repositorio (el *code scanning* no tiene
+alertas abiertas) y de los 7 avisos abiertos de **SonarCloud** (Quality Gate en verde).
+
+| Cambio | Detalle |
+|---|---|
+| Frontend `next` 16.0.10 → **16.4.2** | Cierra las alertas críticas y altas de `next`, `sharp` y `postcss` en `frontend/package-lock.json`. `eslint-config-next` alineado a 16.4.2 |
+| Sonar S8786 (confiabilidad) | La regex del correo podía retroceder en tiempo super-lineal; ahora `esCorreo()` valida lo mismo en un solo recorrido |
+| Sonar S9382 (×3) | `await` dentro de ciclos: los reintentos del despachador son recursivos; las cuentas de tienda se aseguran en paralelo con `Promise.all` (la comprobación síncrona de cada una evita duplicados igual que antes) |
+| Sonar S7785 | Arranque sin base: `await asegurarCuentasTienda()` de nivel superior en vez de `void` |
+| Sonar S7747 y S6582 | `Promise.allSettled(enVuelo)` sin copiar a un arreglo; `cursor?.fecha` |
+
+**Pendiente, a propósito:**
+- **Backend `next` 14.2.35:** sus alertas solo se cierran con Next 16, un salto de versión mayor
+  (las rutas reciben `params` asíncrono, React 19). Se hará en una rama aparte con todas las
+  pruebas antes de llegar a `master`. Las alertas críticas no aplican al backend: la ejecución
+  remota es para servidores Windows o para la optimización de imágenes, que no se usa; los demás
+  fallos necesitan *rewrites* o *middleware*, que el backend no tiene.
+- **`braces` → `micromatch` → `fast-glob` → `eslint-config-next` (5 altas):** no existe versión
+  corregida. Solo se usa al revisar el código y no llega a producción. Se descartan en GitHub con
+  el motivo «riesgo tolerable».
+
+Verificado:
+- `npm test` del backend con PostgreSQL 18 local (111 en verde, 1 omitida) y sin base (106 en
+  verde, 6 omitidas); contrato 28/28; `npm run build` del backend.
+- Frontend: `npm run lint` y `npm run build` con Next 16.4.2; `npm audit` solo deja la cadena de
+  `braces`.
+- El frontend construido, contra la API de producción: portada, tiendas, El Mesón, mis pedidos,
+  panel, seguimiento y el proxy `/api/v1` responden 200.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Las alertas de Dependabot del frontend se cierran | Tras el push, GitHub vuelve a analizar el lockfile; las alertas de `next`, `sharp` y `postcss` del frontend pasan a cerradas |
+| Las alertas de `braces` siguen abiertas hasta descartarlas | En GitHub → Security → Dependabot, descartarlas con «Risk is tolerable» y el motivo |
+
+---
+
+## Backend en Next 16 (22/10/2026, rama `chore/next-16-backend`)
+
+Cierra las alertas de Dependabot de `backend/package-lock.json` y el riesgo **R-5** declarado en
+S8 (`docs/semana-08.md`: «migración programada tras S8, con revalidación del contrato y del
+`output: standalone`»). Se hace en una rama para que producción no cambie hasta probarlo.
+
+| Cambio | Detalle |
+|---|---|
+| Dependencias | `next` 14.2.35 → **16.4.2**, `react` y `react-dom` 18 → **19.2.0** (las mismas versiones del frontend). `npm audit` del backend: **0 vulnerabilidades** |
+| Rutas | En Next 15+ el segundo argumento trae `params` como promesa. Las 7 rutas que leían `params.x` ahora hacen `const { x } = await params` al empezar; las otras 5 ya lo hacían |
+| `next.config.mjs` | `experimental.serverComponentsExternalPackages` → `serverExternalPackages` (`pg` sigue fuera del bundle) |
+| Sin cambios | Contrato, dominio, Dockerfile (Node 22 cumple el mínimo de Next 16) y CI |
+
+Verificado en local:
+- `npm test` con PostgreSQL 18: 111 en verde y 1 omitida. Sin base: 106 en verde y 6 omitidas.
+  Contrato: 28/28.
+- `npm run build` con Turbopack sin advertencias; el *standalone* incluye `pg`.
+- Recorrido HTTP del **build de producción** (`node .next/standalone/server.js`) por las rutas
+  del contrato: **37/37** como se esperaba. Incluye pedido sin cuenta con idempotencia, token de
+  seguimiento, flujo v1 de pago, listo y PIN, registro y sesión, pedido con cuenta y PIN del
+  dueño, y el panel completo (pago, listo sin PIN, entrega, agotado, otra tienda 404, resumen).
+- Reinicio del servidor: el pedido vuelve de la base con su token y el siguiente id continúa.
+- No se construyó la imagen Docker en local (no hay Docker instalado). La construye el
+  despliegue de Dokploy.
+
+**Antes de unir a `master`:** que el CI de la rama pase (incluye las pruebas con PostgreSQL y
+SonarCloud). Al unir, Dokploy redespliega el backend solo.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Las rutas con parámetro leen bien el id en Next 16 | `GET /api/v1/catalogo/productos/prod-001?tiendaId=tienda-01` responde el producto (con `params` sin `await` respondería 404) |
+| Las alertas del backend se cierran | Tras unir a `master`, GitHub → Security → Dependabot ya no lista alertas de `backend/package-lock.json` |
+
+
+---
+
+## Cierre de la validación S12 y verificación de despliegue (24/10/2026)
+
+Tres pendientes declarados el 22/10 quedaron cerrados el 24/10, además de la convención de
+registro de prompts en `docs/ia.md` (§2 Políticas).
+
+| # | Pendiente | Resultado | Verificación |
+|---|---|---|---|
+| 1 | Validación del equipo de la entrega S12 (ADR-0024/0025/0026 en propuesto; evidencias y taller «pendiente de revisión») | Los tres ADR pasan a **aceptado** (solo la línea de estado, criterio ADR-0015); `evidencias-s12.md` y `taller-s12-mensajes.md` validados por el equipo; tabla §9 del arc42 y bitácora alineadas | Lectura de cada fila de la evidencia contra el código antes de aceptar; las entradas de la bitácora del 22/10 quedan marcadas validadas con fecha |
+| 2 | Quality Gate de SonarCloud inaccesible (la revisión del 19/10 reporta HTTP 403) | **No se reproduce**: el proyecto responde en público sin sesión — `api/components/show` y `api/qualitygates/project_status` devuelven 200 anónimos con el gate en OK | `curl https://sonarcloud.io/api/qualitygates/project_status?projectKey=ISCOUTB_AS_202620_LaPlacita` (sin credenciales); si el revisor vuelve a ver 403, revisar su red/VPN antes de suponer projecto privado |
+| 3 | Dominios públicos caídos a través de Cloudflare (hallazgo del 23/10: 000 vía proxy, 200 directo al origen) | **Resuelto**: `laplacita-test` y `laplacita-app` responden 200 vía Cloudflare; el 307 de `/` del backend es el redirect esperado a `/docs` | `curl -w '%{http_code}' https://laplacita-test.iscoutb.dev/api/v1/health` → 200 `{"status":"ok"}`; PWA 200 y BFF sirviendo catálogo real |
+
+### Recorrido HTTP del flujo S12 sobre el despliegue (24/10)
+
+Prueba en Dokploy declarada como pendiente el 22/10, ejecutada el 24/10 contra
+`https://laplacita-test.iscoutb.dev` (rama `master`, despliegue del PR #15). Pedidos de prueba
+etiquetados con `clienteId: prueba-s12*` y una cuenta `prueba.s12.2410@utb.edu.co` creada
+única y exclusivamente para esta verificación (documentar que queda registrada).
+
+| Paso | Operación (evidencia) | Resultado |
+|---|---|---|
+| 1 | Creación confirmada por la base (O-01, ADR-0026) | `POST /pedidos` → **201**, `codigo: A02` (código corto asignado) |
+| 2 | Idempotencia de creación (S11, fila 18/10) | Replay con la misma `Idempotency-Key` → **mismo `pedidoId`** y cabecera `Idempotent-Replayed: true` |
+| 3 | Creación del dueño con sesión (ADR-0021) | Registro 201 (sesión incluida); pedido con `clienteId = usuario` y código `A03` |
+| 4 | Lectura pública solo con llave (ADR-0025) | Sin `seguimiento` → **404** (respuesta uniforme que no revela existencias); con `seguimiento` → 200 con código corto y sin `pin` |
+| 5 | Pago → Listo | `POST /pagos/{id}/confirmar` 200; `POST /entrega/{id}/listo` 200 |
+| 6 | PIN solo para su dueño (ADR-0022) | `GET /pedidos/{id}/pin` con sesión → **200, PIN entregado al dueño**; el mismo endpoint sobre un pedido ajeno → **404** (mismo código que inexistente) |
+| 7 | Entrega: PIN errado y correcto | Errado → 400 contado; correcto → **200, estado `Entregado`**; revalidar el PIN consumido → 400 |
+| 8 | Notificaciones con seguimiento (O-14) | `GET /notificaciones/{id}?seguimiento=…` → `[]`: la lista se alimenta de `POST /notificaciones` y del script de demo, no de la ruta v1 de flujo — comportamiento esperado, no defecto |
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Los tres ADR S12 pasaron a aceptados ⚠️ el mismo día — pero **requieren lectura formal de cada integrante** antes de medianoche del domingo | Reunión del equipo: revisar `docs/adr/0024/0025/0026` + `evidencias-s12.md`; la lectura consta en esta bitácora solo como verificación técnica del 24/10 |
+| El 403 de SonarCloud en la revisión del 19/10 no era del proyecto privado | `curl` anónimo a la API del gate (tabla superior); pedir al revisor repetir desde su red |
+| La caída de Cloudflare del 23/10 no fue del código | Los dominios responden hoy sin cambios en el repo: ping comparado vía proxy vs origin directo |
+
+---
+
+## Imágenes del catálogo con Garage S3 (25/10/2026 · material de S13)
+
+El equipo pidió foto para los productos y decidió que los bytes de imagen
+NO viven en PostgreSQL (no bytea): se adopta **Garage S3** auto-hospedado en
+Dokploy, **sin exposición pública** — el plan se describe en [ADR-0028](docs/adr/0028-almacen-imagenes-garage-dokploy.md)
+creado para este requisito. La lección práctica del intento de MinIO: el
+dolor de SSL aparece al expone el almacén; con el backend como única puerta
+pública vía /api/v1, el almacén vive en la red interna por HTTP plano.
+
+| Pieza | Detalle |
+|---|---|
+| Módulo `almacen` | Dueño único de los bytes (regla de propiedad de datos). Cliente S3 SigV4 con `node:crypto` (sin dependencias — criterio ADR-0021). Modo memoria declarado sin `GARAGE_*` |
+| Sniffing del MIME | El Content-Type de la subida JAMÁS se confía: se detecta por bytes mágicos (webp/png/jpeg); `X-Content-Type-Options: nosniff` en el borde |
+| Referencia | `productos.imagen_id UUID` en PostgreSQL (write-through del catálogo); uuid nuevo por subida → lectura cacheable `immutable` sin invalidación |
+| Rutas | `POST /api/v1/tienda/productos/{id}/imagen` (sesión de tienda) y `GET /api/v1/imagenes/{id}` (pública, 404 uniforme por uuid) |
+| Frontend | Resize en el navegador (canvas → webp 800px), botón «Subir/Cambiar foto» en el panel y foto en la tarjeta de producto de la tienda |
+| Pruebas | `tests/almacen.test.js` (sniffing, contenido disfrazado rechazado, límite real, uuid, claves raras); integración REAL contra Garage (Podman): PUT firmado, GET idéntico, 404 y disfrazado rechazado |
+| S13 | La superficie de amenaza queda lista en ADR-0028: antimalware y comportamiento del uploader malicioso para modelar la próxima semana |
+
+Verificación local (25/10): suite 115 + 28 de contrato en verde, lint y
+build del frontend limpios; integración Garage con Podman presentada en
+los logs de esta bitácora. Despliegue en Dokploy pendiente de la acción del
+equipo (crear el servicio Garage y las variables `GARAGE_*`).
+
+**Corrección posterior (mismo día)**: el empuje `8dd38c4` rompió la suite
+con base de datos (el job `test` del CI en rojo). Causa: el `ALTER TABLE
+productos ADD COLUMN IF NOT EXISTS imagen_id` quedó ANTES del `CREATE TABLE
+IF NOT EXISTS productos` en el DDL — en el primer arranque la tabla no
+existe aún y PostgreSQL responde `relation "productos" does not exist`
+(reproducción fiel con Podman: 112 pass / 2 fail, exactamente los dos neveros
+que el gate). El bloque se movió a su lugar correcto: después del
+`CREATE TABLE productos` y antes del cierre del template literal. Reparado y
+verificado: 120 pass / 0 fail con PostgreSQL real, 28/28 de contrato y 115
+sin base. `pg-test` de Podman retirado tras la verificación.
+
+**Limpieza de textos (25/10/2026)**: ronda de revisión lingüística sobre los
+archivos de la feature (comentarios de `almacen`, `imagenes-fijas`,
+`catalogo` y la tarjeta del panel, más el ADR-0028 y `ia.md`): palabras
+distorsionadas y algún anglicismo torpe.
+ La guía `docs/despliegue-garage-dokploy.md` se
+reescribió para la **versión web de Dokploy**: servicio Compose con el
+compose en Raw, `garage.toml` como File Mount (Advanced → Mounts, referenciado
+como `../files/garage.toml`) y la configuración del clúster desde la terminal
+web del servicio — verificado contra la documentación oficial de Mounts de
+Compose de Dokploy. Suite completa re-verificada (120/0 con BD
+PM, 28/28 contrato, lint/build limpios).
+
+---
+
+## S13 · Superficie pública mínima y soporte para la PWA (25/10/2026)
+
+Cierre del bloque de seguridad del plan S13 (ADR-0029) y las piezas de
+backend que desbloquean los cambios de producto que pidió el equipo.
+
+| Pieza | Detalle |
+|---|---|
+| Rutas v1 de entrega RETIRADAS | `POST /entrega/{id}/listo` y `/entrega/{id}/validar` (sin sesión): el módulo `entrega` permanece y lo usan las rutas `/tienda/*` con sesión (ADR-0023). El cliente nunca valida el PIN |
+| Pago solo del dueño | `POST /pagos/{id}/confirmar` exige sesión: el `clienteId` sale del TOKEN (no del cuerpo) y se compara con el del pedido (403). Cerrado el vector de pago ajeno por enumeración de `pedido-N` |
+| Análisis de dependencias | Job `audit` en el CI (`npm audit --audit-level=high`, backend y frontend, bloqueante) + Dependabot semanal (`.github/dependabot.yml`). Hallazgo corregido: zod 3.25.76 → 4.6.7 (era del toolchain de eslint del frontend) |
+| Evidencia S13 | `docs/evidencias/evidencias-s13.md`: inventario de superficie (§2), tabla STRIDE priorizada de 14 amenazas con mitigación/estado/responsable (§3), resultado de dependencias (§4) y privacidad Ley 1581 (§5). arc42 §8.6 (seguridad) + fila del ADR-0029 en §9 |
+| C4 al día | Garage agregado como contenedor propio (quedó fuera desde el ADR-0028) |
+| Producto · descripción | Columna `descripcion TEXT` en `productos` (migración suave), semilla con 18 descripciones reales, edición por `PATCH` con validación (≤500 caracteres, '' borra), contrato actualizado. La vista de detalle en la PWA la maqueta Miguel |
+| Producto · imagen de tienda | Tabla `tiendas` (referencia `imagen_id`), `POST /tienda/imagen` con sesión (el `tiendaId` sale del token, ESC-02), `GET /catalogo/tiendas` pública (nombre + imagenId), write-through como en productos. El banner en la PWA lo maqueta Miguel |
+| Frontend mínimo | `validarEntrega` retirada de `lib/api.ts` (su ruta ya no existe; la entrega es del panel) — el resto de la PWA queda para Miguel |
+
+Verificación: suite 121/0 (sin DB) y 34/34 de contrato en verde; lint y
+build del frontend limpios; audit de ambos paquetes en verde. El flujo de
+la PWA no cambia: el BFF ya adjuntaba el token desde la cookie (ADR-0021).
+
+---
+
+## Transcripción del plan de ejecución a markdown (25/10/2026)
+
+`docs/plan_ejecucion/LaPlacita-plan-S12-S15.pdf` quedó también en
+`LaPlacita-plan-S12-S15.md` (misma carpeta), para poder referenciarlo por
+secciones y ver su evolución con diff. El PDF sigue siendo la fuente
+oficial; el md lo declara en su encabezado. Sin cambios de código.
+
+---
+
+## Complemento de la Evidencia S13 (28/10/2026)
+
+Segunda pasada del modelado de amenazas sobre lo unido el 25/10 (ADR-0029). Se respeta
+ADR-0029 tal cual y se agrega lo que la tabla STRIDE no cubría. Documento:
+`docs/evidencias/evidencias-s13.md` §7. Decisión estructural: ADR-0030.
+
+| Cambio | Detalle |
+|---|---|
+| ADR-0030 (A-15) | `POST /notificaciones` exige la sesión de una cuenta de la tienda del pedido (401, 403, 400). Antes cualquiera podía escribir «tu pedido está listo» en el historial de un pedido ajeno. Regla pura en `backend/src/http/acceso-tienda.js` |
+| Prueba de inventario | `tests/seguridad-s13.test.js` falla si aparece una ruta de escritura sin sesión fuera de registro, ingreso y pedido sin cuenta |
+| Contrato | `openapi.yaml`: `security: sesion` y respuestas 401 y 403 en `POST /notificaciones` |
+| Repudio (A-12) | La bitácora de las acciones del panel registra `usuarioId` (seudónimo), nunca el correo |
+| CI | El job `audit` genera el SBOM CycloneDX de los dos lockfiles y lo publica como artefacto `sbom` |
+| Dependabot | Se agrega el ecosistema `docker` |
+| Contenedores (A-19) | `USER node` y `COPY --chown=node:node` en los dos Dockerfile |
+| Navegador (A-16, A-20) | `frontend/next.config.mjs`: `Referrer-Policy: same-origin`, `X-Frame-Options: DENY`, `frame-ancestors 'none'`, `nosniff` y `Permissions-Policy` |
+| Dependencias | Se quitan `@hookform/resolvers` y `react-hook-form`, que nadie importa; `overrides.zod = ^4.6.7` |
+| Privacidad | Página `/privacidad` (Ley 1581 de 2012) y casilla obligatoria de autorización en «Crear cuenta» |
+| Documentación | ADR-0030, evidencias-s13 §7, complemento en arc42 §8.6, fila de ADR-0030 en §9 y §14 (riesgos aceptados y pendientes) |
+
+Verificado en local sobre el código ya unido con `master`:
+- `npm test` sin base: 129 en verde y 6 omitidas. Contrato: 34/34.
+- `npm audit --audit-level=high` en 0 en los dos paquetes; `npm sbom` genera los dos SBOM.
+- Build del backend; lint y build del frontend.
+- Recorrido HTTP sobre el build de producción del backend: 11/11 respuestas como se esperaba
+  (notificaciones con y sin sesión, pago del dueño de ADR-0029, ruta de entrega retirada, panel).
+- No se construyó la imagen Docker (no hay Docker local) ni se ejecutó el SBOM dentro del CI.
+
+**Antes de desplegar:**
+- El backend se redespliega solo al unir a `master`. Revisar en Dokploy que el contenedor
+  arranque con `USER node`.
+- El frontend necesita el botón Deploy en Dokploy.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Nadie fuera de la tienda publica avisos | `curl -i -X POST https://laplacita-test.iscoutb.dev/api/v1/notificaciones -H "content-type: application/json" -d '{"pedidoId":"pedido-1","estado":"Listo","tiendaId":"tienda-01"}'` responde **401** |
+| El contenedor no corre como root | En Dokploy → backend → Terminal: `whoami` responde `node` |
+| Las cabeceras de seguridad llegan al navegador | DevTools → Network → documento de `laplacita-app.iscoutb.dev`: aparecen `Referrer-Policy` y `X-Frame-Options` |
+| El registro pide la autorización | En `/cuenta` → Crear cuenta, el formulario no se envía sin marcar la casilla |
+| El SBOM queda en el run | GitHub → Actions → el run del PR → Artifacts: aparece `sbom` |
+| Ajustes de GitHub pendientes (P-2) | GitHub → Settings → Code security: *secret scanning* y *push protection* activados |
+
+---
+
+## Sesión del 28/10 (2) — cierre de los 5 pendientes de 20 minutos (Mateo)
+
+Trabajo sin código (documento + script) tras el merge del PR #24, con el servidor del laboratorio CAÍDO (521 de Cloudflare en PWA y backend desde las ~18:20 — no es un defecto del deploy de S13; el CI/Deploy del merge dieron success antes de la caída).
+
+1. **Trazabilidad del «ADR-0027» fantasma**: el commit `7f047df` menciona «rutas v1 de tienda con sesión (ADR-0027)» pero no existe ningún archivo ADR-0027 — todo su contenido quedó documentado en el **ADR-0030** (que sustentó el PR #24). La numeración 0027 se deja VACÍA a propósito: renumejar equivaldría a inventar historia; este párrafo es la explicación a la que apuntará la sustentación si el docente cruza commits↔ADRs.
+2. **ADR-0030 aceptado** (firma del lado backend; la validación grupal sigue siendo P-6 para la sesión STRIDE del 31/10). Fila de arc42 §9 atualizada a «Aceptado».
+3. **ADR-0031 nuevo** (`0031-sin-etag-ni-listen-notify.md`): formaliza la decisión de S12 que quedó declarada pero sin ADR — NO se implementan ETag ni LISTEN/NOTIFY con una sola instancia (el catálogo corre write-through en memoria y el evento de pedido ya vive dentro del proceso con DLQ, ADR-0026). Incluye los 3 gatillos que reabren la decisión (instancia múltiple, ESC que mida ancho de banda de catálogo, catálogo grande). Fila en arc42 §9.
+4. **P-4 hecho** (se adelantó del 08/11): apéndice §8 en `evidencias-s13.md` con el procedimiento de rotación de `JWT_SECRET` — pasos en Dokploy (generar con `openssl rand -hex 32`, editar Environment, Redeploy), el efecto esperado (las sesiones activas se invalidan, 401 en tokens viejos, pérdida del carrito en curso), y verificación. Filas A-22 (→ mitigada) y P-4 (→ hecho) actualizadas. Queda declarado: el procedimiento está ESCRITO, no ensayado; la primera rotación de prueba va con el cierre del corte.
+5. **Esqueleto `backend/scripts/medir-carga.js`** (arranque S14): oleada concurrente de peticiones con fases «lectura» (catálogo, sin efectos) y «escritura» (pedidos con sesión e Idempotency-Key única, S11); reporta p50/p95/p99, rendimiento y estatus. Sin dependencias nuevas (fetch nativo, mismo criterio de cero dependencias que ADR-0021; el plan decía autocannon — se decide igual que con jose/bcryptjs). Lleva dos TODO explícitos: el umbral ESC-01 (99 % procesado, < 1 % duplicados/perdidos) se contrasta contra la cola vía /metricas, y NO se debe correr la fase escritura antes de desplegar P-1 (rate limit por IP, 04/11).
+
+Batácora: fila «28/10/2026 (2)» en `docs/ia.md` (GLM/OpenCode, 6 prompts del día). Próxima acción del equipo cuando vuelva el servidor: verificar `/privacidad` (200) y `x-frame-options: DENY` en producción.
+
+---
+
+## Sesión 30/10 — demo S13 y desbloqueo de pendientes (Mateo)
+
+Día de la entrega de la semana (demo del viernes 30). Trabajo de preparación, sin código de dominio:
+
+1. **Guion de la demo** (`docs/evidencias/demo-s13-viernes-30.md`): tesis de 3 puertas (cuenta / dueño / tienda), 5 pasos con tiempos, checklist previo de 6, plan B por caída del servidor, anclaje a `seguridad-s13.test.js` y bitácora post-demo.
+2. **Hallazgo del CI en los Dependabot PRs** (al ver por qué no se podían cerrar #16/#17/#27/#28): los 5 jobs de calidad (test, audit, contract, frontend) PASAN y el que FALLA en todo PR de Dependabot es el análisis de SonarCloud — el `SONAR_TOKEN` no está disponible en los runs de esos PRs (límite documentado de GitHub). **Corrección**: el job `sonar` ahora corre solo en push a master (ADR-0016: el gate es bloqueante en master; el PR ya queda cubierto por el resto del pipeline). Los PRs de Dependabot quedan desbloqueados: hacer el push y que los PRs rebasados corran el CI completo en verde.
+3. **Guía P-1** (`docs/despliegue-rate-limit-traefik.md`): middleware exacto para el panel (rateLimit average 5/s, burst 25, ipStrategy depth 1 tras Cloudflare + max-body 1 MiB para no romper las subidas de imagen de 512 KB), pasos de aplicación a los dos dominios, verificación (429 del borde sin JSON) y registro de cierre.
+4. **Guía de la sesión STRIDE del 31** (`docs/evidencias/sesion-stride-31-10.md`): agenda de 60 min (recorrido de las 25 filas por bloques, cierre de P-1..P-6, validación/firma de los ADR 0030/0031) y criterios de salida.
+5. **`medir-carga.js` validado en producción** (fase `lectura`, sin efectos: 100 GET, 33.2 resp/s, p50 154 ms / p95 716 ms / p99 737 ms, 100/100 estatus 200, 0 aborts). La herramienta de S14 quedó comprobada punta a punta; la fase escritura sigue bloqueada hasta P-1 (declarado en el script).
+
+**Acción de Mateo en el panel** (cuando toque): aplicar el P-1 con la guía; y en GitHub darle "Update branch"/`@dependabot rebase` a los PRs de Dependabot que se vayan a cerrar para que el CI verde nuevo (sin sonar) corra sobre la base actual.
+
+---
+
+## Cierre de la Evidencia S13 (01/11/2026)
+
+Contraste de la evidencia contra la ficha `semana-13-evidencia-s13` y el seguimiento del 31/10 y
+el 01/11 del repositorio de retroalimentación. Sin nota publicada de S13 a esta fecha.
+
+| # | Hallazgo | Qué se hizo | Detectado por el sistema |
+|---|---|---|---|
+| 1 | La tabla STRIDE tenía una sola columna de prioridad, sin probabilidad, impacto ni elemento del C4 | Matriz consolidada y ordenada en evidencias-s13 §9.1, sin reescribir §3 ni §7 | Sí |
+| 2 | Sin correspondencia escrita entre prioridad y trabajo hecho | evidencias-s13 §9.2 | Sí |
+| 3 | Análisis de dependencias sin URL del run ni decisión sobre los hallazgos | evidencias-s13 §9.3: `npm audit` y 10 PR de Dependabot con decisión y motivo | Sí |
+| 4 | §5 no coincidía con el código (correo, nombre, pedido sin cuenta, contraseña) | evidencias-s13 §9.4, contrastado con las tablas | Sí |
+| 5 | arc42 §11 no traía las amenazas aceptadas: su numeración la ocupa RES-05 | arc42 §11.7; §14 se conserva con las condiciones de revisión | Sí |
+| 6 | P-5: no se guardaba qué aviso aceptó cada cuenta | Columna `usuarios.aviso_version`; el registro exige la versión vigente | No: requiere ejecutar el registro |
+| 7 | P-3: acciones y `node:22-alpine` con etiquetas móviles | Acciones por SHA e imagen por digest | Sí |
+| 8 | A-09 figuraba Parcial aunque las lecturas por id ya exigen dueño o token (ADR-0025) | Estado corregido en §9.1 | Sí |
+| 9 | El webhook de Dokploy respondía 301 «Branch Not Match» sin desplegar y el paso salía en verde: `curl -f` no falla con un 3xx, y el health check validaba la versión anterior | `deploy-dokploy.yml` envía la rama como un push de GitHub y exige un 200 | Sí |
+| 10 | El README no daba la URL vigente | Sección «Sistema desplegado» | Sí |
+
+La sesión STRIDE del 31/10 **no se realizó**: se reprogramó para la reunión del 03/11 y no se
+registra como hecha. ADR-0030 y ADR-0031 siguen sin validación grupal. Tampoco se ensayó la rotación
+de `JWT_SECRET`, y P-1 sigue pendiente. P-2 se activó el 01/11. Hallazgo nuevo (P-7): la URL de Azure retirada en
+ADR-0018 sigue respondiendo 200 y hay que apagarla (evidencias-s13 §9.5).
+
+Verificación: `npm test` 137 pruebas y 0 fallos, con y sin PostgreSQL local; contrato 34/34; lint y
+build del frontend. Al desplegar, el frontend debe salir junto con el backend: el backend nuevo
+responde 400 a un registro sin `avisoVersion`.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| La versión del aviso queda con la cuenta | Crear una cuenta en `/cuenta` y consultar `SELECT aviso_version FROM usuarios` en la base |
+| El registro sin aceptar el aviso se rechaza | `POST /api/v1/auth/registro` sin `avisoVersion` responde 400 |
+| El webhook despliega de verdad | En el siguiente push a `backend/**`, el paso «Redesplegar en Dokploy» muestra 200 y Dokploy lista un despliegue con ese commit |
+| Los ajustes de GitHub (P-2) | GitHub → Settings → Advanced Security: *Secret Protection* y *Push protection* activados |
+| El límite por IP (P-1) | Verificación de `docs/despliegue-rate-limit-traefik.md` |
+
+---
+
+## README al día con el sistema (01/11/2026)
+
+El README conservaba el estado de S7–S11. Se reescribió contra el repositorio y se ejecutó en local
+lo que documenta: backend y frontend en limpio, registro, pedido, ingreso de tienda y `corte-vertical`.
+El detalle semana a semana que se retiró sigue en el historial de git y en esta bitácora.
+
+| # | Lo que decía | Lo real |
+|---|---|---|
+| 1 | Frontend «placeholder» en la rama `frontend-mvp` | PWA y panel en `master`, desplegados |
+| 2 | Estado en memoria, sin persistencia | PostgreSQL con rehidratación (ADR-0014) |
+| 3 | Tiempo estimado, búsqueda y notificaciones automáticas | No implementados; se declaran en «Lo que no hace» |
+| 4 | Workflow `deploy-backend.yml` y producción en Azure | Solo `deploy-dokploy.yml`; todo en Dokploy (ADR-0018) |
+| 5 | Rutas `entrega/*` y árbol de archivos de S10 | Retiradas (ADR-0029); árbol actualizado |
+| 6 | Frontend en el puerto 3001 con `npm run dev` | Hace falta `npm run dev -- -p 3001`; corregido también en `frontend/README.md` |
+| 7 | Sin variables de entorno ni cuentas de tienda | Tablas de variables y pasos para entrar al panel |
+
+Hallazgo: `backend/scripts/medir-exposicion-pin.js` falla con 403 desde ADR-0029, porque confirma el
+pago sin dueño. No se corrigió; quedó declarado en el README.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Los comandos del README funcionan | Seguir «Cómo ejecutar en local» en un clon limpio |
+| El panel abre con la cuenta de ejemplo | Crear `backend/.env.local` como indica el README y entrar a `/panel` |
+
+---
+
+## Atención de pedidos desde el panel (02/11/2026)
+
+Prueba del equipo en producción: compra de un estudiante desde el celular y atención con una cuenta
+de tienda desde el computador.
+
+| # | Hallazgo | Causa | Corrección |
+|---|---|---|---|
+| 1 | El personal veía la app de los estudiantes y no encontraba los pedidos | Quien ingresaba por `/cuenta` quedaba en la app del cliente; el panel solo se abría escribiendo `/panel` | `GuardaPersonal` lleva a toda cuenta de tienda a `/panel`, salvo en `/privacidad` |
+| 2 | «Confirmar pago» respondía 403 en el panel desde el 25/10 | ADR-0029 pidió el dueño en `pagos.confirmarPago` y la ruta del panel siguió llamándola sin él, de modo que ningún pedido pasaba de Recibido | `pagos.confirmarPagoEnTienda` para la ruta `/tienda`, con cuenta de tienda y `tiendaId` del token. El camino del cliente sigue exigiendo al dueño |
+
+Por qué no se detectó: `next/server` no carga bajo `node:test`, así que las rutas HTTP no se ejecutan en
+las pruebas, y las de módulo pasaban el dueño. La verificación de §7.7 de evidencias-s13 probó `listo`,
+no `pago`. Se agregan pruebas del flujo de tienda y de la llamada de la ruta: 3 fallan sin el arreglo.
+
+Verificación: `npm test` 140 pruebas y 0 fallos (134 pasan y 6 se omiten sin base), contrato 34/34, y
+en local, por las rutas reales, cuenta de caja entrando por `/cuenta` → pedido visible → pago → Listo →
+entrega con PIN. Queda probarlo en producción con el backend y el frontend desplegados.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| El personal llega al panel | Ingresar con una cuenta de tienda en `/cuenta`: debe abrir `/panel` |
+| La tienda atiende el pedido | Comprar en una tienda con una cuenta de estudiante y atenderlo con una cuenta de esa misma tienda |
+
+
+---
+
+## Un pedido por tienda con varios productos (02/11/2026)
+
+Pedido del equipo tras la prueba con celular y panel: quien compra varias cosas dictaba un código y un
+PIN por producto, y la tienda no veía que todo era de una sola persona. Decisión en
+[ADR-0032](docs/adr/0032-un-pedido-por-tienda-con-varios-productos.md), en estado propuesto.
+
+| Pieza | Antes | Ahora |
+|---|---|---|
+| Carrito | Un `POST /pedidos` por línea | Un `POST /pedidos` por tienda, con `items[]` |
+| Código y PIN | Uno por producto | Uno por tienda |
+| Panel | Una tarjeta por producto | Un recuadro con el cliente, sus productos, el total y un solo PIN |
+| Seguimiento y Mis pedidos | Un producto | Todos los productos del pedido |
+| Contrato | Solo `productoId` y `cantidad` | También `items[]`; el formato anterior sigue siendo válido |
+| Base de datos | Sin detalle | Columna `pedidos.items` (`JSONB`); las filas anteriores se conservan |
+
+Verificación: `npm test` 151 pruebas y 0 fallos (150 pasan y 1 se omite con PostgreSQL local, 144 y 7
+sin base), contrato 34/34, lint, tipos y build del frontend. La migración se probó sobre una tabla con
+el esquema anterior y un pedido viejo. En local, por la app y el panel: carrito con 3 productos de
+El Mesón y 2 de El Asa'o → 2 pedidos con su código → la caja de El Mesón ve solo su recuadro → pago,
+Listo y entrega con un PIN. Queda probarlo en producción.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Un pedido por tienda | Comprar en dos tiendas: «Mis pedidos» muestra 2 pedidos, no uno por producto |
+| Recuadro del panel | La tarjeta muestra «Pedido de …», sus productos y el total |
+| Un solo PIN | En «Listos para entregar», un PIN entrega todo el pedido |
+
+
+---
+
+## Eliminar pedidos y pedidos actuales del estudiante (02/11/2026)
+
+Pedido del equipo: los pedidos de prueba sin PIN se quedaban en el panel para siempre, y en el celular
+no se distinguía qué pedidos eran los de ahora. Decisión en
+[ADR-0033](docs/adr/0033-eliminar-pedidos-sin-borrar-la-fila.md), en estado propuesto.
+
+| Pieza | Antes | Ahora |
+|---|---|---|
+| Panel | Un pedido solo salía con su PIN | El `admin` lo elimina con confirmación; la caja no ve el botón |
+| Base de datos | — | Columna `cancelado_en`; la fila se conserva |
+| Mis pedidos | Una sola lista | Recuadro «Tus pedidos de ahora» y «Pedidos anteriores» plegados |
+| Pedidos viejos sin terminar | Parecían actuales | Van a anteriores como «No completado» |
+| Pedidos eliminados | — | El cliente los ve como «Cancelado» |
+| Tiempo en el panel | «hace 14401 min» | «hace 10 días» |
+
+«Actual» es un pedido de hoy (hora de Colombia), sin entregar y sin cancelar. Los Listos van primero.
+
+Verificación: `npm test` 162 pruebas y 0 fallos, con y sin PostgreSQL local; contrato 34/34; tipos,
+lint y build del frontend. En local, con pedidos viejos sembrados en la base: la caja no ve el botón;
+el `admin` eliminó un pedido sin PIN y quedó marcado en la base y en la bitácora con su `usuarioId`; el
+estudiante, a 375 px, vio sus pedidos de hoy aparte y el eliminado como Cancelado. Queda probarlo en
+producción.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Solo el `admin` elimina | Con una cuenta `caja` no aparece el botón; con `admin` sí |
+| Queda el registro | `SELECT pedido_id, cancelado_en FROM pedidos WHERE cancelado_en IS NOT NULL` |
+| Pedidos actuales | En el celular, «Tus pedidos de ahora» solo trae pedidos de hoy sin entregar |
+
+---
+
+## Seguimiento S14 y revisión diaria (03/11/2026)
+
+Se actualizó la copia local con `git pull --ff-only origin master`; HEAD quedó en `d2fd2cd` y
+alineado con `origin/master`. Se leyó la actualización diaria de
+[`AS_202620_feedback/revisiones/2026-2/AS_202620_LaPlacita/feedback.md`](https://github.com/ISCOUTB/AS_202620_feedback/blob/master/revisiones/2026-2/AS_202620_LaPlacita/feedback.md),
+que registra los PR #34–36 integrados y el estado reportado del CI. Ese reporte no sustituye la
+verificación del despliegue ni la aceptación funcional en producción.
+
+### Hallazgos que requieren acción
+
+| Hallazgo | Estado en el repositorio | Evidencia necesaria para cerrarlo |
+|---|---|---|
+| P-7: el despliegue Azure retirado seguía respondiendo el 01/11 | Pendiente operativo; ADR-0018 solo retira Azure del diseño | Apagar o mitigar el recurso desde Azure y comprobar que la URL vieja deja de responder |
+| P-6: sesión STRIDE reprogramada para el 03/11 | La guía existe; no se encontró registro de la reunión en el repo actualizado | Anotar fecha, asistentes, decisiones y validación de ADR-0030–0033 por el equipo |
+| P-1: rate limit de Traefik | Guía lista; middleware no acreditado como aplicado | Aplicar en ambos dominios y registrar 429 de borde, flujo normal y subida de imagen |
+| P-4: rotación de `JWT_SECRET` | Procedimiento escrito; ensayo real pendiente | Rotar fuera de una demo y comprobar que los tokens anteriores fallan y el login nuevo funciona |
+| SHA de producción | Workflow exige respuesta HTTP 200 y consulta health; `/api/v1/health` responde solo `status: ok` | Registrar en Dokploy el SHA de backend y frontend que sirvieron la prueba |
+| Aceptación de los cambios #34–36 | Hay evidencia local reportada; no se encontró cierre funcional en producción | Probar agrupación por tienda, compatibilidad v1, ciclo con un PIN, autorización de cancelación, historial y aislamiento |
+| Dependabot #28 y #30 | Las ramas actuales solo cambian `package.json`/lockfiles. #28 actualiza Next/React del backend; #30 actualiza Next/React y componentes Radix del frontend. El feedback reporta CI de PR verde en la revisión del 01/11, pero ese run no es el CI de la punta actual ni cubre la revisión visual | Rebasar y exigir checks sobre `d2fd2cd`; después de #30, recorrer compra móvil y panel antes de integrar |
+| Evidencia S14 e instrumental ESC-01 | No existía evidencia S14; el script original descartaba cuerpos y no reconciliaba pedidos persistidos | Se creó `docs/evidencias/evidencias-s14.md`; `medir-carga.js` captura IDs y métricas antes/después. Falta acordar denominador/tratamiento de 429 y completar las mediciones |
+
+La evidencia S14 separa el reporte CI del feedback de las comprobaciones independientes y deja
+campos pendientes, sin inventar resultados. `medir-carga.js` conserva el resultado de cada POST,
+reconcilia IDs visibles antes/después con la cuenta autenticada y toma deltas de métricas y DLQ; el
+umbral sigue siendo manual hasta acordar el denominador y el tratamiento de 429. **No se ejecutaron
+pruebas ni llamadas a producción** durante esta revisión. Si se cambia el límite Traefik para una
+prueba autorizada, documentar y revertir ese ajuste.
+
+---
+
+## Despliegue automático del backend y del frontend (04/11/2026)
+
+El frontend ya no necesita el botón **Deploy** en Dokploy. `.github/workflows/deploy-dokploy.yml`
+ahora tiene tres jobs:
+
+1. `cambios` mira qué carpetas tocó el push (`backend/`, `frontend/`). Una ejecución manual o un
+   cambio del propio workflow despliega las dos apps.
+2. `backend` corre pruebas con PostgreSQL y contrato, dispara el webhook de Dokploy y espera hasta
+   10 minutos a que `/api/v1/health` devuelva la huella del commit.
+3. `frontend` corre después del backend (o solo, si el backend no cambió), pasa lint y build,
+   dispara su webhook (secret `DOKPLOY_FRONTEND_WEBHOOK`) y espera a que `/api/version` devuelva
+   la huella del commit.
+
+La huella es un SHA-256 de los archivos del paquete que entran a la imagen
+(`scripts/huella.mjs`, igual en backend y frontend). El Dockerfile la calcula antes del build y la
+deja en `huella.txt`; el workflow la calcula sobre el checkout. Esto corrige un hueco del job
+anterior: el health check aceptaba el 200 del contenedor viejo mientras Dokploy construía el nuevo,
+así que no probaba qué versión estaba sirviendo.
+
+`GET /api/v1/health` responde `{ status: "ok", huella }` (contrato actualizado). Fuera de Docker la
+huella vale `local`.
+
+Verificación local: `npm test` 162 pasan, 7 omitidas sin PostgreSQL y 0 fallos; contrato 34/34;
+frontend `npm run lint` y `npm run build` sin errores. La huella da el mismo valor sobre una copia
+tipo checkout y sobre una copia tipo contexto Docker (sin `Dockerfile`, `.dockerignore`, PDF ni
+`.env`): backend `66944213d8da92ab`, frontend `99f8d1464948c117` en el árbol de este cambio.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| El frontend se despliega solo | Tras un push que toque `frontend/`, el run de *Deploy Dokploy* termina con «Frontend desplegado: huella …» y Dokploy muestra un despliegue nuevo sin haber pulsado Deploy |
+| El orden backend → frontend | En un push que toque las dos carpetas, el job `frontend` empieza cuando `backend` terminó en verde |
+| La versión servida es la del commit | `curl https://laplacita-test.iscoutb.dev/api/v1/health` y `curl https://laplacita-app.iscoutb.dev/api/version` devuelven la misma huella que imprime el run |
+
+---
+
+## Banners con fotos y mejoras de la app en el celular (04/11/2026)
+
+Revisión de toda la PWA en 375 px y cambios hechos el mismo día:
+
+- **Portada:** la fachada de La Placita va nítida de fondo. En el celular va arriba como franja
+  y el texto azul debajo; en pantalla ancha, a la derecha con el texto encima.
+- **Ficha de cada tienda:** foto de su fachada en el banner (`frontend/public/imagenes/tiendas/`,
+  campo `fachada` en `lib/stores.ts`). La imagen que la tienda sube desde el panel (ADR-0035)
+  sigue teniendo prioridad. El letrero queda arriba y el texto abajo; El Mesón tiene encuadre
+  propio porque su foto es 4:3.
+- **Tarjetas de tiendas:** miniatura de la fachada en vez del ícono y descripción en dos líneas.
+- **Etiqueta «Abierta/Cerrada»** del banner con su ancho natural, no de lado a lado.
+- **Títulos de pestaña** propios en Cuenta, Mis pedidos, Panel, Seguimiento del pedido y la
+  página 404 (`layout.tsx` por ruta, porque esas páginas son componentes de cliente).
+- **Contraseña:** botón para mostrarla en Cuenta y Panel (`components/utb/campo-contrasena.tsx`)
+  y texto de a quién acudir si se olvida. No hay servicio de correo para restablecerla sola.
+- **Carrito sin sesión:** avisa que hace falta la cuenta; la página de cuenta muestra que el
+  carrito está guardado y, al ingresar, vuelve a la tienda con el carrito abierto.
+- **Menú:** buscador por nombre y descripción, sin importar tildes ni mayúsculas, con mensaje
+  cuando no hay resultados. La descripción del producto ahora llega del backend
+  (`descripcion`), que antes no se copiaba en `lib/api.ts`.
+- **Proxy `/api/v1`:** ya no reenvía `Content-Encoding` ni `Content-Length`. `fetch` entrega el
+  cuerpo descomprimido y el navegador fallaba al intentar descomprimirlo otra vez
+  (`ERR_CONTENT_DECODING_FAILED`), lo que dejaba el menú sin cargar.
+
+Verificación: recorrido en 375 px y en escritorio contra la API de producción, solo con
+lecturas (sin pedidos ni inicio de sesión); buscador con «limon» y con un término inexistente;
+botón de la contraseña y reapertura del carrito probados en el navegador. `npm run lint` y
+`npm run build` sin errores.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Fotos en los banners y tarjetas | Abrir `/`, `/tiendas` y cada `/tiendas/<slug>` en el celular: se ve la fachada y el letrero completo |
+| Volver al carrito tras ingresar | Sin sesión, agregar un producto, «Ingresa para hacer el pedido», ingresar: vuelve a la tienda con el carrito abierto |
+| Buscador del menú | En una tienda, escribir «limon»: aparece «Limonada natural» |
+| Descripción de productos | Un producto con descripción en el panel la muestra bajo su nombre en el menú |
+
+## Evidencia S14: medición de ESC-01 y revisión externa en arc42 §11 (06/11/2026)
+
+Qué pidió SAVIO: el resultado de la medición contrastado con el umbral del escenario y, en arc42
+§11, lo que señaló la revisión externa con su estado.
+
+- **`backend/scripts/medir-carga.js`:** pasa de esqueleto a medición completa.
+  - Repeticiones y reparto entre las cinco tiendas.
+  - Reintentos con la misma `Idempotency-Key`.
+  - Conciliación en PostgreSQL con `--bd`, o con `GET /pedidos` sin ella.
+  - Veredicto contra el umbral de arc42 §10.2 e informe JSON.
+  - Queda escrito el denominador de «procesado», que el borrador dejaba abierto.
+- **Mediciones:** carga, estrés y caída de la base en local, y lectura en producción. Salidas en
+  `docs/evidencias/mediciones/`. ESC-01 cumple con la base disponible. Con la base caída el
+  procesado baja a 68,83 % (`503`, 0 perdidos) y aparecen 2/600 filas fantasma (F-03).
+- **`evidencias-s14.md`:** reescrita con el procedimiento, el entorno, los resultados por
+  repetición y la conclusión. Se retiró el párrafo obsoleto del frontend manual que señaló el
+  revisor el 05/11.
+- **arc42 §11:** el título pasa a «Riesgos, deuda técnica y reto RES-05». La nueva §11.8 trae
+  17 señalamientos (RV-01 a RV-17) con su estado y los non-risks medidos.
+- **`aspectos.md`:** la evidencia de A-01 apunta a la medición.
+- **Azure (P-7):** el dominio legado ya no resuelve (NXDOMAIN, 06/11).
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Resultado de ESC-01 reproducible | Seguir evidencias-s14 §2.4 y comparar con `docs/evidencias/mediciones/esc01-local-carga.json` |
+| Filas fantasma de F-03 (RV-01) | Corrida C: detener PostgreSQL durante la oleada; el informe lista las filas en `anomalias.filasSinRespuesta201` |
+| Retiro de Azure | `nslookup laplacita-app.graymoss-fdd72159.canadacentral.azurecontainerapps.io 8.8.8.8` responde NXDOMAIN |
+| Estado de cada señalamiento | arc42 §11.8: cada fila dice corregido, asumido o pendiente, con su evidencia |
+
+## Administración general en /admin (06/11/2026)
+
+Panel nuevo para la persona que administra LaPlacita entera, no una sola tienda
+([ADR-0037](docs/adr/0037-administracion-general.md)).
+
+- **Quién entra:** las cuentas cuyos correos están en `ADMINS_GENERALES` (variable del backend en
+  Dokploy). La cuenta se registra normal en la app; el rol no se guarda en la base.
+- **Resumen:** pedidos activos, de hoy y ventas por tienda, y cuentas por rol.
+- **Pedidos:** las cinco tiendas juntas, con filtros por tienda, estado, cuenta y texto.
+  - Por pedido: confirmar pago, marcar listo y eliminar.
+  - En lote: eliminar los pedidos seleccionados.
+  - **Eliminar pedidos de prueba:** se elige una cuenta y se retiran todos sus pedidos activos de una
+    vez. Se ocultan sin borrar la fila (ADR-0033).
+- **Cuentas:** todas las registradas.
+  - Cambiar nombre, rol (cliente, cajero o admin de una tienda) y tienda.
+  - Poner una contraseña nueva.
+  - Ver sus pedidos.
+- **Tiendas y menús:** precio, disponible/agotado y descripción de cualquier producto.
+- **Límites a propósito:**
+  - La entrega sigue exigiendo el PIN del cliente (ESC-03).
+  - Nadie se cambia su propio rol.
+  - Las cuentas de administración general no se editan desde el panel.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| Acceso solo para `ADMINS_GENERALES` | Con una cuenta de cliente, `/admin` muestra el ingreso y `GET /api/v1/admin/resumen` responde 403 |
+| Eliminar los pedidos de prueba | En `/admin` → Pedidos, elegir la cuenta de carga y «Eliminar sus pedidos activos»: desaparecen de `/panel` de cada tienda |
+| Cambio de rol | En Cuentas, poner a una cuenta como cajero de una tienda: al volver a entrar, va a `/panel` de esa tienda |
+| Sin PIN en la administración | La lista de pedidos y «Marcar listo» nunca muestran el PIN |
+
+## Revisión documental previa a S15 (07/11/2026)
+
+Se contrastó el estado de la documentación con el código y con las evidencias de S14 disponibles. El usuario confirmó que la entrega de S14 ya fue enviada en SAVIO; el README ahora refleja esa confirmación. No se cambió el estado de S15 ni se creó la etiqueta `final`, porque el sistema sigue en desarrollo.
+
+- Se alinearon arc42 y `docs/aspectos.md` con los resultados documentados de ESC-01: los perfiles A, B y E cumplieron con PostgreSQL disponible; el perfil C quedó por debajo del umbral durante la interrupción de la base y mantiene RV-01 pendiente.
+- Se actualizaron los diagramas C4 para reflejar una sola aplicación Next.js con las rutas de cliente, tienda y administración general, y para distinguir los cinco contextos de dominio de los módulos de soporte Identidad y Almacén.
+- Se documentó que el módulo de Notificaciones ofrece historial por API y se ejercita en el corte vertical, pero las rutas productivas de transición no publican automáticamente cada cambio. A-03 sigue parcial y sin escenario de calidad aprobado; decidir su umbral e integración corresponde al equipo.
+- **Estructura arc42:** verificación del 10/11 confirma que están las secciones 1–14 y el Glosario; las secciones 13 y 14 preceden al Glosario (`arc42-template-EN.md`, líneas 966–1034). La preocupación anotada el 07/11 era incorrecta. No se renumeró ni reorganizó el documento, porque las secciones adicionales contienen decisiones y trazabilidad vigentes y la consigna no exige eliminarlas.
+- RV-14 permanece pendiente de comparar la huella del backend con el despliegue vigente en Dokploy. No se afirmó un despliegue o una huella nueva.
+
+**Verificación realizada:** enlaces Markdown locales y `git diff --check`. La repetición de pruebas de aplicación y builds se registra en `evidencias-s14.md` §8.5.
+
+## Pruebas locales previas a S15 (07/11/2026)
+
+Se ejecutaron comprobaciones locales del backend y frontend con cuentas ficticias. El backend se inició sin `DATABASE_URL` ni configuración de Garage; por ello los datos de esta ronda fueron efímeros y no representan persistencia ni aceptación del despliegue. Los comandos, resultados y límites se registran en [`docs/evidencias/evidencias-s14.md` §8.1–8.2](docs/evidencias/evidencias-s14.md#81-complemento-de-aceptación-local-2026-11-07).
+
+- Backend: `npm test`, 172 aprobadas, 0 fallidas y 7 omitidas por dependencia de PostgreSQL; `npm run contract-test`, 34/34 aprobadas; `npm run build`, aprobado con permisos de build ampliados.
+- Frontend: `npm run lint`, aprobado; `npm run build -- --webpack`, aprobado. El build predeterminado de Turbopack falló dos veces en esta máquina al crear un proceso hijo al procesar `rubik_1431770f.module.css`.
+- Flujos HTTP: 15/15 comprobaciones funcionales aprobadas en backend local en memoria, incluyendo compra, historial multitienda, aislamiento, cancelación, pagos, PIN, entrega, roles e imágenes abiertas/cerradas.
+- Las rutas principales del frontend y endpoints de salud/catálogo respondieron HTTP 200. No se realizó inspección visual en navegador ni validación responsive.
+
+**Pendiente de validar por el equipo:** ejecutar las pruebas que requieren PostgreSQL y Garage, investigar el fallo de Turbopack en Windows/CI, y hacer la aceptación visual y funcional en Dokploy. No se desplegó, no se modificó configuración productiva y no se cambió código de aplicación.
+
+## Auditoría documental transversal (10/11/2026)
+
+Se revisaron las referencias internas, el estado S14/S15 y la coherencia entre los resultados recientes y la documentación de arquitectura.
+
+- **Enlaces Markdown:** se recorrieron 70 archivos Markdown bajo `docs/`; no se encontraron destinos de archivo inexistentes. Se detectaron y corrigieron dos anclas rotas que apuntaban al procedimiento P-4 en `evidencias-s13.md`.
+- **Estado de entrega:** el README decía que el proyecto «va en la Semana 14», aunque también indicaba que S14 ya fue entregada y S15 seguía pendiente. Se sustituyó por ese estado explícito y consistente.
+- **Evidencia de rendimiento local:** §8.3–8.4 de `evidencias-s14.md` se contrastó con los tres JSON del 10/11. Se corrigió la frase que atribuía la imposibilidad de simular la caída a que PostgreSQL no estaba instalado: PostgreSQL 18.6 sí está instalado; la conexión al clúster temporal no pudo establecerse. No se presentan nuevas mediciones persistentes.
+- **Verificación:** `git diff --check` y validación de destinos de archivo/anclas internas. No se ejecutaron pruebas de aplicación en esta auditoría.
+
+### Observaciones documentales y decisiones que siguen siendo del equipo
+
+- **Estados ADR ratificados:** ADR-0036 y ADR-0008 tienen estado aceptado y ratifican explícitamente decisiones anteriores. Los ADR originales conservan el estado con que se registraron, de acuerdo con la inmutabilidad que esos documentos declaran. No es una decisión sin resolver ni se modificaron los originales; la tabla arc42 debe enlazar la ratificación aceptada como estado vigente.
+- **arc42 y consigna S15:** se confirma que §§1–14 y el Glosario existen y que §§13–14 están antes del Glosario. Se conserva esta estructura y sus enlaces; no hay una corrección pendiente por orden del glosario.
+- **A-03:** `docs/aspectos.md` conserva la nota fechada «al 07/11» sobre el escenario de notificaciones pendiente. Se mantiene como corte histórico; debe actualizarse cuando el equipo decida si añade escenario o conserva la deuda.
+
+La lista anterior contiene pendientes de decisión documental, no errores corregidos automáticamente ni evidencia de que las decisiones grupales ya estén aprobadas.
+
+## Pruebas de seguridad S14 en laboratorio local (14/11/2026)
+
+El panel de Dokploy sigue caído (502 desde el 07/11), así que las pruebas que no son seguras
+contra producción se hicieron en un laboratorio local. La evidencia completa está en
+[`docs/evidencias/seguridad-s14.md`](docs/evidencias/seguridad-s14.md).
+
+- **Laboratorio:** `infra/lab/lab.sh` levanta PostgreSQL 16 en Podman (5433), el backend en 3100 y
+  el PWA en 3200. Los secretos se generan en `infra/lab/.env.local` (ignorado por git); la
+  plantilla es `infra/lab/.env.example`.
+- **Batería:** `infra/lab/pruebas/seguridad-http.mjs`, 50 pruebas HTTP sin dependencias. Cubre
+  administración general, autenticación y JWT, IDOR, PIN, aislamiento de tiendas, integridad del
+  pedido, entrada, cabeceras, CORS, BFF y bitácora. Resultado final: **50/50**, con 2 guardas del
+  riesgo aceptado A-24.
+- **Corrección del laboratorio:** el `JWT_SECRET` generado tenía 24 caracteres y el backend exige
+  ≥ 32; ahora genera 64 y la corrida prueba el secreto configurado.
+
+### Hallazgos corregidos
+
+| # | Hallazgo | Corrección |
+|---|---|---|
+| S14-01 | Sin HSTS en backend ni PWA | `Strict-Transport-Security: max-age=31536000` en `backend/next.config.mjs` y `frontend/next.config.mjs` |
+| S14-03 | Swagger desde unpkg sin SRI | `integrity` SHA-384 + `crossorigin` en CSS y JS (`backend/app/docs/route.js`) |
+| S14-04 | `x-powered-by: Next.js` | `poweredByHeader: false` en los dos `next.config.mjs` |
+| S14-05 | `/metricas` sin `no-store` | `cache-control: no-store` en `backend/app/api/v1/metricas/route.js` |
+| S14-06 | `cantidad: 1e9` → desborde `NUMERIC` → `503` | `MAX_UNIDADES_POR_LINEA = 100` y `MAX_UNIDADES_POR_PEDIDO = 500` con `validarUnidades` en `backend/src/modules/pedidos/index.js`; `maximum` en `backend/openapi.yaml` |
+
+El hallazgo S14-02 (CSP completa) se mantiene como **riesgo aceptado A-24**: Next exige nonces por
+petición y el token vive en cookie `httpOnly`. Las guardas de la batería fallan si algún día aparece
+una CSP con `script-src`, para obligar a revisar el riesgo y arc42 §14.
+
+### Endurecimiento adicional
+
+- La huella de idempotencia incluye `tiendaId`, además de las líneas y el cliente.
+- El tope de cantidad se declara en el contrato (`maximum: 100` por línea y `maximum: 500` por
+  pedido) y tiene pruebas unitarias, además de las HTTP.
+- Se exportan `MAX_LINEAS`, `MAX_UNIDADES_POR_LINEA`, `MAX_UNIDADES_POR_PEDIDO` y
+  `validarUnidades` para probar la validación pura sin depender del catálogo.
+
+### Resumen de correcciones que el sistema automatizado no detecta automáticamente
+
+| Corrección invisible al sistema | Cómo verificarla manualmente |
+|---|---|
+| HSTS en los dos servicios | `curl -sI http://127.0.0.1:3100/api/v1/health` y `curl -sI http://127.0.0.1:3200/`: debe aparecer `strict-transport-security` |
+| SRI del Swagger | Abrir `/docs` y revisar que CSS y JS de unpkg lleven `integrity` y `crossorigin`; la batería exige dos hashes |
+| Tope de cantidad | `POST /api/v1/pedidos` con `cantidad: 101` → 400; con `1000000000` → 400 (antes 503) y sin pedido huérfano |
+| Sin `x-powered-by` | Las respuestas de backend y PWA no deben traer esa cabecera |
+| `/metricas` no cacheable | `curl -sI http://127.0.0.1:3100/api/v1/metricas` debe traer `cache-control: no-store` |
+
+### Verificación
+
+- Batería HTTP: 50 pruebas, 50 ok, 0 fallos, 2 aceptadas (A-24).
+- Backend: `npm test` con 175 pruebas y 0 fallos (incluye contrato 34/34).
+- `npm audit --omit=dev`: 0 vulnerabilidades en backend y frontend.
+- Producción (no destructivo): TLS y cabeceras, cookie `httpOnly`, IDOR y PIN, path traversal y
+  dependencias; sin fuerza bruta, carga ni subidas maliciosas.
+
+### Pendiente
+
+- P-1 (rate limit en Traefik), HSTS de borde, configuración de Garage y ensayo de rotación de
+  `JWT_SECRET`: bloqueados por el panel caído.
+- No se mergea nada que toque `backend/**` o `frontend/**` hasta que vuelva el panel: el push
+  dispara el despliegue de las dos apps.

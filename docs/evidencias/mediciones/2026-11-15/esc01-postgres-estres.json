@@ -1,0 +1,226 @@
+{
+  "escenario": "ESC-01",
+  "fecha": "2026-11-15T05:03:38.597Z",
+  "url": "http://127.0.0.1:3100",
+  "fase": "escritura",
+  "carga": {
+    "peticiones": 1000,
+    "concurrencia": 100,
+    "repeticiones": 3,
+    "calentamiento": 20,
+    "pctReintentos": 10,
+    "tiendas": [
+      "tienda-01",
+      "tienda-02",
+      "tienda-03",
+      "tienda-04",
+      "tienda-05"
+    ]
+  },
+  "fuenteConciliacion": "postgresql",
+  "umbral": {
+    "procesadoMinPct": 99,
+    "duplicadoOPerdidoMaxPct": 1
+  },
+  "version": "local",
+  "corridas": [
+    {
+      "repeticion": 1,
+      "duracionS": 27.02,
+      "rendimientoRps": 40.7,
+      "latenciaMs": {
+        "p50": 1442,
+        "p95": 7350,
+        "p99": 10274,
+        "max": 10409
+      },
+      "estatus": {
+        "0": 46,
+        "201": 1052,
+        "503": 2
+      },
+      "anomalias": {
+        "filasSinRespuesta201": [
+          "tienda-04:pedido-458",
+          "tienda-05:pedido-452",
+          "tienda-01:pedido-459",
+          "tienda-05:pedido-456",
+          "tienda-05:pedido-459",
+          "tienda-02:pedido-450",
+          "tienda-03:pedido-462",
+          "tienda-01:pedido-452",
+          "tienda-01:pedido-451",
+          "tienda-05:pedido-458",
+          "tienda-04:pedido-461",
+          "tienda-05:pedido-455"
+        ],
+        "estatusDeLosOriginalesSin201": {
+          "0": 46
+        }
+      },
+      "conciliacion": {
+        "enviados": 1000,
+        "respuestas201": 954,
+        "idsUnicos201": 954,
+        "filasNuevas": 969,
+        "procesados": 957,
+        "procesadosAlPrimerIntento": 954,
+        "procesadosTrasReintento": 3,
+        "perdidos": 0,
+        "filasSinRespuesta201": 12,
+        "duplicados": 12,
+        "estadoDistinto": 0,
+        "rechazos429": 0,
+        "rechazos503": 0,
+        "reintentosEnviados": 100,
+        "reintentosConMismoId": 95
+      },
+      "resultado": {
+        "procesadoPct": 95.7,
+        "duplicadoOPerdidoPct": 1.2,
+        "cumple": false
+      }
+    },
+    {
+      "repeticion": 2,
+      "duracionS": 9.69,
+      "rendimientoRps": 113.5,
+      "latenciaMs": {
+        "p50": 887,
+        "p95": 1395,
+        "p99": 1783,
+        "max": 1863
+      },
+      "estatus": {
+        "201": 1100
+      },
+      "anomalias": {
+        "filasSinRespuesta201": [],
+        "estatusDeLosOriginalesSin201": {}
+      },
+      "conciliacion": {
+        "enviados": 1000,
+        "respuestas201": 1000,
+        "idsUnicos201": 1000,
+        "filasNuevas": 1000,
+        "procesados": 1000,
+        "procesadosAlPrimerIntento": 1000,
+        "procesadosTrasReintento": 0,
+        "perdidos": 0,
+        "filasSinRespuesta201": 0,
+        "duplicados": 0,
+        "estadoDistinto": 0,
+        "rechazos429": 0,
+        "rechazos503": 0,
+        "reintentosEnviados": 100,
+        "reintentosConMismoId": 100
+      },
+      "resultado": {
+        "procesadoPct": 100,
+        "duplicadoOPerdidoPct": 0,
+        "cumple": true
+      }
+    },
+    {
+      "repeticion": 3,
+      "duracionS": 38.41,
+      "rendimientoRps": 28.6,
+      "latenciaMs": {
+        "p50": 2575,
+        "p95": 10002,
+        "p99": 10069,
+        "max": 10203
+      },
+      "estatus": {
+        "0": 63,
+        "201": 1009,
+        "503": 28
+      },
+      "anomalias": {
+        "filasSinRespuesta201": [
+          "tienda-02:pedido-738",
+          "tienda-02:pedido-750",
+          "tienda-04:pedido-740",
+          "tienda-04:pedido-739",
+          "tienda-03:pedido-752",
+          "tienda-04:pedido-751",
+          "tienda-03:pedido-769",
+          "tienda-02:pedido-769",
+          "tienda-02:pedido-814",
+          "tienda-05:pedido-809",
+          "tienda-03:pedido-808",
+          "tienda-02:pedido-819",
+          "tienda-05:pedido-810",
+          "tienda-05:pedido-812",
+          "tienda-04:pedido-816",
+          "tienda-03:pedido-822",
+          "tienda-05:pedido-821",
+          "tienda-05:pedido-808",
+          "tienda-01:pedido-821",
+          "tienda-03:pedido-820",
+          "tienda-04:pedido-817",
+          "tienda-04:pedido-818",
+          "tienda-02:pedido-822",
+          "tienda-05:pedido-817",
+          "tienda-02:pedido-821",
+          "tienda-04:pedido-820",
+          "tienda-04:pedido-822",
+          "tienda-03:pedido-818",
+          "tienda-05:pedido-818"
+        ],
+        "estatusDeLosOriginalesSin201": {
+          "0": 63,
+          "503": 27
+        }
+      },
+      "conciliacion": {
+        "enviados": 1000,
+        "respuestas201": 910,
+        "idsUnicos201": 910,
+        "filasNuevas": 946,
+        "procesados": 917,
+        "procesadosAlPrimerIntento": 910,
+        "procesadosTrasReintento": 7,
+        "perdidos": 0,
+        "filasSinRespuesta201": 29,
+        "duplicados": 29,
+        "estadoDistinto": 0,
+        "rechazos429": 0,
+        "rechazos503": 27,
+        "reintentosEnviados": 100,
+        "reintentosConMismoId": 92
+      },
+      "resultado": {
+        "procesadoPct": 91.7,
+        "duplicadoOPerdidoPct": 2.9,
+        "cumple": false
+      }
+    }
+  ],
+  "agregado": {
+    "p95MsMin": 1395,
+    "p95MsMediana": 7350,
+    "p95MsMax": 10002,
+    "rendimientoRpsMediana": 40.7,
+    "enviados": 3000,
+    "procesados": 2874,
+    "perdidos": 0,
+    "duplicados": 41,
+    "estadoDistinto": 0,
+    "procesadoPct": 95.8,
+    "duplicadoOPerdidoPct": 1.37,
+    "cumpleTodas": false
+  },
+  "metricasFinales": {
+    "pedidosCreados": 4505,
+    "pagosConfirmados": 0,
+    "pedidosListos": 0,
+    "entregasValidadas": 0,
+    "pinesRechazados": 0,
+    "pinesBloqueados": 0,
+    "escriturasReintentadas": 960,
+    "escriturasDescartadas": 0,
+    "escriturasFallidas": 92,
+    "escriturasEnColaDeFallidos": 0
+  }
+}

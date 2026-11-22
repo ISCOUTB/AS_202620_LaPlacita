@@ -1,0 +1,32 @@
+LaPlacita · laboratorio local de rendimiento/QoS
+Perfil: B-estres-pedidos
+Fecha UTC: 2026-11-15T16:51:38.633Z
+Commit medido: 5f640aaa3a4eda44728014767fd467912b0a05c5
+Configuración: escritura; 1000 solicitudes; 100 clientes; 3 repeticiones; 10% reintentos
+Host: win32; x64; AMD Ryzen 3 7320U with Radeon Graphics         ; 8 núcleos lógicos; 5.7 GiB RAM detectada por Node; Node v24.19.0
+Topes: generador 1 CPU/256m; backend 2 CPU/1024m; PostgreSQL 1 CPU/512m.
+Cliente, backend y base comparten el mismo host; no equivale a una medición de producción.
+ESC-01 · medir-carga · fase escritura · 1000 peticiones × 3 repeticiones · concurrencia 100
+URL base: http://laplacita-qos-backend:3000 · versión: "b20fbafeb09326e9"
+Conciliación contra: postgresql · reintentos con la misma llave: 10 %
+
+#1 · 20.34 s · 54.1 resp/s · p50 1435 · p95 5682 · p99 10038 · máx 10084 ms · estatus {"0":18,"201":1082}
+   enviados 1000 · 201 982 · procesados 984 (2 tras reintento) · perdidos 0 · duplicados 16 (filas sin 201: 16) · estado distinto 0 · 429 0 · 503 0
+   reintentos con la misma llave 100 → mismo id 98
+   procesado 98.4 % (umbral ≥ 99 %) · duplicado+perdido 1.6 % (umbral < 1 %) → NO CUMPLE
+
+#2 · 16.99 s · 64.7 resp/s · p50 1541 · p95 2457 · p99 3245 · máx 3487 ms · estatus {"201":1100}
+   enviados 1000 · 201 1000 · procesados 1000 (0 tras reintento) · perdidos 0 · duplicados 0 (filas sin 201: 0) · estado distinto 0 · 429 0 · 503 0
+   reintentos con la misma llave 100 → mismo id 100
+   procesado 100 % (umbral ≥ 99 %) · duplicado+perdido 0 % (umbral < 1 %) → CUMPLE
+
+#3 · 15.17 s · 72.5 resp/s · p50 1376 · p95 1988 · p99 3583 · máx 4345 ms · estatus {"201":1100}
+   enviados 1000 · 201 1000 · procesados 1000 (0 tras reintento) · perdidos 0 · duplicados 0 (filas sin 201: 0) · estado distinto 0 · 429 0 · 503 0
+   reintentos con la misma llave 100 → mismo id 100
+   procesado 100 % (umbral ≥ 99 %) · duplicado+perdido 0 % (umbral < 1 %) → CUMPLE
+
+Agregado: 3000 pedidos · procesado 99.47 % · duplicado+perdido 0.53 % · p95 entre corridas 1988–5682 ms (mediana 2457) → NO CUMPLE en al menos una repetición
+Métricas del proceso al final: {"pedidosCreados":4500,"pagosConfirmados":0,"pedidosListos":0,"entregasValidadas":0,"pinesRechazados":0,"pinesBloqueados":0,"escriturasReintentadas":35,"escriturasDescartadas":0,"escriturasFallidas":0,"escriturasEnColaDeFallidos":0}
+Informe JSON: /tmp/B-estres-pedidos.json
+
+Código de salida del medidor: 1

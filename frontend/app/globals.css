@@ -1,0 +1,162 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/*
+ * Sistema visual LaPlacita con la identidad actual de la UTB (marca renovada
+ * en sept. 2023, colores tomados de utb.edu.co) y el lenguaje de la UTB App:
+ * encabezados en degradado azul, tarjetas blancas redondeadas y barra
+ * inferior. Los tokens se definen UNA vez aquí y se consumen como utilidades
+ * de Tailwind (bg-azul, text-noche, font-display…).
+ */
+
+:root {
+  /* Marca UTB */
+  --azul: #093ad8;
+  --azul-hover: #0730b4;
+  --noche: #15295a;
+  --violeta: #3b0dc1;
+  --violeta-hover: #300aa0;
+  --celeste: #6ec1e4;
+
+  /* Superficies y texto */
+  --fondo: #f4f6fb;
+  --superficie: #fbfcff;
+  --tinta: #1c2340;
+  --suave: #4a5578;
+  --tenue: #6b7494;
+  --borde: #dde3f2;
+
+  /* Estados del pedido (contrato: Recibido → En preparación → Listo → Entregado) */
+  --recibido-fondo: #e3f3fb;
+  --recibido-texto: #0b5c80;
+  --preparacion-fondo: #fdf0dc;
+  --preparacion-texto: #8a4b06;
+  --listo-fondo: #ddf5e8;
+  --listo-texto: #0e6b40;
+  --entregado-fondo: #e6e8ef;
+  --entregado-texto: #3b4260;
+  --error-fondo: #fdecea;
+  --error-texto: #a1251b;
+
+  /* Tokens que usan los componentes shadcn (components/ui) */
+  --background: var(--superficie);
+  --foreground: var(--tinta);
+  --muted-foreground: var(--suave);
+  --secondary: var(--fondo);
+  --ring: var(--azul);
+  --radius: 1rem;
+}
+
+@theme inline {
+  --color-azul: var(--azul);
+  --color-azul-hover: var(--azul-hover);
+  --color-noche: var(--noche);
+  --color-violeta: var(--violeta);
+  --color-violeta-hover: var(--violeta-hover);
+  --color-celeste: var(--celeste);
+  --color-fondo: var(--fondo);
+  --color-superficie: var(--superficie);
+  --color-tinta: var(--tinta);
+  --color-suave: var(--suave);
+  --color-tenue: var(--tenue);
+  --color-borde: var(--borde);
+
+  --color-recibido-fondo: var(--recibido-fondo);
+  --color-recibido-texto: var(--recibido-texto);
+  --color-preparacion-fondo: var(--preparacion-fondo);
+  --color-preparacion-texto: var(--preparacion-texto);
+  --color-listo-fondo: var(--listo-fondo);
+  --color-listo-texto: var(--listo-texto);
+  --color-entregado-fondo: var(--entregado-fondo);
+  --color-entregado-texto: var(--entregado-texto);
+  --color-error-fondo: var(--error-fondo);
+  --color-error-texto: var(--error-texto);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-secondary: var(--secondary);
+  --color-ring: var(--ring);
+
+  --font-sans: var(--font-rubik), system-ui, sans-serif;
+  --font-display: var(--font-dm-sans), var(--font-rubik), system-ui, sans-serif;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
+
+  --shadow-tarjeta: 0 10px 28px -12px rgb(21 41 90 / 0.18);
+  --shadow-flotante: 0 18px 40px -14px rgb(21 41 90 / 0.45);
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--fondo);
+    color: var(--tinta);
+    font-family: var(--font-sans);
+    min-height: 100dvh;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--celeste);
+    outline-offset: 2px;
+    border-radius: 0.5rem;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+@layer components {
+  /* Degradado de los encabezados, como la UTB App */
+  .degradado-utb {
+    background-image: linear-gradient(150deg, var(--azul) 0%, var(--noche) 100%);
+  }
+
+  /* Espacio inferior para que la barra de navegación móvil no tape contenido */
+  .espacio-barra {
+    padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
+  }
+
+  .animacion-imagen-estado {
+    animation: imagen-estado-entrada 500ms ease-out both;
+  }
+
+  @media (min-width: 768px) {
+    .espacio-barra {
+      padding-bottom: 3rem;
+    }
+  }
+}
+
+@keyframes imagen-estado-entrada {
+  from {
+    opacity: 0.55;
+    transform: translateX(0.75rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

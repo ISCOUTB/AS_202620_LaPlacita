@@ -1,0 +1,471 @@
+# Evidencia S13 — Seguridad y riesgos
+
+Documento del 2026-10-25 (semana S13, 26/10–01/11). Responde a la Evidencia S13 de SAVIO:
+tabla de amenazas STRIDE priorizada con mitigación y responsable, resultado del análisis de
+dependencias y sección de privacidad. Material: plan de ejecución S12–S15, auditoría de
+superficie del 25/10 y [ADR-0029](../adr/0029-superficie-publica-minima.md).
+
+**Regla del documento:** cada amenaza cita su defensa con archivo:línea o se declara aceptada
+con su justificación. Nada de "seguridad fingida": lo que no está implementado figura en la
+tabla como **aceptada** o **pendiente**, nunca como mitigado.
+
+**Estado vigente:** [§9, cierre del 01/11/2026](#9-cierre-de-la-evidencia-01112026), con la matriz
+priorizada sobre el C4 y los pendientes actualizados.
+
+---
+
+## 1. Base de la revisión: cómo se protege una petición
+
+| Capa | Mecanismo | Código / ADR |
+|---|---|---|
+| Sesión | Token propio firmado HMAC-SHA256 (`node:crypto`, sin dependencias — ADR-0021), vía BFF con cookie `httpOnly`, `SameSite=Lax`, `Secure`; el navegador nunca ve el token | `backend/src/modules/identidad/`, `frontend/app/api/v1/[...path]/route.js` |
+| Identidad de la tienda | El `tiendaId` SIEMPRE sale del token; ninguna ruta lo recibe del cliente (ESC-02) | `src/http/autenticacion.js` (`cuentaDeTienda`) |
+| Roles | `cliente` / `trabajador` / `admin`; el precio solo lo cambia el admin (403) | `src/modules/catalogo/index.js` |
+| PIN | Solo lectura para su dueño y con pedido en Listo (ADR-0022); vista pública sin PIN (ADR-0013); logs enmascarados | `pedidos/[pedidoId]/pin/route.js`, `src/logger.js` |
+| Contraseñas | scrypt con sal aleatoria (formato `scrypt$N$sal$derivada`) | `src/modules/identidad/contrasenas.js` |
+| Límites | 5 fallos de login → bloqueo temporal (429); 5 intentos de PIN | `src/modules/identidad/index.js`, `src/modules/entrega/index.js` |
+| Superficie | Retiro de rutas v1 de entrega y pago solo del dueño (ADR-0029, este sprint) | `openapi.yaml`, `tests/contract-openapi.test.js` (S13) |
+
+## 2. Inventario de superficie pública (auditoría 25/10/2026)
+
+| Ruta | Sesión | Nota |
+|---|---|---|
+| `POST /auth/registro`, `POST /auth/sesion` | — (es el login) | Límite de intentos activo |
+| `GET /auth/yo` | ✔ usuario | |
+| `GET /health`, `GET /openapi` | — | Estado y contrato (documento, sin datos) |
+| `GET /catalogo/tiendas`, `/catalogo/productos/{id}`, `/catalogo/tiendas/{id}/productos` | — | Contenido público del menú |
+| `GET /imagenes/{id}` | — | uuid v4 no enumerable; sniffing + `nosniff` (ADR-0028) |
+| `GET /metricas` | — | **Aceptada** (ver A-10) |
+| `GET /notificaciones`, `/notificaciones/{id}` | usuario | Historial del pedido |
+| `POST /pedidos` | ✔ cliente | Idempotencia; el total lo calcula el servidor |
+| `GET /pedidos`, `GET /pedidos/{id}`, `GET /pedidos/{id}/pin` | ✔ cliente | Pin solo dueño + Listo (ADR-0022) |
+| `POST /pagos/{id}/confirmar` | ✔ **dueño** | ADR-0029 (antes v1 sin sesión) |
+| `POST /tienda/*` (pedidos, productos, imagen, resumen) | ✔ tienda | `tiendaId` del token (ESC-02) |
+| ~~`POST /entrega/{id}/listo`, `/entrega/{id}/validar`~~ | — | **RETIRADAS** (ADR-0029) |
+
+## 3. Tabla STRIDE priorizada
+
+Prioridad = probabilidad × impacto a la vista del estado real del sistema (un solo proceso,
+1 instancia por servicio, red interna de Dokploy). Responsables: M = Mateo (backend/datos),
+G = Miguel (frontend).
+
+| # | STRIDE | Amenaza | Vector | Prioridad | Mitigación (o decisión) | Estado | Resp. |
+|---|---|---|---|---|---|---|---|
+| A-01 | **T** | Confirmar el pago de un pedido ajeno | `POST /pagos/{id}/confirmar` sin sesión + id enumerable | **Alta** (probable y de impacto directo en negocio) | Sesión de dueño: comparación `clienteId` del token vs. pedido; 403 en caso contrario (ADR-0029) | ✅ Mitigada (25/10) | M |
+| A-02 | **T / E** | Marcar pedido Listo o validar PIN sin cuenta | Rutas v1 `entrega/*` sin sesión | **Alta** | Retiro de la superficie: rutas y contrato eliminadas (ADR-0029); aserciones de ausencia en el CI | ✅ Mitigada (25/10) | M |
+| A-03 | **S** | Suplantar a una tienda (subir foto, cambiar menú, ver cola) | Token falsificado o robado | Alta | Firma HMAC del token + cookie `httpOnly`/`Secure`/`SameSite=Lax` (ADR-0021); `tiendaId` del token (ESC-02); backend revalida en cada ruta | ✅ Mitigada | M |
+| A-04 | **I** | Ver el PIN de un pedido ajeno | Vista pública, logs, reenvío | Alta | Vista pública sin PIN (ADR-0013); `GET /pedidos/{id}/pin` solo dueño + Listo (ADR-0022); seguimiento por token de un solo uso (ADR-0025); logs enmascaran | ✅ Mitigada | M |
+| A-05 | **I** | Subida de archivos disfrazados de imagen (XSS/JS activo) | Campo multipart del panel | Alta | MIME por sniffing de bytes mágicos + whitelist webp/png/jpeg + `nosniff` + uuid nuevo por subida (ADR-0028; 9 pruebas) | ✅ Mitigada | M |
+| A-06 | **E** | Trabajador escala a admin (cambia precios) | `PATCH /tienda/productos/{id}` | Media | Rol verificado en el dominio (403); el rol viaja en el token | ✅ Mitigada | M |
+| A-07 | **D** | Fuerza bruta de credenciales | `POST /auth/sesion`, PIN de entrega | Media | 5 fallos → bloqueo temporal 429 (login); 5 intentos de PIN | ✅ Mitigada | M |
+| A-08 | **D** | Subida masiva de archivos (DoS de disco/red) | multipart repetido | Media | Límite 512 KB sobre el buffer real + timeout de 10 s al almacén (ADR-0028) | ✅ Mitigada | M |
+| A-09 | **S** | Cliente opera pedidos de otro cliente | Enumeración de `pedido-N` (ADR-0024) | Media | Lecturas y transiciones exigir dueño: `GET /pedidos/{id}/pin` (ADR-0022), pago (ADR-0029). **El resto de lecturas por id se endurece con «Mis pedidos» por cuenta (S13, en curso)** | 🟡 Parcial | M |
+| A-10 | **I** | Divulgación de información operacional | `GET /metricas` pública | **Baja** (contadores agregados, sin datos personales ni de pedidos) | **Aceptada**: se usa para la evidencia ESC-01 y el monitoreo; restringirla rompería la medición sin cerrar un vector real | ✅ Aceptada | M |
+| A-11 | **D** | Dependencias vulnerables (cadena de suministro) | `npm install` | Media | Job `npm audit --audit-level=high` bloquea el CI (backend y frontend) + Dependabot semanal. Resultado 25/10: backend 0 vulnerabilidades; frontend: 1 high (zod, toolchain de eslint) → corregida a 4.6.7 | ✅ Mitigada | M |
+| A-12 | **R** | Repudio de una acción del panel («yo no cambié ese precio») | Registros de auditoría | Baja | Logs estructurados por ruta con `tiendaId`/usuario, sin datos sensibles (RES-01). Deuda declarada: no hay firma ni retención formal de logs | 🟡 Aceptada con deuda | M |
+| A-13 | **E** | Contadores de intentos se reinician con el proceso | Reinicio del contenedor | Baja | Declarado en evidencias-s12 (O-04, O-12): con una sola instancia el riesgo es la ventana del reinicio; alternativa (contadores en PostgreSQL) queda como decisión futura | ✅ Aceptada | M |
+| A-14 | **I** | Contenido de imagen válido que explota un bug del decodificador del cliente | Navegador del usuario final | Baja | Riesgo inherente a cualquier fuente de imágenes; el uploader es el operador de su propia tienda y el impacto queda en su menú. Antimalware: fuera de alcance declarado (ADR-0028 §Seguridad) | ✅ Aceptada | M |
+
+## 4. Análisis de dependencias (resultado)
+
+| Paquete | Herramienta | Resultado (25/10/2026) |
+|---|---|---|
+| `backend/` | `npm audit --audit-level=high` (job `audit` del CI) | **0 vulnerabilidades** |
+| `frontend/` | `npm audit --audit-level=high` (job `audit` del CI) | 1 high (zod 3.25.76, vía `eslint-config-next`, solo toolchain de lint) → **corregida a 4.6.7** el 25/10; audit en verde |
+| Ambos | Dependabot (`.github/dependabot.yml`) | Semanal: npm en `/backend` y `/frontend` + GitHub Actions; parches/minores agrupados |
+
+## 5. Privacidad (Ley 1581 de 2012)
+
+Tratamiento de datos personales, conforme a la política declarada para el sistema:
+
+| Dato personal | Finalidad | Base | Dónde vive |
+|---|---|---|---|
+| Correo electrónico | Identificar la cuenta, enviar el estado del pedido | Consentimiento al registrarse (art. 9) | Tabla `usuarios` (PostgreSQL de Dokploy) |
+| Nombre | Mostrarlo en la app («Hola, …») | Consentimiento al registrarse | Tabla `usuarios` |
+| Historial de pedidos (productos, montos, estados) | Operar el pedido, seguimiento y entrega | Ejecución del contrato con el usuario | Tabla `pedidos` + memoria del proceso |
+| PIN de entrega | Entregar en ventanilla | Ejecución del contrato | Tabla `pedidos` (columna `pin`), nunca en la vista pública |
+| **No se tratan**: datos de pago (el pago es simulado), ubicación, ni datos de menores de edad | — | — | — |
+
+Compromisos operados por el sistema: los pedidos quedan ligados a la cuenta del cliente (nadie
+más los ve); el PIN solo se entrega a su dueño (ADR-0022); el correo y el nombre no salen por
+ninguna ruta pública; no hay compartición con terceros ni transferencia internacional (los
+datos residen en el servidor del laboratorio de la universidad). Derechos de acceso,
+actualización y rectificación: canal directo del equipo de LaPlacita (borrado de cuenta bajo
+solicitud — herramienta pendiente, se declara como deuda, no como capacidad existente).
+
+## 6. La semana está lista cuando…
+
+- [x] Superficie pública mínima: rutas v1 de entrega retiradas y pago solo del dueño (ADR-0029, en producción tras el CI).
+- [x] Análisis de dependencias en el CI (job `audit`) + Dependabot semanal.
+- [x] Tabla STRIDE priorizada con mitigación, estado y responsable (este documento).
+- [x] arc42 §8 con la arquitectura de seguridad (§8.6) y amenazas aceptadas citadas.
+- [ ] Sesión STRIDE de 1 h en el laboratorio (relleno con Miguel): validación del equipo sobre esta tabla.
+- [ ] Demo del viernes 30: registrarse, pedir, pagar y ver el PIN en el celular — nadie más puede verlo.
+
+---
+
+## 7. Complemento del 28/10/2026 (Miguel)
+
+Segunda pasada del modelado sobre lo que ya estaba unido a `master`. **No reemplaza nada de
+§1–§6**: agrega las fronteras de confianza, las amenazas que la tabla de §3 no cubría (A-15 en
+adelante, misma escala de prioridad), refuerzos de la cadena de suministro y de la privacidad,
+y los riesgos de IA. Decisión estructural nueva:
+[ADR-0030](../adr/0030-escrituras-con-sesion-y-notificaciones.md).
+
+### 7.1 Fronteras de confianza sobre el C4 nivel 2
+
+```mermaid
+flowchart LR
+    classDef person fill:#08427b,stroke:#073b6f,color:#fff;
+    classDef container fill:#1168bd,stroke:#0e5296,color:#fff;
+    classDef ext fill:#999999,stroke:#666666,color:#fff;
+
+    subgraph internet ["FC-1 · Internet (no confiable)"]
+        cliente["Cliente"]:::person
+        cajero["Personal de la tienda"]:::person
+        atacante["Cualquiera"]:::person
+    end
+
+    subgraph dokploy ["FC-2 · Dokploy (HTTPS en Traefik)"]
+        web["Frontend PWA + panel<br/>BFF /api/v1, cookie httpOnly"]:::container
+        api["API backend<br/>publicada también en internet"]:::container
+        subgraph red ["FC-3 · Red interna de Dokploy"]
+            db[("PostgreSQL")]:::container
+            garage[("Garage S3<br/>imágenes")]:::container
+        end
+    end
+
+    subgraph cadena ["FC-4 · Cadena de suministro"]
+        npm["Registro npm"]:::ext
+        hub["Docker Hub (node:22-alpine)"]:::ext
+        gh["GitHub Actions<br/>secretos y webhook"]:::ext
+    end
+
+    cliente -->|HTTPS| web
+    cajero -->|HTTPS /panel| web
+    atacante -->|HTTPS| web
+    atacante -->|HTTPS directo, sin BFF| api
+    web -->|Bearer desde la cookie| api
+    api --> db
+    api --> garage
+    npm --> gh
+    hub --> gh
+    gh -->|webhook de despliegue| api
+```
+
+Lo que más pesa en el análisis: **el backend está publicado en internet**
+(`laplacita-test.iscoutb.dev`), no solo detrás del BFF. Cualquier ruta es alcanzable sin la
+app, y los ids `pedido-N` y `tienda-0X` no hay que adivinarlos.
+
+### 7.2 Amenazas adicionales
+
+| # | STRIDE | Amenaza | Vector | Prioridad | Mitigación (o decisión) | Estado | Resp. |
+|---|---|---|---|---|---|---|---|
+| A-15 | **S / T** | Escribir «tu pedido está listo» en el historial de un pedido ajeno | `POST /notificaciones` sin sesión + id enumerable (no estaba en el inventario de §2) | **Alta** | Sesión de una cuenta de la tienda del pedido: 401, 403, 400 (ADR-0030, `src/http/acceso-tienda.js`). Prueba de inventario: falla si aparece otra ruta de escritura sin sesión | ✅ Mitigada (28/10) | M |
+| A-16 | **I** | El token de seguimiento se filtra a otros sitios | Va en la URL de la página del pedido (ADR-0025) y viaja en la cabecera `Referer` | Media | `Referrer-Policy: same-origin` en todas las páginas (`frontend/next.config.mjs`) | ✅ Mitigada (28/10) | G |
+| A-17 | **S / D** | *Credential stuffing* contra muchos correos y pedidos basura | `POST /auth/sesion` (A-07 limita **por correo**, no por IP) y `POST /pedidos` sin cuenta | Media | Límite de peticiones por IP con el middleware `rateLimit` de Traefik en Dokploy | 🟡 Pendiente (P-1) | M |
+| A-18 | **S** | Registrar el correo UTB de otra persona | `POST /auth/registro`: no se verifica que el correo sea de quien se registra | Media | No hay servicio de correo para enviar un enlace de verificación; el daño se limita a pedir a nombre de otro, sin datos de pago | ✅ Aceptada (arc42 §14) | G |
+| A-19 | **E** | Quien logre ejecutar código en el servidor controla el contenedor | Los Dockerfile corrían como root | Media | `USER node` y `COPY --chown=node:node` en los dos Dockerfile. Falta fijar `node:22-alpine` por digest | ✅ Mitigada (28/10); digest pendiente (P-3) | M |
+| A-20 | **T** | *Clickjacking*: una página ajena incrusta el panel y engaña al cajero | iframe | Baja | `X-Frame-Options: DENY` y `frame-ancestors 'none'`; además `nosniff` y `Permissions-Policy` | ✅ Mitigada (28/10) | G |
+| A-21 | **T / E** | Una acción de GitHub comprometida roba el webhook o el token de Sonar | `actions/checkout@v4` y demás son etiquetas móviles | Baja | Dependabot vigila `github-actions`. Falta fijarlas por SHA | 🟡 Pendiente (P-3) | G |
+| A-22 | **S / E** | Con `JWT_SECRET` filtrado se firma un token de admin de cualquier tienda | Secreto de Dokploy | Baja | ≥32 caracteres obligatorio en producción y `alg: none` rechazado (prueba). Procedimiento de rotación documentado: [§8](#8-procedimiento-de-rotación-de-jwt_secret-p-4-28102026) | ✅ Mitigada (28/10) | M |
+| A-23 | **I** | Un secreto termina en un commit | `.env`, `CUENTAS_TIENDA`, credenciales de Garage | Baja | `.env` ignorado y `.env.example` sin valores. Falta activar *secret scanning* y *push protection* en GitHub | 🟡 Pendiente (P-2) | G |
+| A-24 | **I** | Un XSS ejecuta código en la app | Contenido mostrado en la PWA | Baja | El token ya está fuera del alcance de JavaScript (cookie `httpOnly`) y React escapa el contenido. Sin CSP `script-src`: Next exige nonces por petición | ✅ Aceptada (arc42 §14) | G |
+| A-25 | **I** | Quien obtenga una copia de la base ve PIN y tokens de seguimiento en claro | Copia de PostgreSQL | Baja | La base solo vive en la red interna de Dokploy (ADR-0014); el PIN es de un solo uso | ✅ Aceptada (arc42 §14) | M |
+
+**Refuerzo de A-12 (repudio):** desde el 28/10 la bitácora de cada acción del panel registra
+`usuarioId` (el id seudónimo `usr-…`, nunca el correo ni el nombre), además de `tiendaId` y
+`pedidoId` (`src/logger.js` y las rutas de `/tienda/*`). Sigue la deuda de retención formal de
+logs.
+
+### 7.3 Cadena de suministro: lo que se agrega
+
+| Cambio | Detalle |
+|---|---|
+| SBOM | El job `audit` genera un SBOM CycloneDX de cada lockfile y lo publica como artefacto `sbom` del run (`npm sbom`). En local: 68 componentes en el backend y 466 en el frontend (sin opcionales) |
+| Dependabot | Se agrega el ecosistema `docker` para la imagen base de los dos Dockerfile |
+| Menos dependencias | Se quitan `@hookform/resolvers` y `react-hook-form`, que ningún archivo importa. `overrides.zod = ^4.6.7` impide que vuelva la versión vulnerable por el linter |
+| Resultado | `npm audit --audit-level=high`: 0 en backend y 0 en frontend (28/10) |
+
+### 7.4 Privacidad: lo que se agrega
+
+- **Aviso de privacidad** en `/privacidad` (`frontend/app/privacidad/page.tsx`): qué datos se
+  usan y para qué, qué no se hace y los derechos del titular, con los plazos de la Ley 1581:
+  10 días hábiles para consultas y 15 para reclamos.
+- **Autorización expresa:** casilla obligatoria con enlace al aviso en «Crear cuenta»
+  (`frontend/app/cuenta/page.tsx`). La base que cita §5, el consentimiento al registrarse,
+  ahora tiene un aviso que lo sustenta.
+- **Pendientes:**
+  - Guardar con la cuenta qué versión del aviso aceptó (P-5).
+  - Poner en el aviso un correo de contacto real del equipo.
+
+**Puntos para revisar juntos.** Encontré diferencias entre §2/§5 y el código; no las corregí
+para no reescribir el texto de otro:
+
+1. §2 dice que `POST /pedidos` exige sesión de cliente, pero la ruta sigue aceptando pedidos
+   **sin cuenta** (contrato v1, `app/api/v1/pedidos/route.js`).
+2. §5 dice que el correo sirve para «enviar el estado del pedido», pero no hay servicio de
+   correo.
+3. §5 dice que el nombre se muestra en la app. Además, la tienda ve el **primer nombre** del
+   cliente en el panel (`nombreCorto`, ADR-0023).
+
+### 7.5 Riesgos propios de las aplicaciones con IA generativa
+
+El sistema **no tiene un componente de IA generativa**
+([ADR-0012](../adr/0012-no-incorporar-componente-generativo.md)). Por eso los riesgos del OWASP
+Top 10 for LLM no aplican al producto: inyección de prompt, fuga de datos por el modelo,
+envenenamiento del contexto y agencia excesiva. Sí aplican al **desarrollo**, porque el equipo
+usa asistentes de código:
+
+| Riesgo | Mitigación vigente |
+|---|---|
+| Código generado con un fallo de seguridad | Revisión del equipo antes de cada commit, pruebas, SonarCloud con gate bloqueante y la prueba de inventario de rutas (ADR-0030) |
+| Dependencia inventada o con nombre parecido (*slopsquatting*) | Cada dependencia nueva se registra en `docs/ia.md` y pasa por `npm audit` en el CI |
+| Instrucciones escondidas en el contenido que lee el asistente | El asistente lo trata como datos y no hace commit ni push: lo hace el equipo |
+| Secretos pegados en el chat del asistente | Los secretos viven en Dokploy y GitHub, nunca en el repositorio ni en los prompts |
+
+### 7.6 Plan de lo pendiente
+
+| # | Acción | Amenaza | Dónde | Resp. | Fecha |
+|---|---|---|---|---|---|
+| P-1 | Middleware `rateLimit` de Traefik por IP, con tope de tamaño del cuerpo | A-17 | Dokploy → dominio → Middlewares | M | 04/11/2026 (antes de medir en S14) |
+| P-2 | Activar *secret scanning* y *push protection* | A-23 | GitHub → Settings → Code security | G | 31/10/2026 |
+| P-3 | Fijar las acciones por SHA y `node:22-alpine` por digest | A-19, A-21 | `.github/workflows/*.yml`, `*/Dockerfile` | G | 08/11/2026 |
+| P-4 | Procedimiento de rotación de `JWT_SECRET` — **HECHO el 28/10, se adelantó**: queda en [§8](#8-procedimiento-de-rotación-de-jwt_secret-p-4-28102026) de este documento | A-22 | `docs/evidencias/evidencias-s13.md` §8 | M | ✅ 28/10/2026 (comprometía 08/11) |
+| P-5 | Guardar la versión del aviso aceptada con la cuenta | §7.4 | `usuarios` + `POST /auth/registro` | G | Entrega final |
+| P-6 | Validar ADR-0030 y este complemento en la sesión STRIDE del laboratorio | — | — | Ambos | 31/10/2026 |
+
+### 7.7 Verificación del complemento (28/10/2026, sobre el código ya unido con `master`)
+
+Recorrido HTTP sobre el build de producción del backend, sin base y con cuentas de prueba de
+`tienda-01` y `tienda-02`: **11/11** respuestas como se esperaba.
+
+| Caso | Esperado | Obtenido |
+|---|---|---|
+| Notificación falsa sin sesión (ADR-0030) | 401 | 401 |
+| Notificación con sesión de cliente | 403 | 403 |
+| Notificación con cuenta de `tienda-02` | 403 | 403 |
+| Notificación con cuenta de `tienda-01` | 201 | 201 |
+| Pago sin sesión (ADR-0029) | 401 | 401 |
+| Pago por otro cliente (ADR-0029) | 403 | 403 |
+| Pago por su dueña (ADR-0029) | 200 | 200 |
+| Ruta v1 `/entrega/listo` retirada (ADR-0029) | 404 | 404 |
+| Panel: listo con `tienda-01` | 200 | 200 |
+| Panel: listo con `tienda-02` (ESC-02) | 404 | 404 |
+| Pedido sin cuenta (sigue abierto) | 201 | 201 |
+
+Además:
+- `npm test` del backend sin base: 129 en verde y 6 omitidas; contrato 34/34;
+  `tests/seguridad-s13.test.js` en verde.
+- Frontend: lint y build sin errores. Las cabeceras se comprobaron en el build construido, y
+  `/privacidad` y «Crear cuenta» se revisaron en móvil (375 px).
+- No verificado: la imagen Docker con `USER node` (no hay Docker local) ni el SBOM dentro del
+  CI.
+
+---
+
+## 8. Procedimiento de rotación de `JWT_SECRET` (P-4, 28/10/2026)
+
+Procedimiento operativo que cierra [A-22](#3-tabla-stride-priorizada): qué hacer si el secreto
+que firma los tokens de sesión (ADR-0021) se filtra, se escapa en un log o termina el corte.
+**Regla de entrada: el secreto NUNCA vive en el repositorio ni en los prompts** — vive en
+Dokploy → backend → Environment, como las demás variables `JWT_*`.
+
+### 8.1 Pasos (10–15 minutos, sin tocar código)
+
+1. **Generar el secreto nuevo, localmente en el equipo de quien lo rota** (no en servidores,
+   no en chats): `openssl rand -hex 32` — son los ≥32 caracteres que exige la prueba en
+   vigor. Si se genera en la terminal web de Dokploy, limpiar el historial del terminal
+   después.
+2. **Dokploy → backend → Environment**: editar la variable `JWT_SECRET` con el valor nuevo
+   y **Redeploy**. El reinicio limpia el estado en memoria (contadores de intentos: riesgo
+   declarado A-13 y evidencias-s12 O-04/O-12 — se acepta en la ventana de rotación).
+3. **Verificar la sesión nueva en dos minutos con**: 
+   - `POST /auth/sesion` (login) responde `200` con token nuevo;
+   - un token ANTERIOR responde `401` en `GET /auth/yo` (firma con el secreto viejo ya no
+     valida — es exactamente el efecto buscado si el secreto se filtró);
+   - el panel sigue operativo con el login nuevo (una cuenta de tienda en el panel da 200).
+4. **Registrar** la rotación (fecha y motivo, nunca el valor) en `correcciones.md` del día.
+   Si la fuga sucedió fuera de Dokploy (ej. un log de un run de CI), abrir issue para buscar
+   dónde quedó impreso y borrar el artefacto.
+
+### 8.2 Qué le pasa a los usuarios en la rotación
+
+- **Todas las sesiones activas se invalidan de golpe**: el siguiente click de cualquier
+  usuario cae en pantalla de login (el BFF traduce el 401 del backend, no hay error técnico
+  visible). Es un costo aceptado y documentado: el sistema no ofrece sesión simultánea con
+  dos secretos porque el secreto viejo se considera comprometido por definición del
+  procedimiento.
+- El carrito en construcción SIEMPRE se pierde (vive en la sesión). Comunicarlo es decisión
+  de producto: para la demo del curso, rotar antes de la demo o después, nunca en medio.
+- La idempotencia de pedidos y los pedidos existentes NO dependen del secreto (viven en la
+  base y en la memoria del proceso — ADR-0026): la rotación no toca datos.
+
+### 8.3 ¿Cuándo rotar?
+
+| Motivo | Acción |
+|---|---|
+| **Inmediato** | Sospecha o evidencia de fuga del valor (log, chat, commit, artifact) |
+| **Programada** | Al final de cada corte (3 veces en el semestre) y al terminar la entrega final — práctica pedagógica de cierre |
+| **Opcional** | Si se cambia el algoritmo de firma (hoy HMAC-SHA256 propio, ADR-0021) |
+
+### 8.4 Lo que NO hace este procedimiento (declarado)
+
+- No cifra de más: el secreto vive en el Environment del panel de Dokploy, como las demás
+  variables (`DATABASE_URL`, `GARAGE_*`); la amenaza residual real es quién pueda leer ese
+  panel, y se mitiga con la cuenta personal del equipo (no compartida) y el 2FA del
+  proveedor si el plan lo ofrece.
+- No soporta llaves múltiples ni rotación gradual (`kid` por token): sobreingeniería para
+  un monolito de una instancia (criterio ADR-0019). Con más de una instancia del backend
+  la rotación se aplica por red de seguridad.
+- No cubre la sesión ya copiada del navegador de otro (token VÁLIDO en la cookie ajena):
+  eso no lo arregla rotar el secreto, lo arregla cerrar la sesión (salir borra la cookie)
+  y la expiración del token a los 7 días. Queda registrado como límite del modelo de
+  sesión en ADR-0021.
+
+---
+
+## 9. Cierre de la evidencia (01/11/2026)
+
+Contraste de la evidencia contra la ficha `semana-13-evidencia-s13` del curso. **No reescribe
+§1–§8:** agrega lo que faltaba y, donde el estado cambió, esta sección es la vigente. Para el
+detalle de cada amenaza (vector y mitigación) siguen valiendo §3 y §7.2.
+
+### 9.1 Matriz priorizada sobre el C4
+
+Los elementos son los de [C4 nivel 2](../c4/contenedores.md) y las fronteras de §7.1.
+P = probabilidad e I = impacto, de 1 a 3, **antes** de mitigar. Riesgo = P×I:
+**Alta** de 6 a 9, **Media** 4 y **Baja** de 1 a 3. La tabla está ordenada por riesgo. Los
+valores desglosan la prioridad ya declarada en §3 y §7.2 (y los P×I de arc42 §14).
+
+| # | STRIDE | Elemento C4 afectado | P | I | Riesgo | Mitigación | Estado (01/11) | Resp. |
+|---|---|---|---|---|---|---|---|---|
+| A-01 | T | API Backend Central (`pagos`) | 3 | 3 | **9 Alta** | Sesión de dueño (ADR-0029) | ✅ Hecha 25/10 | Mateo |
+| A-02 | T / E | API Backend Central (`entrega`) | 3 | 3 | **9 Alta** | Retiro de rutas v1 (ADR-0029) | ✅ Hecha 25/10 | Mateo |
+| A-03 | S | API Backend Central y Portal Establecimiento | 2 | 3 | **6 Alta** | Token firmado y `tiendaId` del token (ADR-0021) | ✅ Hecha | Mateo |
+| A-04 | I | API Backend Central y App / Web Cliente | 2 | 3 | **6 Alta** | PIN solo para su dueño (ADR-0013, 0022, 0025) | ✅ Hecha | Mateo |
+| A-05 | I | Portal Establecimiento → Almacén de Imágenes | 2 | 3 | **6 Alta** | Validación por bytes y `nosniff` (ADR-0028) | ✅ Hecha 25/10 | Mateo |
+| A-15 | S / T | API Backend Central (`notificaciones`) | 3 | 2 | **6 Alta** | Sesión de la tienda y prueba de inventario (ADR-0030) | ✅ Hecha 28/10 | Mateo |
+| A-06 | E | API Backend Central (`catalogo`) | 2 | 2 | 4 Media | Rol en el dominio (403) | ✅ Hecha | Mateo |
+| A-07 | D | API Backend Central (`identidad`, `entrega`) | 2 | 2 | 4 Media | Bloqueo por intentos | ✅ Hecha | Mateo |
+| A-08 | D | API Backend Central → Almacén de Imágenes | 2 | 2 | 4 Media | Tope de 512 KB y timeout | ✅ Hecha 25/10 | Mateo |
+| A-09 | S | API Backend Central (`pedidos`) | 2 | 2 | 4 Media | Lecturas por id solo con dueño o token de seguimiento (ADR-0025): `vistaConAcceso` responde 404 a cualquier otro. Antes figuraba Parcial | ✅ Hecha | Mateo |
+| A-11 | D | Cadena de suministro (FC-4) | 2 | 2 | 4 Media | Job `audit` bloqueante y Dependabot | ✅ Hecha | Mateo |
+| A-16 | I | App / Web Cliente | 2 | 2 | 4 Media | `Referrer-Policy: same-origin` | ✅ Hecha 28/10 | Miguel |
+| A-17 | S / D | Borde Traefik → API Backend Central | 2 | 2 | 4 Media | `rateLimit` por IP (P-1) | 🟡 Pendiente, 04/11 | Mateo |
+| A-18 | S | API Backend Central (`identidad`) | 2 | 2 | 4 Media | Sin servicio de correo para verificar | ⚪ Aceptada | Miguel |
+| A-19 | E | Contenedores de API y App / Web Cliente | 2 | 2 | 4 Media | `USER node` e imagen fijada por digest (P-3) | ✅ Hecha 01/11 | Miguel |
+| A-20 | T | Portal Establecimiento | 1 | 3 | 3 Baja | `X-Frame-Options: DENY` y `frame-ancestors` | ✅ Hecha 28/10 | Miguel |
+| A-21 | T / E | Cadena de suministro (FC-4) | 1 | 3 | 3 Baja | Acciones fijadas por SHA (P-3) | ✅ Hecha 01/11 | Miguel |
+| A-22 | S / E | API Backend Central (`identidad`) | 1 | 3 | 3 Baja | Secreto largo y procedimiento §8 | ✅ Hecha; ensayo pendiente | Mateo |
+| A-23 | I | Repositorio (FC-4) | 1 | 3 | 3 Baja | *Secret scanning* y *push protection* (P-2) | ✅ Hecha 01/11 | Miguel |
+| A-24 | I | App / Web Cliente | 1 | 3 | 3 Baja | Cookie `httpOnly` y escape de React | ⚪ Aceptada | Miguel |
+| A-25 | I | Base de Datos Principal | 1 | 3 | 3 Baja | Base solo en la red interna (ADR-0014) | ⚪ Aceptada | Mateo |
+| A-12 | R | Portal Establecimiento y API Backend Central | 1 | 2 | 2 Baja | Bitácora con `usuarioId` | ⚪ Aceptada con deuda | Mateo |
+| A-13 | E | API Backend Central (memoria del proceso) | 1 | 2 | 2 Baja | Una sola instancia | ⚪ Aceptada | Mateo |
+| A-14 | I | App / Web Cliente (navegador) | 1 | 2 | 2 Baja | Fuera de alcance (ADR-0028) | ⚪ Aceptada | Mateo |
+| A-10 | I | API Backend Central (`/metricas`) | 1 | 1 | 1 Baja | Contadores sin datos personales | ⚪ Aceptada | Mateo |
+
+### 9.2 El plan atacó primero lo priorizado
+
+- Las **6 amenazas de riesgo Alto** quedaron mitigadas entre el 25 y el 28/10. Eran las rutas
+  sin sesión y la identidad de tienda, y por eso fueron lo primero: ADR-0029 el 25/10 y ADR-0030
+  el 28/10.
+- De las 9 de riesgo Medio, 7 están hechas, A-18 está aceptada y solo **A-17** sigue pendiente.
+- Lo único que queda abierto es A-17 (riesgo 4). Ninguna amenaza Alta espera a una de menor
+  prioridad.
+
+### 9.3 Dependencias: resultado y hallazgos decididos
+
+Herramienta en el pipeline: job `audit` en [`ci.yml`](../../.github/workflows/ci.yml) (líneas
+101 y 105, `npm audit --audit-level=high`) y Dependabot
+([`dependabot.yml`](../../.github/dependabot.yml)). Último run en `master`:
+[41069624061](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/41069624061), con
+[el job `audit` en verde](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/41069624061/job/124110533665).
+
+`npm audit` del 01/11:
+
+| Paquete | Con dependencias de desarrollo | Solo producción (`--omit=dev`) | Decisión |
+|---|---|---|---|
+| `backend/` | 0 | 0 | Nada que atender |
+| `frontend/` | 16 moderadas, 0 altas ni críticas | 0 | **Se acepta.** Vienen de `minimatch` por `eslint` y `eslint-config-next`: solo corren en el lint, con archivos propios, y no llegan a la imagen. Se revisa si pasan a altas (el job las bloquearía) |
+
+Pull requests de Dependabot abiertos:
+
+| PR | Cambio | Decisión | Motivo |
+|---|---|---|---|
+| `#28` | Parches del backend (3) | Integrar el 03/11 | CI en verde; sin relación con una alerta alta |
+| `#30` | Parches del frontend (38) | Integrar el 03/11 | CI en verde; requiere revisar la app antes de la demo del 06/11 |
+| `#16`, `#17`, `#27` | `checkout`, `setup-node` y `upload-artifact` a v7 | Posponer a después de la entrega | Salto mayor sin hallazgo de seguridad; las versiones actuales quedaron fijadas por SHA |
+| `#25`, `#26` | Node 22 a 26 | Posponer a después de la entrega | Cambiar el runtime dos semanas antes del código congelado (13/11) es más riesgo que beneficio |
+| `#20` | `lucide-react` 0.x a 1.x | Posponer a después de la entrega | Salto mayor, solo iconos, se usa en 19 archivos |
+| `#21`, `#23` | `react-day-picker` 10 y `recharts` 3 | No integrar | Ningún archivo los importa; lo correcto es retirarlos, no actualizarlos |
+
+Límite: la lista de alertas de Dependabot en GitHub no es pública. El resultado de arriba sale de
+`npm audit` sobre los mismos lockfiles.
+
+### 9.4 Privacidad contrastada con el modelo de datos
+
+Cierra los puntos de §7.4. Modelo revisado: tablas `usuarios` y `pedidos`
+(`backend/src/persistencia/index.js`). Donde §5 y este apartado difieran, vale este.
+
+| Dato | Dónde | Finalidad | Base |
+|---|---|---|---|
+| Correo institucional | `usuarios.correo` | Identificar la cuenta e iniciar sesión. **No se envían correos:** el sistema no tiene ese servicio | Autorización al registrarse (Ley 1581, art. 9) |
+| Nombre | `usuarios.nombre` | Saludo en la app y **primer nombre en el panel de la tienda** (ADR-0023) | Autorización al registrarse |
+| Contraseña derivada | `usuarios.hash` | Iniciar sesión; se guarda con scrypt y sal, nunca en claro | Autorización al registrarse |
+| Versión del aviso aceptada | `usuarios.aviso_version` | Probar qué aviso autorizó cada cuenta (P-5) | Conservar la prueba de la autorización (art. 9) |
+| Pedidos, PIN y token de seguimiento | `pedidos` | Preparar, entregar y mostrar el historial | Ejecución del servicio pedido |
+| Identificador del cliente | `pedidos.cliente_id` | Ligar el pedido a su dueño. Con sesión es el id seudónimo `usr-…`, el mismo de la bitácora | Ejecución del servicio pedido |
+
+- **Pedido sin cuenta:** `POST /pedidos` **sí acepta peticiones sin sesión** (contrato v1). Lo que
+  decía §2 no es exacto: es la excepción declarada en la prueba de inventario de ADR-0030. En ese
+  caso `cliente_id` es el texto que mande quien llama, y el pedido solo se ve con su token de
+  seguimiento. El abuso se limita con A-17.
+- **Datos que no se tratan:** datos de pago (el pago es simulado), ubicación ni teléfono.
+- **Prueba de la autorización:** desde el 01/11 el registro exige la versión vigente del aviso
+  (400 si falta) y queda guardada con la cuenta. Las cuentas de tienda y las anteriores a esa
+  fecha tienen `NULL`.
+- **Contacto para ejercer derechos:** misaza@utb.edu.co, publicado en `/privacidad` desde el
+  01/11. Es un dato de contacto, no cambia qué se trata ni para qué, así que la versión del aviso
+  se mantiene.
+- **Sigue pendiente:** la herramienta de borrado de cuenta. Hoy el borrado es manual, a solicitud.
+
+### 9.5 Pendientes al cierre
+
+| # | Estado (01/11) | Qué falta |
+|---|---|---|
+| P-1 | 🟡 Pendiente | Aplicar en Dokploy la guía [`despliegue-rate-limit-traefik.md`](../despliegue-rate-limit-traefik.md). Mateo, 04/11 |
+| P-2 | ✅ Hecha 01/11 (vencía el 31/10) | *Secret Protection* y *Push protection* activos en GitHub → Settings → Advanced Security. Solo se comprueba con acceso de administrador |
+| P-3 | ✅ Hecha 01/11 | Acciones por SHA y `node:22-alpine` por digest; Dependabot las sigue actualizando |
+| P-4 | ✅ Escrita; ensayo pendiente | Hacer una rotación real fuera de una demo y registrarla como pide §8.1 |
+| P-5 | ✅ Hecha 01/11 | Columna `aviso_version` y validación en el registro |
+| P-6 | 🟡 Reprogramada al 03/11 | La sesión STRIDE planeada para el 31/10 **no se realizó**. Se hace en la reunión del martes 03/11 con la guía [`sesion-stride-31-10.md`](sesion-stride-31-10.md). Hasta entonces, la matriz de §9.1 y los ADR-0030 y 0031 no tienen validación grupal |
+| P-7 | 🟡 Nuevo, 03/11 | La URL de Azure retirada en ADR-0018 sigue respondiendo (`/api/v1/health` da 200 el 01/11). Es una versión vieja fuera del modelo de amenazas: apagarla desde la cuenta de Azure y comprobar que deja de responder |
+
+### 9.6 Mapa de la ficha a la evidencia
+
+| Criterio | Dónde |
+|---|---|
+| Amenazas ancladas en el C4 | §7.1 y §9.1 |
+| Priorización por probabilidad e impacto | §9.1 |
+| Mitigación con dueño y estado | §9.1 y §9.5 |
+| El plan ataca primero lo priorizado | §9.2 |
+| Análisis de dependencias en el pipeline | §9.3 |
+| Hallazgos revisados y decididos | §9.3 |
+| Privacidad con datos y base | §5, §7.4 y §9.4 |
+| Componente generativo | No lo hay ([ADR-0012](../adr/0012-no-incorporar-componente-generativo.md)); §7.5 |
+| arc42 sección 8 | [arc42 §8.6](../arc42/arc42-template-EN.md) |
+| arc42 sección 11 | [arc42 §11.7](../arc42/arc42-template-EN.md), con el detalle en §14 |
+| ADR de mitigaciones estructurales | [ADR-0021](../adr/0021-identidad-cuentas-y-sesion-jwt.md), [0025](../adr/0025-token-de-seguimiento-del-pedido.md), [0028](../adr/0028-almacen-imagenes-garage-dokploy.md), [0029](../adr/0029-superficie-publica-minima.md) y [0030](../adr/0030-escrituras-con-sesion-y-notificaciones.md) |
+
+Barrido de secretos del 01/11 con patrones de CONTRATO §9: sin credenciales en `HEAD`, sin `.env`
+versionado y sin claves en el historial. Las coincidencias del patrón son variables de código,
+marcadores de las guías (`<hex aleatorio>`) y los propios comandos citados en la documentación.
+
+Verificación del cierre: `npm test` 137 pruebas, 0 fallos (136 pasan con PostgreSQL local y 1 se
+omite; sin base, 131 y 6), contrato 34/34, lint y build del frontend sin errores.
+
+Despliegue del 01/11 (PR #31): el [run 41322752031](https://github.com/ISCOUTB/AS_202620_LaPlacita/actions/runs/41322752031)
+terminó en verde, y ese paso ahora exige un 200 de Dokploy. Producción sirve la versión nueva:
+`/api/v1/openapi` incluye `avisoVersion` y `/privacidad` muestra la versión del aviso.

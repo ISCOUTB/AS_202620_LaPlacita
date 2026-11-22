@@ -1,0 +1,589 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+
+import * as catalogo from '../src/modules/catalogo/index.js';
+import * as pedidos from '../src/modules/pedidos/index.js';
+import * as pagos from '../src/modules/pagos/index.js';
+import * as entrega from '../src/modules/entrega/index.js';
+import * as notificaciones from '../src/modules/notificaciones/index.js';
+import * as health from '../src/health.js';
+
+test('Health: estadoSalud retorna { status: "ok", huella }', () => {
+  const result = health.estadoSalud();
+  assert.strictEqual(result.status, 'ok');
+  assert.deepStrictEqual(Object.keys(result), ['status', 'huella']);
+  assert.strictEqual(typeof result.huella, 'string');
+});
+
+test('Catalogo: obtenerProducto retorna producto con campos obligatorios', () => {
+  const producto = catalogo.obtenerProducto('prod-001', 'tienda-01');
+  assert.ok(producto.id);
+  assert.strictEqual(producto.tiendaId, 'tienda-01');
+  assert.ok(producto.nombre);
+  assert.ok(typeof producto.precio === 'number');
+  assert.ok(typeof producto.disponible === 'boolean');
+});
+
+test('Catalogo: obtenerProducto lanza error si el producto no pertenece a la tienda', () => {
+  assert.throws(
+    () => catalogo.obtenerProducto('prod-001', 'tienda-02'),
+    /no pertenece a la tienda/
+  );
+});
+
+test('Catalogo: listarProductosPorTienda retorna array de productos de la tienda', () => {
+  const productos = catalogo.listarProductosPorTienda('tienda-01');
+  assert.ok(Array.isArray(productos));
+  productos.forEach((p) => {
+    assert.strictEqual(p.tiendaId, 'tienda-01');
+  });
+});
+
+test('Pedidos: crearPedido retorna pedido con todos los campos obligatorios', () => {
+  const pedido = pedidos.crearPedido({
+    productoId: 'prod-001',
+    cantidad: 1,
+    clienteId: 'cliente-01',
+    tiendaId: 'tienda-01',
+  });
+  assert.ok(pedido.id);
+  assert.strictEqual(pedido.clienteId, 'cliente-01');
+  assert.strictEqual(pedido.tiendaId, 'tienda-01');
+  assert.strictEqual(pedido.cantidad, 1);
+  assert.ok(typeof pedido.total === 'number');
+  assert.strictEqual(pedido.estado, 'Recibido');
+  assert.strictEqual(pedido.pin, null);
+});
+
+test('Pedidos: crearPedido lanza error si cantidad <= 0', () => {
+  assert.throws(
+    () => pedidos.crearPedido({
+      productoId: 'prod-001',
+      cantidad: 0,
+      clienteId: 'cliente-01',
+      tiendaId: 'tienda-01',
+    }),
+    /mayor a 0/
+  );
+});
+
+test('S14 · seguridad: crearPedido rechaza más de 100 unidades por línea', () => {
+  assert.strictEqual(pedidos.MAX_UNIDADES_POR_LINEA, 100);
+  assert.throws(
+    () => pedidos.crearPedido({
+      items: [{ productoId: 'prod-001', cantidad: 101 }],
+      clienteId: 'cliente-01',
+      tiendaId: 'tienda-01',
+    }),
+    /hasta 100 unidades/
+  );
+  const alLimite = pedidos.crearPedido({
+    items: [{ productoId: 'prod-001', cantidad: 100 }],
+    clienteId: 'cliente-01',
+    tiendaId: 'tienda-01',
+  });
+  assert.strictEqual(alLimite.cantidad, 100);
+});
+
+test('S14 · seguridad: crearPedido rechaza más de 500 unidades por pedido', () => {
+  assert.strictEqual(pedidos.MAX_UNIDADES_POR_PEDIDO, 500);
+  // El catálogo semilla tiene 5 productos por tienda: 5 × 100 = 500 es el
+  // máximo real por HTTP. La validación pura cubre el caso de un catálogo mayor.
+  const cincoProductos = ['prod-001', 'prod-002', 'prod-004', 'prod-005', 'prod-006']
+    .map((productoId) => ({ productoId, cantidad: 100 }));
+  const alLimite = pedidos.crearPedido({
+    items: cincoProductos,
+    clienteId: 'cliente-01',
+    tiendaId: 'tienda-01',
+  });
+  assert.strictEqual(alLimite.cantidad, 500);
+  const seisLineas = Array.from({ length: 6 }, (_, i) => ({ productoId: `prod-${i}`, cantidad: 100 }));
+  assert.throws(() => pedidos.validarUnidades(seisLineas), /hasta 500 unidades/);
+});
+
+test('Pedidos: crearPedido lanza error si falta tiendaId', () => {
+  assert.throws(
+    () => pedidos.crearPedido({
+      productoId: 'prod-001',
+      cantidad: 1,
+      clienteId: 'cliente-01',
+    }),
+    /tiendaId es obligatorio/
+  );
+});
+
+test('Pedidos: obtenerPedido retorna pedido con campos correctos', () => {
+  const pedido = pedidos.crearPedido({
+    productoId: 'prod-001',
+    cantidad: 1,
+    clienteId: 'cliente-01',
+    tiendaId: 'tienda-01',
+  });
+  const resultado = pedidos.obtenerPedido(pedido.id, 'tienda-01');
+  assert.strictEqual(resultado.id, pedido.id);
+  assert.strictEqual(resultado.estado, 'Recibido');
+});
+
+test('Pedidos: obtenerPedido lanza error si el pedido no es de la tienda', () => {
+  const pedido = pedidos.crearPedido({
+    productoId: 'prod-001',
+    cantidad: 1,
+    clienteId: 'cliente-01',
+    tiendaId: 'tienda-01',
+  });
+  assert.throws(
+    () => pedidos.obtenerPedido(pedido.id, 'tienda-02'),
+    /no encontrado en la tienda/
+  );
+});
+
+test('Pedidos: cambiarEstado retorna pedido con estado actualizado', () => {
+  const pedido = pedidos.crearPedido({
+    productoId: 'prod-001',
+    cantidad: 1,
+    clienteId: 'cliente-01',
+    tiendaId: 'tienda-01',
+  });
+  const actualizado = pedidos.cambiarEstado(pedido.id, 'tienda-01', 'En preparación');
+  assert.strictEqual(actualizado.estado, 'En preparación');
+});
+
+test('Pedidos: cambiarEstado lanza error para transición inválida', () => {
+  const pedido = pedidos.crearPedido({
+    productoId: 'prod-001',
+    cantidad: 1,
+    clienteId: 'cliente-01',
+    tiendaId: 'tienda-01',
+  });
+  assert.throws(
+    () => pedidos.cambiarEstado(pedido.id, 'tienda-01', 'Listo'),
+    /Transición inválida/
+  );
+});
+
+test('Pedidos: ESTADOS contiene los valores correctos y en orden', () => {
+  assert.deepStrictEqual(pedidos.ESTADOS, [
+    'Recibido',
+    'En preparación',
+    'Listo',
+    'Entregado',
+  ]);
+});
+
+test('Pagos: confirmarPago mueve el pedido a En preparación', () => {
+  const pedido = pedidos.crearPedido({
+    productoId: 'prod-001',
+    cantidad: 1,
+    clienteId: 'cliente-01',
+    tiendaId: 'tienda-01',
+  });
+  const actualizado = pagos.confirmarPago(pedido.id, 'tienda-01', pedido.clienteId);
+  assert.strictEqual(actualizado.estado, 'En preparación');
+});
+
+test('Pagos: confirmarPago lanza error si el pedido no está en Recibido', () => {
+  const pedido = pedidos.crearPedido({
+    productoId: 'prod-001',
+    cantidad: 1,
+    clienteId: 'cliente-01',
+    tiendaId: 'tienda-01',
+  });
+  pedidos.cambiarEstado(pedido.id, 'tienda-01', 'En preparación');
+  assert.throws(
+    () => pagos.confirmarPago(pedido.id, 'tienda-01', pedido.clienteId),
+    /No se puede pagar/
+  );
+});
+
+test('S13 · ADR-0029: confirmarPago exige al DUEÑO del pedido', () => {
+  const pedido = pedidos.crearPedido({
+    productoId: 'prod-001',
+    cantidad: 1,
+    clienteId: 'cliente-01',
+    tiendaId: 'tienda-01',
+  });
+  // Un cliente distinto (o sin dueño) no puede pagar un pedido ajeno: el id
+  // es enumerable (ADR-0024) y sin este chequeo era superficie abierta.
+  assert.throws(
+    () => pagos.confirmarPago(pedido.id, 'tienda-01', 'otro-cliente'),
+    /dueño/
+  );
+  assert.throws(
+    () => pagos.confirmarPago(pedido.id, 'tienda-01', undefined),
+    /dueño/
+  );
+  const actualizado = pagos.confirmarPago(pedido.id, 'tienda-01', pedido.clienteId);
+  assert.strictEqual(actualizado.estado, 'En preparación');
+});
+
+test('S13 · ADR-0029: las rutas v1 de entrega ya no existen en app/api/v1', () => {
+  for (const ruta of [
+    'app/api/v1/entrega/[pedidoId]/listo/route.js',
+    'app/api/v1/entrega/[pedidoId]/validar/route.js',
+  ]) {
+    assert.ok(
+      !existsSync(new URL('../' + ruta, import.meta.url)),
+      'La ruta deprecated sigue desplegada: ' + ruta
+    );
+  }
+});
+
+test('S13 · ADR-0029: /pagos exige sesión en el contrato (security: sesion)', () => {
+  const content = readFileSync(new URL('../openapi.yaml', import.meta.url), 'utf-8');
+  const ini = content.indexOf('  /pagos/{pedidoId}/confirmar:');
+  const fin = content.indexOf('\n  /', ini + 10);
+  const bloque = content.slice(ini, fin);
+  assert.ok(bloque.includes('security:'), 'pagos sin security en el contrato');
+  assert.ok(bloque.includes('sesion: []'), 'pagos no exige sesión de cliente');
+  assert.ok(!bloque.includes('deprecated: true'), 'pagos sigue marcado deprecated tras asegurarla');
+});
+
+test('S14: actualizarProducto guarda y valida la descripción del producto', async () => {
+  const editado = await catalogo.actualizarProducto('prod-002', 'tienda-01', {
+    descripcion: '  Jugo natural recién licuado.  ',
+  });
+  assert.strictEqual(editado.descripcion, 'Jugo natural recién licuado.');
+  // Cadena vacía borra la descripción (vuelve a null).
+  const borrada = await catalogo.actualizarProducto('prod-002', 'tienda-01', { descripcion: '' });
+  assert.strictEqual(borrada.descripcion, null);
+  // Más de 500 caracteres: rechazo 400.
+  await assert.rejects(
+    () => catalogo.actualizarProducto('prod-002', 'tienda-01', { descripcion: 'x'.repeat(501) }),
+    /500/
+  );
+  // No texto: rechazo 400.
+  await assert.rejects(
+    () => catalogo.actualizarProducto('prod-002', 'tienda-01', { descripcion: 42 }),
+    /texto/
+  );
+});
+
+test('S14: imagen del encabezado de la tienda — write-through y lista pública', async () => {
+  const tienda = await catalogo.asignarImagenTienda('tienda-03', 'f4dfd953-8e07-4e07-8e07-000000000003');
+  assert.strictEqual(tienda.imagenId, 'f4dfd953-8e07-4e07-8e07-000000000003');
+  const listado = catalogo.listarTiendas();
+  assert.strictEqual(listado.length, 5, 'la lista pública debe traer los 5 establecimientos');
+  assert.ok(listado.find((t) => t.id === 'tienda-03').imagenId === 'f4dfd953-8e07-4e07-8e07-000000000003');
+  // Una tienda no reconocida: 404 uniforme.
+  await assert.rejects(
+    () => catalogo.asignarImagenTienda('tienda-09', 'f4dfd953-8e07-4e07-8e07-000000000009'),
+    /no reconocida/
+  );
+});
+
+test('S14: el contrato declara /catalogo/tiendas y /tienda/imagen', () => {
+  const content = readFileSync(new URL('../openapi.yaml', import.meta.url), 'utf-8');
+  assert.ok(content.includes('  /catalogo/tiendas:'), 'falta /catalogo/tiendas en el contrato');
+  assert.ok(content.includes('  /tienda/imagen:'), 'falta /tienda/imagen en el contrato');
+  assert.ok(content.includes('    Tienda:'), 'falta el esquema Tienda');
+});
+
+test('S14 · seguridad: el contrato declara los topes de cantidad (100 por línea, 500 por pedido)', () => {
+  const content = readFileSync(new URL('../openapi.yaml', import.meta.url), 'utf-8');
+  const maximos = [...content.matchAll(/^\s+maximum: (\d+)$/gm)].map((m) => Number(m[1]));
+  assert.ok(maximos.includes(pedidos.MAX_UNIDADES_POR_LINEA), 'falta maximum 100 en el contrato');
+  assert.ok(maximos.includes(pedidos.MAX_UNIDADES_POR_PEDIDO), 'falta maximum 500 en el contrato');
+});
+
+test('Entrega: marcarListo genera PIN y cambia estado a Listo', () => {
+  const pedido = pedidos.crearPedido({
+    productoId: 'prod-001',
+    cantidad: 1,
+    clienteId: 'cliente-01',
+    tiendaId: 'tienda-01',
+  });
+  pagos.confirmarPago(pedido.id, 'tienda-01', pedido.clienteId);
+  const actualizado = entrega.marcarListo(pedido.id, 'tienda-01');
+  assert.strictEqual(actualizado.estado, 'Listo');
+  assert.ok(actualizado.pin);
+  assert.strictEqual(actualizado.pin.length, 4);
+});
+
+test('Entrega: validarPin cambia estado a Entregado si el PIN es correcto', () => {
+  const pedido = pedidos.crearPedido({
+    productoId: 'prod-001',
+    cantidad: 1,
+    clienteId: 'cliente-01',
+    tiendaId: 'tienda-01',
+  });
+  pagos.confirmarPago(pedido.id, 'tienda-01', pedido.clienteId);
+  entrega.marcarListo(pedido.id, 'tienda-01');
+  const pin = pedidos.obtenerPedido(pedido.id, 'tienda-01').pin;
+  const entregado = entrega.validarPin(pedido.id, 'tienda-01', pin);
+  assert.strictEqual(entregado.estado, 'Entregado');
+});
+
+test('Entrega: validarPin lanza error si el PIN es incorrecto', () => {
+  const pedido = pedidos.crearPedido({
+    productoId: 'prod-001',
+    cantidad: 1,
+    clienteId: 'cliente-01',
+    tiendaId: 'tienda-01',
+  });
+  pagos.confirmarPago(pedido.id, 'tienda-01', pedido.clienteId);
+  entrega.marcarListo(pedido.id, 'tienda-01');
+  assert.throws(
+    () => entrega.validarPin(pedido.id, 'tienda-01', '0000'),
+    /PIN incorrecto/
+  );
+});
+
+test('Notificaciones: notificarCambioEstado retorna notificación con campos obligatorios', () => {
+  const notificacion = notificaciones.notificarCambioEstado(
+    'pedido-001',
+    'Recibido',
+    'tienda-01'
+  );
+  assert.strictEqual(notificacion.pedidoId, 'pedido-001');
+  assert.strictEqual(notificacion.estado, 'Recibido');
+  assert.strictEqual(notificacion.tiendaId, 'tienda-01');
+  assert.ok(notificacion.mensaje);
+  assert.ok(notificacion.enviadaEn);
+});
+
+test('Notificaciones: obtenerNotificaciones retorna array de notificaciones del pedido', () => {
+  const pedidoId = 'pedido-test-' + Date.now();
+  notificaciones.notificarCambioEstado(pedidoId, 'Recibido', 'tienda-01');
+  const historial = notificaciones.obtenerNotificaciones(pedidoId, 'tienda-01');
+  assert.ok(Array.isArray(historial));
+  assert.ok(historial.length >= 1);
+  historial.forEach((n) => {
+    assert.strictEqual(n.pedidoId, pedidoId);
+    assert.strictEqual(n.tiendaId, 'tienda-01');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// DEMOSTRACIÓN DE FALLO DEL CONTRATO — Cambio incompatible
+// ═══════════════════════════════════════════════════════════════
+// Descomenta cualquiera de estos bloques para verificar que la
+// prueba de contrato detecta un cambio incompatible y FALLA.
+//
+// Ejemplo 1: Si `crearPedido` dejara de aceptar { tiendaId, ... }:
+//
+//   test('CONTRATO ROTO: crearPedido requiere tiendaId', () => {
+//     // Si crearPedido ya no lanza error sin tiendaId, el contrato falla:
+//     assert.throws(
+//       () => pedidos.crearPedido({ productoId: 'prod-001', cantidad: 1, clienteId: 'cliente-01' }),
+//       /tiendaId es obligatorio/
+//     );
+//   });
+//
+// Ejemplo 2: Si `obtenerProducto` ya no valida la tienda:
+//
+//   test('CONTRATO ROTO: obtenerProducto valida tienda del producto', () => {
+//     // Si obtenerProducto ya no lanza error para tienda equivocada:
+//     assert.throws(
+//       () => catalogo.obtenerProducto('prod-001', 'tienda-02'),
+//       /no pertenece a la tienda/
+//     );
+//   });
+//
+// Ejemplo 3: Si `confirmarPago` ya no valida el estado:
+//
+//   test('CONTRATO ROTO: confirmarPago valida estado Recibido', () => {
+//     const pedido = pedidos.crearPedido({ productoId: 'prod-001', cantidad: 1, clienteId: 'cliente-01', tiendaId: 'tienda-01' });
+//     pedidos.cambiarEstado(pedido.id, 'tienda-01', 'En preparación');
+//     // Si confirmarPago ya no lanza error cuando el pedido no está Recibido:
+//     assert.throws(
+//       () => pagos.confirmarPago(pedido.id, 'tienda-01', pedido.clienteId),
+//       /No se puede pagar/
+//     );
+//   });
+//
+// Si cualquiera de estos escenarios falla, el contrato está roto
+// y se debe corregir la implementación o actualizar el contrato.
+// ═══════════════════════════════════════════════════════════════
+
+// ─── Validación del contrato OpenAPI ───────────────────────────
+// Este bloque verifica que el archivo openapi.yaml existe y tiene
+// la estructura mínima requerida. Si el archivo falta o está
+// malformado, estos tests fallan.
+
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
+
+test('openapi.yaml existe y es un archivo YAML válido', () => {
+  const content = readFileSync(new URL('../openapi.yaml', import.meta.url), 'utf-8');
+  assert.ok(content.includes('openapi: 3.1.0'));
+  assert.ok(content.includes('info:'));
+  assert.ok(content.includes('paths:'));
+  assert.ok(content.includes('components:'));
+  assert.ok(content.includes('version: v1'));
+});
+
+test('openapi.yaml define todos los endpoints del contrato', () => {
+  const content = readFileSync(new URL('../openapi.yaml', import.meta.url), 'utf-8');
+  assert.ok(content.includes('/health'), 'Falta endpoint /health');
+  assert.ok(content.includes('/catalogo/productos/{productoId}'), 'Falta endpoint /catalogo/productos/{productoId}');
+  assert.ok(content.includes('/catalogo/tiendas/{tiendaId}/productos'), 'Falta endpoint /catalogo/tiendas/{tiendaId}/productos');
+  assert.ok(content.includes('/pedidos'), 'Falta endpoint /pedidos');
+  assert.ok(content.includes('/pagos/{pedidoId}/confirmar'), 'Falta endpoint /pagos/{pedidoId}/confirmar');
+  // S13 (ADR-0029): las rutas v1 de entrega se RETIRARON de la superficie.
+  assert.ok(!content.includes('/entrega/{pedidoId}/listo'), 'La ruta deprecated /entrega/{pedidoId}/listo sigue en el contrato');
+  assert.ok(!content.includes('/entrega/{pedidoId}/validar'), 'La ruta deprecated /entrega/{pedidoId}/validar sigue en el contrato');
+  assert.ok(content.includes('/notificaciones'), 'Falta endpoint /notificaciones');
+});
+
+test('openapi.yaml define los esquemas de request y response', () => {
+  const content = readFileSync(new URL('../openapi.yaml', import.meta.url), 'utf-8');
+  assert.ok(content.includes('CrearPedidoRequest'), 'Falta schema CrearPedidoRequest');
+  assert.ok(content.includes('ValidarPinRequest'), 'Falta schema ValidarPinRequest');
+  assert.ok(content.includes('NotificarCambioEstadoRequest'), 'Falta schema NotificarCambioEstadoRequest');
+  assert.ok(content.includes('Pedido'), 'Falta schema Pedido');
+  assert.ok(content.includes('Producto'), 'Falta schema Producto');
+  assert.ok(content.includes('Notificacion'), 'Falta schema Notificacion');
+  assert.ok(content.includes('Error'), 'Falta schema Error');
+});
+
+test('openapi.yaml: cada path del contrato tiene su route.js en app/api/v1/', () => {
+  const content = readFileSync(new URL('../openapi.yaml', import.meta.url), 'utf-8');
+  const seccionPaths = content.slice(content.indexOf('paths:'), content.indexOf('components:'));
+
+  const apiPaths = [...seccionPaths.matchAll(/^\s{2}(\/[^\n:]+):\s*$/gm)].map((m) => m[1]);
+  assert.ok(apiPaths.length > 0, 'No se encontraron paths en openapi.yaml');
+
+  for (const apiPath of apiPaths) {
+    const archivo = 'app/api/v1' + apiPath.replace(/\{([^}]+)\}/g, '[$1]') + '/route.js';
+    const urlArchivo = new URL('../' + archivo, import.meta.url);
+    assert.ok(
+      existsSync(urlArchivo),
+      `El path ${apiPath} no tiene su route.js: falta ${archivo}`
+    );
+
+    const fuente = readFileSync(urlArchivo, 'utf-8');
+    for (const m of fuente.matchAll(/from '(\.[^']+)'/g)) {
+      assert.ok(
+        existsSync(new URL(m[1], urlArchivo)),
+        `${archivo} importa ${m[1]} — la ruta relativa no resuelve`
+      );
+    }
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// ASERCIONES NEGATIVAS DEL BORDE — S9 (ADR-0013, A-06 / ESC-03)
+// ═══════════════════════════════════════════════════════════════
+// Estas aserciones no comprueban que algo exista, sino que algo NO
+// esté expuesto. Defienden el criterio de éxito de A-06
+// (docs/aspectos.md): el PIN no debe poder obtenerse por lectura, y el
+// progreso del pedido solo debe ocurrir por los métodos de intención
+// (V-03 del ADR-0007).
+//
+// Son la regresión que acompaña al fix de S9. Antes del fix fallaban;
+// el fallo se ejecutó en CI y quedó registrado en
+// docs/evidencias/evidencias-s9.md.
+
+function rutasHttp() {
+  const base = new URL('../app/api/v1/', import.meta.url);
+  const encontradas = [];
+  (function recorrer(dir) {
+    for (const entrada of readdirSync(dir, { withFileTypes: true })) {
+      if (entrada.isDirectory()) recorrer(new URL(entrada.name + '/', dir));
+      else if (entrada.name === 'route.js') encontradas.push(new URL(entrada.name, dir));
+    }
+  })(base);
+  return encontradas;
+}
+
+test('S9: pedidos.vistaPublica existe y no expone el pin (A-06 / ESC-03)', () => {
+  assert.strictEqual(
+    typeof pedidos.vistaPublica,
+    'function',
+    'pedidos.vistaPublica no existe: el borde HTTP no tiene una proyección sin pin'
+  );
+
+  const pedido = pedidos.crearPedido({
+    productoId: 'prod-001',
+    cantidad: 1,
+    clienteId: 'cliente-s9',
+    tiendaId: 'tienda-01',
+  });
+  pagos.confirmarPago(pedido.id, 'tienda-01', pedido.clienteId);
+  entrega.marcarListo(pedido.id, 'tienda-01');
+
+  const publica = pedidos.vistaPublica(pedido.id, 'tienda-01');
+  assert.strictEqual(
+    Object.prototype.hasOwnProperty.call(publica, 'pin'),
+    false,
+    `vistaPublica expone el pin del pedido: ${JSON.stringify(publica)}`
+  );
+  assert.strictEqual(publica.estado, 'Listo');
+
+  // La proyección no borra el secreto del almacén: el dominio sigue leyéndolo.
+  assert.ok(
+    pedidos.obtenerPedido(pedido.id, 'tienda-01').pin,
+    'vistaPublica no debe borrar el pin del dominio; entrega.validarPin lo necesita'
+  );
+});
+
+test('S9: el contrato no declara pin en el esquema de lectura del pedido', () => {
+  const content = readFileSync(new URL('../openapi.yaml', import.meta.url), 'utf-8');
+  const ini = content.indexOf('\n    Pedido:');
+  assert.notStrictEqual(ini, -1, 'No se encontró el esquema Pedido en openapi.yaml');
+  const fin = content.indexOf('\n    CrearPedidoRequest:', ini);
+  const bloque = content.slice(ini, fin === -1 ? undefined : fin);
+
+  assert.ok(
+    !/^\s{8}pin:/m.test(bloque),
+    'El esquema Pedido declara `pin`: GET /pedidos/{pedidoId} lo devolvería en claro'
+  );
+  // S13 (ADR-0029): sin la ruta, el esquema también se retiró. El único
+  // PIN que sale es el del dueño (GET /pedidos/{id}/pin, ADR-0022).
+  assert.ok(
+    !content.includes('PedidoConPin:'),
+    'El esquema PedidoConPin sigue en el contrato: sugeriría una ruta que entrega el pin sin dueño'
+  );
+});
+
+test('S9: el contrato no expone un setter genérico de estado (V-03)', () => {
+  const content = readFileSync(new URL('../openapi.yaml', import.meta.url), 'utf-8');
+  const secPaths = content.slice(content.indexOf('paths:'), content.indexOf('components:'));
+  const ini = secPaths.indexOf('  /pedidos/{pedidoId}:');
+  assert.notStrictEqual(ini, -1, 'No se encontró /pedidos/{pedidoId} en el contrato');
+  const fin = secPaths.indexOf('\n  /', ini + 5);
+  const bloque = secPaths.slice(ini, fin === -1 ? undefined : fin);
+
+  assert.ok(
+    !/^\s{4}put:/m.test(bloque),
+    'El contrato declara `put` en /pedidos/{pedidoId}: expone el setter genérico de estado'
+  );
+});
+
+test('S9: ninguna ruta HTTP llama cambiarEstado con el nombre del estado (V-03)', () => {
+  const rutas = rutasHttp();
+  assert.ok(rutas.length > 0, 'No se encontró ninguna route.js en app/api/v1');
+  for (const url of rutas) {
+    const fuente = readFileSync(url, 'utf-8');
+    assert.ok(
+      !/\bcambiarEstado\b/.test(fuente),
+      `${url.pathname} usa cambiarEstado: el estado solo debe avanzar por los métodos de intención`
+    );
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// ASERCIÓN DE REGRESIÓN DEL BORDE — Fase D (ESC-01, ADR-0014)
+// ═══════════════════════════════════════════════════════════════
+// Defecto encontrado el 12/10/2026 por el experimento de supervivencia contra
+// el entorno de pruebas: las rutas de ESCRITURA no esperaban la rehidratación,
+// de modo que un POST temprano asignaba ids con los contadores en blanco y la
+// rehidratación asíncrona posterior (que limpia los mapas del dominio) provoca
+// colisiones de id y pérdida silenciosa por UPSERT. La lectura ya esperaba
+// (`await lista()`); esta aserción extiende la espera a toda ruta que toque el
+// almacén persistido de pedidos.
+
+const MODULOS_QUE_TOCAN_PEDIDOS_PERSISTIDO = /modules\/(pedidos|pagos|entrega)\/index\.js/;
+
+test('ESC-01: toda ruta que muta el almacén de pedidos espera la rehidratación', () => {
+  const rutas = rutasHttp();
+  assert.ok(rutas.length > 0, 'No se encontró ninguna route.js en app/api/v1');
+  for (const url of rutas) {
+    const fuente = readFileSync(url, 'utf-8');
+    if (!MODULOS_QUE_TOCAN_PEDIDOS_PERSISTIDO.test(fuente)) continue;
+    assert.ok(
+      /await\s+lista\(\)/.test(fuente),
+      `${url.pathname} toca el almacén persistido de pedidos y no espera la rehidratación: ` +
+        'un POST temprano antes del boot de persistencia provoca colisión de ids y pérdida de pedidos (ESC-01)'
+    );
+  }
+});

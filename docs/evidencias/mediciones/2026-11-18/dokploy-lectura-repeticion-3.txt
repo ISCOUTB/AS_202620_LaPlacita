@@ -1,0 +1,11 @@
+ESC-01 · medir-carga · fase lectura · 200 peticiones × 3 repeticiones · concurrencia 10
+URL base: https://laplacita-test.iscoutb.dev · versión: "886b5dc953968820"
+
+#1 · 4.79 s · 41.8 resp/s · p50 205 · p95 519 · p99 601 · máx 605 ms · estatus {"200":200}
+
+#2 · 3.9 s · 51.2 resp/s · p50 203 · p95 223 · p99 243 · máx 244 ms · estatus {"200":200}
+
+#3 · 3.99 s · 50.2 resp/s · p50 204 · p95 218 · p99 243 · máx 244 ms · estatus {"200":200}
+
+Agregado: p95 entre corridas 218–519 ms (mediana 223) · fase lectura: no crea pedidos.
+Informe JSON: C:\Users\jorge\AppData\Local\Temp\laplacita-dokploy-rendimiento-20261118-3.json

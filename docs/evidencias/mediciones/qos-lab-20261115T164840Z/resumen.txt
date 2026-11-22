@@ -1,0 +1,26 @@
+LaPlacita · resumen de rendimiento/QoS
+Fecha UTC: 2026-11-15T16:53:17.598Z
+Commit: 5f640aaa3a4eda44728014767fd467912b0a05c5
+Perfiles con código de medidor no cero o JSON ausente: 2
+Los códigos del medidor se interpretan junto con los umbrales de cada JSON; no equivalen a aprobación global.
+E es una degradación artificial; no representa la red real de Dokploy o la universidad.
+No se midió priorización DSCP/clases de servicio: no existe una política diferenciada declarada.
+Máximos de CPU y memoria observados:
+laplacita-qos-client: 169 muestras; CPU máxima 30.7 % (formato Podman); RAM máxima 41.2 MiB (16.1 % del límite).
+laplacita-qos-backend: 169 muestras; CPU máxima 70.5 % (formato Podman); RAM máxima 116.8 MiB (11.4 % del límite).
+laplacita-qos-postgres: 169 muestras; CPU máxima 95.8 % (formato Podman); RAM máxima 54.1 MiB (10.6 % del límite).
+
+Archivos generados:
+- A-carga-pedidos.json
+- A-carga-pedidos.txt
+- B-estres-pedidos.json
+- B-estres-pedidos.txt
+- C-fallo-recuperacion-bd.json
+- C-fallo-recuperacion-bd.txt
+- D-lectura-catalogo.json
+- D-lectura-catalogo.txt
+- E-red-degradada.json
+- E-red-degradada.txt
+- protocolo.txt
+- recursos.csv
+- resumen.txt

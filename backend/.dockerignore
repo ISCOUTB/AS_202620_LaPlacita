@@ -1,0 +1,18 @@
+# dependencias y artefactos de build: se regeneran dentro de la imagen
+node_modules
+.next
+out
+.git
+.gitignore
+
+# secretos: nunca deben quedar horneados en la imagen (RES-01, criterio S8)
+.env
+.env*.local
+
+# logs y PDFs pesados que no intervienen en el build
+npm-debug.log*
+*.pdf
+
+# docker
+Dockerfile
+.dockerignore

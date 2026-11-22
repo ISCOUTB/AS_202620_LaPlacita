@@ -1,0 +1,97 @@
+{
+  "escenario": "ESC-01",
+  "fecha": "2026-11-15T16:52:52.526Z",
+  "url": "http://laplacita-qos-backend:3000",
+  "fase": "escritura",
+  "carga": {
+    "peticiones": 600,
+    "concurrencia": 25,
+    "repeticiones": 1,
+    "calentamiento": 20,
+    "pctReintentos": 10,
+    "tiendas": [
+      "tienda-01",
+      "tienda-02",
+      "tienda-03",
+      "tienda-04",
+      "tienda-05"
+    ]
+  },
+  "fuenteConciliacion": "postgresql",
+  "umbral": {
+    "procesadoMinPct": 99,
+    "duplicadoOPerdidoMaxPct": 1
+  },
+  "version": "b20fbafeb09326e9",
+  "corridas": [
+    {
+      "repeticion": 1,
+      "duracionS": 19.39,
+      "rendimientoRps": 34,
+      "latenciaMs": {
+        "p50": 372,
+        "p95": 1597,
+        "p99": 6086,
+        "max": 6226
+      },
+      "estatus": {
+        "201": 535,
+        "503": 125
+      },
+      "anomalias": {
+        "filasSinRespuesta201": [],
+        "estatusDeLosOriginalesSin201": {
+          "503": 116
+        }
+      },
+      "conciliacion": {
+        "enviados": 600,
+        "respuestas201": 484,
+        "idsUnicos201": 484,
+        "filasNuevas": 486,
+        "procesados": 486,
+        "procesadosAlPrimerIntento": 484,
+        "procesadosTrasReintento": 2,
+        "perdidos": 0,
+        "filasSinRespuesta201": 0,
+        "duplicados": 0,
+        "estadoDistinto": 0,
+        "rechazos429": 0,
+        "rechazos503": 116,
+        "reintentosEnviados": 60,
+        "reintentosConMismoId": 49
+      },
+      "resultado": {
+        "procesadoPct": 81,
+        "duplicadoOPerdidoPct": 0,
+        "cumple": false
+      }
+    }
+  ],
+  "agregado": {
+    "p95MsMin": 1597,
+    "p95MsMediana": 1597,
+    "p95MsMax": 1597,
+    "rendimientoRpsMediana": 34,
+    "enviados": 600,
+    "procesados": 486,
+    "perdidos": 0,
+    "duplicados": 0,
+    "estadoDistinto": 0,
+    "procesadoPct": 81,
+    "duplicadoOPerdidoPct": 0,
+    "cumpleTodas": false
+  },
+  "metricasFinales": {
+    "pedidosCreados": 5111,
+    "pagosConfirmados": 0,
+    "pedidosListos": 0,
+    "entregasValidadas": 0,
+    "pinesRechazados": 0,
+    "pinesBloqueados": 0,
+    "escriturasReintentadas": 436,
+    "escriturasDescartadas": 0,
+    "escriturasFallidas": 125,
+    "escriturasEnColaDeFallidos": 0
+  }
+}

@@ -1,0 +1,32 @@
+ESC-01 · medir-carga · fase escritura · 300 peticiones × 5 repeticiones · concurrencia 25
+URL base: http://localhost:3000 · versión: "local"
+Conciliación contra: postgresql · reintentos con la misma llave: 10 %
+
+#1 · 0.97 s · 341.6 resp/s · p50 69 · p95 138 · p99 174 · máx 187 ms · estatus {"201":330}
+   enviados 300 · 201 300 · procesados 300 · perdidos 0 · duplicados 0 · estado distinto 0 · 429 0 · 503 0
+   reintentos con la misma llave 30 → mismo id 30
+   procesado 100 % (umbral ≥ 99 %) · duplicado+perdido 0 % (umbral < 1 %) → CUMPLE
+
+#2 · 0.87 s · 378.7 resp/s · p50 67 · p95 87 · p99 94 · máx 100 ms · estatus {"201":330}
+   enviados 300 · 201 300 · procesados 300 · perdidos 0 · duplicados 0 · estado distinto 0 · 429 0 · 503 0
+   reintentos con la misma llave 30 → mismo id 30
+   procesado 100 % (umbral ≥ 99 %) · duplicado+perdido 0 % (umbral < 1 %) → CUMPLE
+
+#3 · 0.84 s · 394.3 resp/s · p50 66 · p95 83 · p99 95 · máx 103 ms · estatus {"201":330}
+   enviados 300 · 201 300 · procesados 300 · perdidos 0 · duplicados 0 · estado distinto 0 · 429 0 · 503 0
+   reintentos con la misma llave 30 → mismo id 30
+   procesado 100 % (umbral ≥ 99 %) · duplicado+perdido 0 % (umbral < 1 %) → CUMPLE
+
+#4 · 0.85 s · 389.6 resp/s · p50 68 · p95 81 · p99 92 · máx 100 ms · estatus {"201":330}
+   enviados 300 · 201 300 · procesados 300 · perdidos 0 · duplicados 0 · estado distinto 0 · 429 0 · 503 0
+   reintentos con la misma llave 30 → mismo id 30
+   procesado 100 % (umbral ≥ 99 %) · duplicado+perdido 0 % (umbral < 1 %) → CUMPLE
+
+#5 · 0.88 s · 373.6 resp/s · p50 68 · p95 97 · p99 100 · máx 112 ms · estatus {"201":330}
+   enviados 300 · 201 300 · procesados 300 · perdidos 0 · duplicados 0 · estado distinto 0 · 429 0 · 503 0
+   reintentos con la misma llave 30 → mismo id 30
+   procesado 100 % (umbral ≥ 99 %) · duplicado+perdido 0 % (umbral < 1 %) → CUMPLE
+
+Agregado: 1500 pedidos · procesado 100 % · duplicado+perdido 0 % · p95 entre corridas 81–138 ms (mediana 87) → CUMPLE en todas las repeticiones
+Métricas del proceso al final: {"pedidosCreados":3050,"pagosConfirmados":0,"pedidosListos":0,"entregasValidadas":0,"pinesRechazados":0,"pinesBloqueados":0,"escriturasReintentadas":0,"escriturasDescartadas":0,"escriturasFallidas":0,"escriturasEnColaDeFallidos":0}
+Informe JSON: ../docs/evidencias/mediciones/esc01-local-carga.json

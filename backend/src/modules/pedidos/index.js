@@ -1,0 +1,539 @@
+// Módulo: pedidos
+// Responsabilidad: creación, estado y concurrencia del ciclo de vida del pedido (ESC-01).
+// Lógica de negocio pura, sin framework HTTP — ver docs/adr/0001-adopcion-monolito-modular.md
+// Aislamiento RES-05: cada tienda tiene su propio repositorio de pedidos; ninguna
+// operación puede leer ni mutar el estado de otra tienda (A-02, ESC-02).
+//
+// Dueño único de `pin` y `estado` (V-01/V-03, docs/dominio/auditoria-modularidad.md):
+// ningún otro módulo escribe estos campos directamente; solo pasan por
+// `asignarPin` y por los métodos de intención (`confirmarPago`/`marcarListo`/
+// `confirmarEntrega`). `obtenerPedido` y toda función pública devuelven una
+// copia frozen para que una mutación externa falle en vez de corromper el
+// almacén.
+
+import { randomBytes, timingSafeEqual } from 'node:crypto';
+
+import { obtenerProducto } from '../catalogo/index.js';
+import { contar } from '../../metricas.js';
+import { escribirPedido, alCargar } from '../../persistencia/index.js';
+import { asignarCodigo, fechaColombia, indiceDesdeCodigo, TOTAL_CODIGOS } from './codigo.js';
+
+const ESTADOS = ['Recibido', 'En preparación', 'Listo', 'Entregado'];
+// ADR-0032: tope de productos distintos en un pedido, para acotar el trabajo de
+// una sola petición y el tamaño de la fila.
+const MAX_LINEAS = 20;
+// S14 · seguridad: tope de unidades por línea y por pedido. Sin tope, una
+// cantidad como 1e9 desborda NUMERIC(10,2), agota los reintentos de escritura
+// y responde 503. El tope convierte ese fallo de infraestructura en un 400.
+const MAX_UNIDADES_POR_LINEA = 100;
+const MAX_UNIDADES_POR_PEDIDO = 500;
+
+import { estadoCompartido } from '../../estado-compartido.js';
+
+const pedidosPorTienda = estadoCompartido('pedidosPorTienda', () => new Map());
+const contadoresPorTienda = estadoCompartido('contadoresPorTienda', () => new Map());
+// S11 · F-01/F-02: claves de idempotencia por tienda. Un reintento del cliente
+// con la misma `Idempotency-Key` devuelve el pedido original en vez de crear
+// otro. Vive en memoria (deuda declarada: no sobrevive a un reinicio).
+const idempotenciaPorTienda = estadoCompartido('idempotenciaPorTienda', () => new Map());
+// Código corto del pedido (A01 … Z99, ver codigo.js): posición de la
+// secuencia de cada tienda en el día. Se reconstruye en la rehidratación.
+const cursoresCodigo = estadoCompartido('cursoresCodigo', () => new Map());
+
+function repoTienda(tiendaId) {
+  if (!pedidosPorTienda.has(tiendaId)) {
+    pedidosPorTienda.set(tiendaId, new Map());
+  }
+  return pedidosPorTienda.get(tiendaId);
+}
+
+function siguienteId(tiendaId) {
+  const n = (contadoresPorTienda.get(tiendaId) ?? 0) + 1;
+  contadoresPorTienda.set(tiendaId, n);
+  return `pedido-${n}`;
+}
+
+// Asigna el código del pedido nuevo: libre entre los pedidos aún no
+// entregados de la tienda y reiniciado cada día (hora de Colombia).
+function siguienteCodigo(tiendaId, creadoEn) {
+  const ocupados = new Set();
+  for (const pedido of repoTienda(tiendaId).values()) {
+    if (pedido.codigo && pedido.estado !== 'Entregado' && !pedido.canceladoEn) {
+      ocupados.add(pedido.codigo);
+    }
+  }
+  const { codigo, cursor } = asignarCodigo(cursoresCodigo.get(tiendaId), fechaColombia(creadoEn), ocupados);
+  cursoresCodigo.set(tiendaId, cursor);
+  return codigo;
+}
+
+function pedidoMutable(pedidoId, tiendaId) {
+  if (!tiendaId) {
+    throw new Error('tiendaId es obligatorio');
+  }
+  const pedido = repoTienda(tiendaId).get(pedidoId);
+  if (!pedido) {
+    throw new Error(`Pedido ${pedidoId} no encontrado en la tienda ${tiendaId}`);
+  }
+  return pedido;
+}
+
+function copiaItems(items) {
+  return Object.freeze(items.map((item) => Object.freeze({ ...item })));
+}
+
+function instantanea(pedido) {
+  return Object.freeze({ ...pedido, items: copiaItems(pedido.items) });
+}
+
+// ADR-0032: líneas del pedido. Acepta `items[]` o el formato de un producto del
+// contrato v1; un producto repetido se suma en una sola línea.
+function lineasDe({ productoId, cantidad, items }) {
+  if (items === undefined) return [{ productoId, cantidad }];
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new Error('items debe traer al menos un producto');
+  }
+  if (items.length > MAX_LINEAS) {
+    throw new Error(`Un pedido admite hasta ${MAX_LINEAS} productos distintos`);
+  }
+  const porProducto = new Map();
+  for (const item of items) {
+    const previo = porProducto.get(item?.productoId) ?? 0;
+    porProducto.set(item?.productoId, previo + item?.cantidad);
+  }
+  return [...porProducto].map(([id, unidades]) => ({ productoId: id, cantidad: unidades }));
+}
+
+function validarUnidades(lineas) {
+  if (lineas.some(({ cantidad }) => !Number.isInteger(cantidad) || cantidad <= 0)) {
+    throw new Error('La cantidad debe ser mayor a 0');
+  }
+  if (lineas.some(({ cantidad }) => cantidad > MAX_UNIDADES_POR_LINEA)) {
+    throw new Error(`Cada producto admite hasta ${MAX_UNIDADES_POR_LINEA} unidades`);
+  }
+  const unidades = lineas.reduce((suma, { cantidad }) => suma + cantidad, 0);
+  if (unidades > MAX_UNIDADES_POR_PEDIDO) {
+    throw new Error(`Un pedido admite hasta ${MAX_UNIDADES_POR_PEDIDO} unidades`);
+  }
+}
+
+function crearPedido(datos) {
+  const { clienteId, tiendaId } = datos;
+  const lineas = lineasDe(datos);
+  validarUnidades(lineas);
+  if (!clienteId) {
+    throw new Error('clienteId es obligatorio');
+  }
+  if (!tiendaId) {
+    throw new Error('tiendaId es obligatorio');
+  }
+
+  // Se validan todos los productos ANTES de crear nada: uno de otra tienda o
+  // agotado rechaza el pedido completo (RES-05). Nombre y precio quedan fijados
+  // al crear: un cambio posterior del menú no altera lo que se compró.
+  const items = lineas.map(({ productoId, cantidad }) => {
+    const producto = obtenerProducto(productoId, tiendaId);
+    return { productoId: producto.id, nombre: producto.nombre, cantidad, precioUnitario: producto.precio };
+  });
+  const creadoEn = new Date();
+
+  const pedido = {
+    id: siguienteId(tiendaId),
+    codigo: siguienteCodigo(tiendaId, creadoEn),
+    creadoEn: creadoEn.toISOString(),
+    clienteId,
+    tiendaId,
+    // Contrato v1: primer producto y unidades totales. El detalle está en `items`.
+    productoId: items[0].productoId,
+    cantidad: items.reduce((suma, item) => suma + item.cantidad, 0),
+    items,
+    total: items.reduce((suma, item) => suma + item.precioUnitario * item.cantidad, 0),
+    estado: 'Recibido',
+    canceladoEn: null,
+    pin: null,
+    // ADR-0025: llave de la vista pública. 128 bits al azar: los `pedidoId`
+    // son consecutivos y se pueden adivinar; este token no.
+    seguimiento: randomBytes(16).toString('base64url'),
+  };
+
+  repoTienda(tiendaId).set(pedido.id, pedido);
+  escribirPedido(pedido);
+  contar('pedidosCreados');
+  return instantanea(pedido);
+}
+
+function huella(datos) {
+  return JSON.stringify([lineasDe(datos), datos.clienteId, datos.tiendaId]);
+}
+
+// Sin clave se comporta como `crearPedido` (la cabecera es opcional en v1).
+// La comprobación y la creación son síncronas: dos peticiones simultáneas con
+// la misma clave no pueden intercalarse en el event loop.
+function crearPedidoIdempotente(datos, clave) {
+  if (!clave) {
+    return { pedido: crearPedido(datos), repetido: false };
+  }
+  if (!datos.tiendaId) {
+    throw new Error('tiendaId es obligatorio');
+  }
+  const llave = `${datos.tiendaId}::${clave}`;
+  const previo = idempotenciaPorTienda.get(llave);
+  if (previo) {
+    if (previo.huella !== huella(datos)) {
+      const error = new Error('Idempotency-Key reutilizada con otro contenido');
+      error.conflicto = true;
+      throw error;
+    }
+    return { pedido: instantanea(pedidoMutable(previo.pedidoId, datos.tiendaId)), repetido: true };
+  }
+  const pedido = crearPedido(datos);
+  idempotenciaPorTienda.set(llave, { pedidoId: pedido.id, huella: huella(datos) });
+  return { pedido, repetido: false };
+}
+
+function obtenerPedido(pedidoId, tiendaId) {
+  return instantanea(pedidoMutable(pedidoId, tiendaId));
+}
+
+// S9 · ADR-0013: proyección pública del pedido. Es la única función que el
+// borde HTTP debe usar para leer un pedido, y devuelve la instantánea sin
+// `pin`. El PIN es el mecanismo de validación del punto de recolección (A-06,
+// ESC-03) y no debe ser legible por una vía de lectura: si el llamante puede
+// leerlo, no necesita adivinarlo ni la validación del mostrador pierde sentido.
+//
+// `obtenerPedido` se conserva sin cambios porque el dominio la necesita
+// legítimamente: `entrega.validarPin` lee el `pin` para compararlo. Lo que
+// cambia es quién puede verlo desde fuera, no quién puede usarlo dentro.
+function vistaPublica(pedidoId, tiendaId) {
+  const publico = { ...instantanea(pedidoMutable(pedidoId, tiendaId)) };
+  delete publico.pin;
+  // ADR-0025: el token de seguimiento solo se entrega una vez, al crear.
+  delete publico.seguimiento;
+  return Object.freeze(publico);
+}
+
+function tokenCoincide(guardado, recibido) {
+  if (!guardado || typeof recibido !== 'string') return false;
+  const a = Buffer.from(guardado);
+  const b = Buffer.from(recibido);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+// ADR-0025: lectura de un pedido desde fuera. Responde solo a quien prueba
+// que el pedido es suyo: su dueño con sesión o quien trae el token de
+// seguimiento que se entregó al crearlo. Para todos los demás el pedido «no
+// existe» (404, mismo mensaje que un id inexistente): recorrer pedido-1…N ya
+// no revela nada. Los pedidos anteriores al token solo los ve su dueño.
+function vistaConAcceso(pedidoId, tiendaId, { seguimiento, usuarioId } = {}) {
+  const pedido = repoTienda(tiendaId ?? '').get(pedidoId);
+  const esDueno = Boolean(pedido && usuarioId && pedido.clienteId === usuarioId);
+  if (!pedido || !(esDueno || tokenCoincide(pedido.seguimiento, seguimiento))) {
+    const e = new Error(`Pedido ${pedidoId} no encontrado en la tienda ${tiendaId}`);
+    e.estado = 404;
+    throw e;
+  }
+  return vistaPublica(pedidoId, tiendaId);
+}
+
+// ADR-0026 (hallazgo 1 de S12): la creación de un pedido no se pudo guardar
+// en la base. Se retira de la memoria junto con su clave de idempotencia, para
+// que el cliente reintente y no quede un `pedidoId` que la base no conoce.
+function descartarPedido(pedidoId, tiendaId) {
+  repoTienda(tiendaId).delete(pedidoId);
+  for (const [llave, entrada] of idempotenciaPorTienda) {
+    if (llave.startsWith(`${tiendaId}::`) && entrada.pedidoId === pedidoId) idempotenciaPorTienda.delete(llave);
+  }
+}
+
+function cambiarEstado(pedidoId, tiendaId, nuevoEstado) {
+  const pedido = pedidoMutable(pedidoId, tiendaId);
+  if (pedido.canceladoEn) {
+    throw new Error('Este pedido fue cancelado');
+  }
+  const indiceActual = ESTADOS.indexOf(pedido.estado);
+  const indiceNuevo = ESTADOS.indexOf(nuevoEstado);
+
+  if (indiceNuevo === -1) {
+    throw new Error(`Estado ${nuevoEstado} inválido`);
+  }
+  if (indiceNuevo !== indiceActual + 1) {
+    throw new Error(`Transición inválida: ${pedido.estado} -> ${nuevoEstado}`);
+  }
+
+  pedido.estado = nuevoEstado;
+  escribirPedido(pedido);
+  if (nuevoEstado === 'En preparación') contar('pagosConfirmados');
+  if (nuevoEstado === 'Listo') contar('pedidosListos');
+  if (nuevoEstado === 'Entregado') contar('entregasValidadas');
+  return instantanea(pedido);
+}
+
+// ADR-0033: el administrador de la tienda retira un pedido sin necesitar su PIN.
+// La fila se conserva marcada: es la trazabilidad, y un borrado real competiría
+// con los mensajes de escritura pendientes de ese pedido (ADR-0026).
+function cancelarPedido(pedidoId, tiendaId, rol) {
+  if (rol !== 'admin') {
+    const e = new Error('Solo el administrador de la tienda puede eliminar pedidos');
+    e.estado = 403;
+    throw e;
+  }
+  const pedido = pedidoMutable(pedidoId, tiendaId);
+  if (pedido.estado === 'Entregado') {
+    const e = new Error('Un pedido entregado no se puede eliminar');
+    e.estado = 409;
+    throw e;
+  }
+  if (!pedido.canceladoEn) {
+    pedido.canceladoEn = new Date().toISOString();
+    escribirPedido(pedido);
+  }
+  return instantanea(pedido);
+}
+
+// ADR-0034: el dueño puede cancelar su pedido antes de que esté Listo.
+// El soft-delete conserva historial y usa el mismo marcador persistido que
+// la cancelación administrativa; el backend vuelve a comprobar dueño/estado.
+function cancelarPedidoPorDueno(pedidoId, tiendaId, usuarioId) {
+  const pedido = repoTienda(tiendaId ?? '').get(pedidoId);
+  if (!pedido || !usuarioId || pedido.clienteId !== usuarioId) {
+    const e = new Error('Pedido no encontrado en tu cuenta');
+    e.estado = 404;
+    throw e;
+  }
+  if (pedido.canceladoEn) return instantanea(pedido);
+  if (!['Recibido', 'En preparación'].includes(pedido.estado)) {
+    const e = new Error('Solo puedes cancelar un pedido antes de que esté Listo');
+    e.estado = 409;
+    throw e;
+  }
+  pedido.canceladoEn = new Date().toISOString();
+  escribirPedido(pedido);
+  return instantanea(pedido);
+}
+
+// V-01: único escritor de `pin`. Entrega ya no hace `pedido.pin = generarPin()`
+// directamente sobre el objeto de otro contexto; le pide a Pedidos que lo
+// asigne.
+function asignarPin(pedidoId, tiendaId, pin) {
+  if (!pin) {
+    throw new Error('pin es obligatorio');
+  }
+  const pedido = pedidoMutable(pedidoId, tiendaId);
+  pedido.pin = pin;
+  escribirPedido(pedido);
+  return instantanea(pedido);
+}
+
+// ADR-0022: el PIN se entrega a su DUEÑO, autenticado, y solo cuando el
+// pedido está Listo. Es la vía de emisión al cliente; la vista pública
+// (`vistaPublica`, ADR-0013) sigue sin exponerlo a nadie más. El error no
+// distingue «no existe» de «no es tuyo» para no revelar pedidos ajenos.
+function pinParaDueno(pedidoId, tiendaId, usuarioId) {
+  const pedido = repoTienda(tiendaId ?? '').get(pedidoId);
+  if (!pedido || !usuarioId || pedido.clienteId !== usuarioId) {
+    const e = new Error('Pedido no encontrado en tu cuenta');
+    e.estado = 404;
+    throw e;
+  }
+  if (pedido.estado !== 'Listo' || !pedido.pin || pedido.canceladoEn) {
+    const e = new Error('El PIN aparece cuando tu pedido está Listo');
+    e.estado = 409;
+    throw e;
+  }
+  return Object.freeze({ pedidoId: pedido.id, tiendaId: pedido.tiendaId, codigo: pedido.codigo ?? null, pin: pedido.pin });
+}
+
+// Pedidos de una cuenta en todas las tiendas, del más reciente al más antiguo,
+// en vista pública (sin PIN). Es lectura del propio cliente: el aislamiento
+// RES-05 separa tiendas entre sí, no impide que un cliente vea lo suyo.
+function pedidosDeCliente(usuarioId) {
+  const propios = [];
+  for (const repo of pedidosPorTienda.values()) {
+    for (const pedido of repo.values()) {
+      if (pedido.clienteId === usuarioId) propios.push(vistaPublica(pedido.id, pedido.tiendaId));
+    }
+  }
+  return propios.sort((a, b) => String(b.creadoEn ?? '').localeCompare(String(a.creadoEn ?? '')));
+}
+
+// Panel de tienda (ADR-0023): pedidos de UNA tienda, del más antiguo al más
+// reciente (orden de atención), en vista pública. Los entregados solo si son
+// de hoy, para que la columna de entregados no crezca sin fin.
+function pedidosDeTienda(tiendaId, { hoy = fechaColombia() } = {}) {
+  const lista = [];
+  for (const pedido of repoTienda(tiendaId).values()) {
+    if (pedido.canceladoEn) continue;
+    const deHoy = pedido.creadoEn && fechaColombia(new Date(pedido.creadoEn)) === hoy;
+    if (pedido.estado !== 'Entregado' || deHoy) lista.push(vistaPublica(pedido.id, tiendaId));
+  }
+  return lista.sort((a, b) => String(a.creadoEn ?? '').localeCompare(String(b.creadoEn ?? '')));
+}
+
+// ADR-0037: lectura de la administración general. Es la ÚNICA lectura que
+// cruza tiendas por diseño (excepción declarada a RES-05): recorre los
+// repositorios de cada tienda y devuelve vistas públicas, sin PIN ni token de
+// seguimiento. Las MUTACIONES del administrador general siguen pasando por las
+// funciones de una sola tienda (`cancelarPedido`, métodos de intención), con el
+// `tiendaId` explícito del pedido.
+function todosLosPedidos({ tiendaId, clienteId, estado, incluirCancelados = true } = {}) {
+  const lista = [];
+  const repos = tiendaId ? [[tiendaId, repoTienda(tiendaId)]] : [...pedidosPorTienda];
+  for (const [idTienda, repo] of repos) {
+    for (const pedido of repo.values()) {
+      if (clienteId && pedido.clienteId !== clienteId) continue;
+      if (!incluirCancelados && pedido.canceladoEn) continue;
+      if (estado === 'Cancelado') {
+        if (!pedido.canceladoEn) continue;
+      } else if (estado && (pedido.canceladoEn || pedido.estado !== estado)) {
+        continue;
+      }
+      lista.push(vistaPublica(pedido.id, idTienda));
+    }
+  }
+  return lista.sort((a, b) => String(b.creadoEn ?? '').localeCompare(String(a.creadoEn ?? '')));
+}
+
+// ADR-0037: cifras por tienda para la administración general.
+function estadisticasPorTienda({ hoy = fechaColombia() } = {}) {
+  const salida = {};
+  for (const [tiendaId, repo] of pedidosPorTienda) {
+    const cifras = { total: 0, activos: 0, cancelados: 0, entregados: 0, hoy: 0, ventasHoy: 0, ventasTotales: 0 };
+    for (const pedido of repo.values()) {
+      cifras.total += 1;
+      if (pedido.canceladoEn) {
+        cifras.cancelados += 1;
+        continue;
+      }
+      if (pedido.estado === 'Entregado') cifras.entregados += 1;
+      else cifras.activos += 1;
+      const pagado = pedido.estado !== 'Recibido';
+      if (pagado) cifras.ventasTotales += pedido.total;
+      if (pedido.creadoEn && fechaColombia(new Date(pedido.creadoEn)) === hoy) {
+        cifras.hoy += 1;
+        if (pagado) cifras.ventasHoy += pedido.total;
+      }
+    }
+    salida[tiendaId] = cifras;
+  }
+  return salida;
+}
+
+// Resumen del día de una tienda, calculado desde sus pedidos de hoy. Ventas =
+// pedidos con pago confirmado (En preparación, Listo o Entregado).
+function resumenDelDia(tiendaId, { hoy = fechaColombia() } = {}) {
+  const porEstado = Object.fromEntries(ESTADOS.map((e) => [e, 0]));
+  let pedidosHoy = 0;
+  let ventas = 0;
+  for (const pedido of repoTienda(tiendaId).values()) {
+    if (pedido.canceladoEn || !pedido.creadoEn || fechaColombia(new Date(pedido.creadoEn)) !== hoy) continue;
+    pedidosHoy += 1;
+    porEstado[pedido.estado] += 1;
+    if (pedido.estado !== 'Recibido') ventas += pedido.total;
+  }
+  return { fecha: hoy, pedidos: pedidosHoy, porEstado, ventas };
+}
+
+// V-03: métodos de intención. Pagos y Entrega ya no invocan `cambiarEstado`
+// con el nombre del estado destino (no conocen la máquina de estados);
+// expresan la intención de negocio y Pedidos decide la transición.
+function confirmarPago(pedidoId, tiendaId) {
+  return cambiarEstado(pedidoId, tiendaId, 'En preparación');
+}
+
+function marcarListo(pedidoId, tiendaId) {
+  return cambiarEstado(pedidoId, tiendaId, 'Listo');
+}
+
+function confirmarEntrega(pedidoId, tiendaId) {
+  return cambiarEstado(pedidoId, tiendaId, 'Entregado');
+}
+
+// Puerto de rehidratación (ESC-01, ADR-0014). Reconstruye el estado desde las
+// filas que `src/persistencia` cargó de PostgreSQL al arrancar el proceso;
+// también lo usan las pruebas de supervivencia para simular el arranque
+// posterior a un reinicio. `restaurarEstadoDesde([])` equivale a un arranque
+// en blanco: es exactamente lo que le pasa hoy a la memoria tras un reinicio
+// sin persistencia (línea base del experimento S10).
+function restaurarEstadoDesde(registros) {
+  pedidosPorTienda.clear();
+  contadoresPorTienda.clear();
+  cursoresCodigo.clear();
+  const hoy = fechaColombia();
+  const ultimoDeHoy = new Map();
+  for (const fila of registros) {
+    const pedido = {
+      id: fila.id,
+      // Filas anteriores a la columna `codigo` quedan con null: el frontend
+      // muestra el pedidoId en ese caso.
+      codigo: fila.codigo ?? null,
+      creadoEn: fila.creadoEn ?? null,
+      clienteId: fila.clienteId,
+      tiendaId: fila.tiendaId,
+      productoId: fila.productoId,
+      cantidad: fila.cantidad,
+      // Filas anteriores a ADR-0032: un producto, sin el nombre fijado.
+      items: fila.items ?? [
+        {
+          productoId: fila.productoId,
+          nombre: null,
+          cantidad: fila.cantidad,
+          precioUnitario: fila.total / fila.cantidad,
+        },
+      ],
+      total: fila.total,
+      estado: fila.estado,
+      canceladoEn: fila.canceladoEn ?? null,
+      pin: fila.pin ?? null,
+      seguimiento: fila.seguimiento ?? null,
+    };
+    repoTienda(pedido.tiendaId).set(pedido.id, pedido);
+    const numero = Number(String(pedido.id).replace(/^pedido-/, ''));
+    if (Number.isInteger(numero) && numero > (contadoresPorTienda.get(pedido.tiendaId) ?? 0)) {
+      contadoresPorTienda.set(pedido.tiendaId, numero);
+    }
+    // El cursor de códigos sigue al pedido de HOY creado más recientemente:
+    // tras un reinicio a mitad del día no se vuelve a A01.
+    if (pedido.codigo && pedido.creadoEn && fechaColombia(new Date(pedido.creadoEn)) === hoy) {
+      const previo = ultimoDeHoy.get(pedido.tiendaId);
+      if (!previo || pedido.creadoEn > previo.creadoEn) {
+        ultimoDeHoy.set(pedido.tiendaId, pedido);
+      }
+    }
+  }
+  for (const [tiendaId, pedido] of ultimoDeHoy) {
+    const indice = indiceDesdeCodigo(pedido.codigo);
+    if (indice >= 0) {
+      cursoresCodigo.set(tiendaId, { fecha: hoy, siguiente: (indice + 1) % TOTAL_CODIGOS });
+    }
+  }
+}
+
+alCargar(restaurarEstadoDesde);
+
+export {
+  crearPedido,
+  crearPedidoIdempotente,
+  obtenerPedido,
+  vistaPublica,
+  vistaConAcceso,
+  descartarPedido,
+  pinParaDueno,
+  pedidosDeCliente,
+  pedidosDeTienda,
+  todosLosPedidos,
+  estadisticasPorTienda,
+  resumenDelDia,
+  cambiarEstado,
+  cancelarPedido,
+  cancelarPedidoPorDueno,
+  asignarPin,
+  confirmarPago,
+  marcarListo,
+  confirmarEntrega,
+  restaurarEstadoDesde,
+  ESTADOS,
+  MAX_LINEAS,
+  MAX_UNIDADES_POR_LINEA,
+  MAX_UNIDADES_POR_PEDIDO,
+  validarUnidades,
+};

@@ -1,0 +1,300 @@
+// Cliente del contrato OpenAPI v1 del backend LaPlacita (backend/openapi.yaml).
+// Única vía de acceso a datos: nada por fuera de /api/v1. La base es RELATIVA:
+// el servidor Next del frontend hace proxy de /api/v1 hacia el backend
+// (patrón BFF en next.config.mjs), así el navegador nunca cruza orígenes.
+
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? ""
+
+import { reescalarImagen } from "./imagen"
+
+// ── Tipos del contrato (espejo de los schemas de openapi.yaml) ──────────────
+
+/** Producto del catálogo del backend (prod-001, …). */
+export interface Product {
+  id: string
+  /** En el backend es el `tiendaId` del establecimiento dueño. */
+  storeSlug: string
+  name: string
+  description?: string
+  price: number
+  category?: string
+  imageUrl?: string
+  disponible?: boolean
+  /** uuid v4 en el almacén de imágenes (ADR-0028): la URL se compone en la vista. */
+  imagenId?: string | null
+}
+
+export type EstadoPedido = "Recibido" | "En preparación" | "Listo" | "Entregado"
+
+/** Producto dentro de un pedido (ADR-0032). `nombre` es null en pedidos anteriores. */
+export interface ItemPedido {
+  productoId: string
+  nombre?: string | null
+  cantidad: number
+  precioUnitario?: number
+}
+
+export interface Pedido {
+  id: string
+  /** Código corto para el mostrador (A01 … Z99, por tienda y por día). Null en pedidos viejos. */
+  codigo?: string | null
+  creadoEn?: string | null
+  clienteId: string
+  tiendaId: string
+  /** Primer producto y unidades totales (contrato v1). El detalle está en `items`. */
+  productoId: string
+  cantidad: number
+  items?: ItemPedido[]
+  total: number
+  estado: EstadoPedido
+  /** Momento en que la tienda eliminó el pedido (ADR-0033). Null si sigue vigente. */
+  canceladoEn?: string | null
+  pin?: string | null
+  /** Llave de la vista pública (ADR-0025). Solo llega en la respuesta de POST /pedidos. */
+  seguimiento?: string
+}
+
+/** Sufijo `&seguimiento=…` para las lecturas públicas del pedido (ADR-0025); vacío sin token. */
+function conSeguimiento(seguimiento?: string | null): string {
+  return seguimiento ? `&seguimiento=${encodeURIComponent(seguimiento)}` : ""
+}
+
+export interface Notificacion {
+  pedidoId: string
+  tiendaId: string
+  estado: EstadoPedido
+  mensaje?: string
+  enviadaEn?: string
+}
+
+/** Referencias públicas de imágenes por estado de atención (ADR-0035). */
+export interface ImagenesTienda {
+  id: string
+  nombre: string
+  imagenId?: string | null
+  imagenAbiertaId?: string | null
+  imagenCerradaId?: string | null
+}
+
+export type EstadoImagenTienda = "abierta" | "cerrada"
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const respuesta = await fetch(`${API_BASE}/api/v1${path}`, init)
+  const cuerpo = await respuesta.json().catch(() => ({}))
+  if (!respuesta.ok) {
+    const mensaje =
+      typeof cuerpo === "object" && cuerpo !== null && "error" in cuerpo
+        ? String((cuerpo as { error: unknown }).error)
+        : `HTTP ${respuesta.status}`
+    throw new ErrorApi(mensaje, respuesta.status)
+  }
+  return cuerpo as T
+}
+
+/** Error del contrato con su código HTTP (401 sin sesión, 404, 409…). */
+export class ErrorApi extends Error {
+  constructor(
+    mensaje: string,
+    readonly estado: number,
+  ) {
+    super(mensaje)
+  }
+}
+
+// ── Operaciones del contrato ────────────────────────────────────────────────
+
+/** GET /catalogo/tiendas/{tiendaId}/productos */
+export async function obtenerProductos(tiendaId: string): Promise<Product[]> {
+  // El backend habla español (nombre/precio/tiendaId); el frontend, inglés
+  // (name/price/storeSlug). El mapeo vive aquí — TypeScript no valida el
+  // contenido de la respuesta, solo lo que declaramos.
+  const crudos = await request<
+    Array<{
+      id: string
+      tiendaId: string
+      nombre: string
+      precio: number
+      disponible: boolean
+      imagenId?: string | null
+      descripcion?: string | null
+    }>
+  >(`/catalogo/tiendas/${encodeURIComponent(tiendaId)}/productos`)
+  return crudos.map((p) => ({
+    id: p.id,
+    storeSlug: p.tiendaId,
+    name: p.nombre,
+    price: p.precio,
+    disponible: p.disponible,
+    imagenId: p.imagenId ?? null,
+    description: p.descripcion?.trim() || undefined,
+  }))
+}
+
+/** GET /catalogo/tiendas — las referencias apuntan al mismo Garage que el menú. */
+export function obtenerImagenesTiendas(): Promise<ImagenesTienda[]> {
+  return request<ImagenesTienda[]>("/catalogo/tiendas", { cache: "no-store" })
+}
+
+/** POST /pedidos — un pedido por tienda, con uno o varios productos (ADR-0032). */
+export function crearPedido(entrada: {
+  items: { productoId: string; cantidad: number }[]
+  clienteId: string
+  tiendaId: string
+}): Promise<Pedido> {
+  return request<Pedido>("/pedidos", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(entrada),
+  })
+}
+
+/** GET /pedidos — pedidos de la cuenta con sesión (ADR-0021), sin PIN. */
+export function obtenerMisPedidos(): Promise<Pedido[]> {
+  return request<Pedido[]>("/pedidos", { cache: "no-store" })
+}
+
+/** GET /pedidos/{pedidoId}/pin?tiendaId=… — solo el dueño, con el pedido Listo (ADR-0022). */
+export function obtenerPin(
+  pedidoId: string,
+  tiendaId: string,
+): Promise<{ pedidoId: string; tiendaId: string; codigo?: string | null; pin: string }> {
+  return request(`/pedidos/${encodeURIComponent(pedidoId)}/pin?tiendaId=${encodeURIComponent(tiendaId)}`, {
+    cache: "no-store",
+  })
+}
+
+/**
+ * GET /pedidos/{pedidoId}?tiendaId=…&seguimiento=… — vista pública, sin pin (ADR-0013).
+ * Responde al dueño con sesión o a quien trae el token de seguimiento (ADR-0025); si no, 404.
+ */
+export function obtenerPedido(pedidoId: string, tiendaId: string, seguimiento?: string | null): Promise<Pedido> {
+  return request<Pedido>(
+    `/pedidos/${encodeURIComponent(pedidoId)}?tiendaId=${encodeURIComponent(tiendaId)}${conSeguimiento(seguimiento)}`
+  )
+}
+
+/** POST /pedidos/{pedidoId}/cancelar — solo el dueño, antes de que esté Listo. */
+export function cancelarPedidoPropio(pedidoId: string, tiendaId: string): Promise<Pedido> {
+  return request<Pedido>(
+    `/pedidos/${encodeURIComponent(pedidoId)}/cancelar?tiendaId=${encodeURIComponent(tiendaId)}`,
+    { method: "POST" },
+  )
+}
+
+/** POST /pagos/{pedidoId}/confirmar?tiendaId=… — acción del establecimiento. */
+export function confirmarPago(pedidoId: string, tiendaId: string): Promise<Pedido> {
+  return request<Pedido>(
+    `/pagos/${encodeURIComponent(pedidoId)}/confirmar?tiendaId=${encodeURIComponent(tiendaId)}`,
+    { method: "POST" }
+  )
+}
+
+// S13 (ADR-0029): la ruta v1 /entrega/{pedidoId}/validar se RETIRÓ del
+// backend — la entrega la valida la TIENDA con sesión (POST
+// /tienda/pedidos/{id}/entrega, ADR-0023). El cliente nunca valida el PIN.
+
+/** GET /notificaciones/{pedidoId}?tiendaId=… — historial de cambios de estado. */
+export function obtenerNotificaciones(
+  pedidoId: string,
+  tiendaId: string,
+  seguimiento?: string | null
+): Promise<Notificacion[]> {
+  return request<Notificacion[]>(
+    `/notificaciones/${encodeURIComponent(pedidoId)}?tiendaId=${encodeURIComponent(tiendaId)}${conSeguimiento(seguimiento)}`
+  )
+}
+
+// ── Panel de tienda (ADR-0023): la tienda sale del token de la sesión ────────
+
+/** Pedido visto desde el mostrador: sin PIN, con el primer nombre del cliente. */
+export interface PedidoTienda extends Pedido {
+  clienteNombre?: string | null
+}
+
+export interface ProductoTienda {
+  id: string
+  tiendaId: string
+  nombre: string
+  precio: number
+  disponible: boolean
+  /** uuid v4 del objeto en el almacén (ADR-0028); null si aún no tiene foto. */
+  imagenId?: string | null
+}
+
+export interface ResumenTienda {
+  fecha: string
+  pedidos: number
+  porEstado: Record<EstadoPedido, number>
+  /** Solo para el admin; null para el trabajador. */
+  ventas: number | null
+}
+
+const SIN_CACHE: RequestInit = { cache: "no-store" }
+
+export function listarPedidosTienda(): Promise<PedidoTienda[]> {
+  return request<PedidoTienda[]>("/tienda/pedidos", SIN_CACHE)
+}
+
+function accionTienda(pedidoId: string, accion: "pago" | "listo" | "entrega" | "cancelar", cuerpo?: object) {
+  return request<PedidoTienda>(`/tienda/pedidos/${encodeURIComponent(pedidoId)}/${accion}`, {
+    method: "POST",
+    headers: cuerpo ? { "content-type": "application/json" } : undefined,
+    body: cuerpo ? JSON.stringify(cuerpo) : undefined,
+  })
+}
+
+export const confirmarPagoTienda = (pedidoId: string) => accionTienda(pedidoId, "pago")
+export const marcarListoTienda = (pedidoId: string) => accionTienda(pedidoId, "listo")
+export const entregarConPin = (pedidoId: string, pin: string) => accionTienda(pedidoId, "entrega", { pin })
+export const eliminarPedidoTienda = (pedidoId: string) => accionTienda(pedidoId, "cancelar")
+
+export function listarMenuTienda(): Promise<ProductoTienda[]> {
+  return request<ProductoTienda[]>("/tienda/productos", SIN_CACHE)
+}
+
+export function actualizarProductoTienda(
+  productoId: string,
+  cambios: { disponible?: boolean; precio?: number },
+): Promise<ProductoTienda> {
+  return request<ProductoTienda>(`/tienda/productos/${encodeURIComponent(productoId)}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(cambios),
+  })
+}
+
+/** ADR-0028: sube la foto del producto (multipart, cookie de sesión vía BFF).
+ * El reescalado/compresión del navegador vive en lib/imagen.ts — aquí solo la
+ * llamada al contrato. */
+export async function subirImagenProducto(
+  productoId: string,
+  archivo: File
+): Promise<ProductoTienda> {
+  const blob = await reescalarImagen(archivo)
+  const cuerpo = new FormData()
+  cuerpo.append("imagen", new File([blob], "imagen.webp", { type: "image/webp" }))
+  return request<ProductoTienda>(
+    `/tienda/productos/${encodeURIComponent(productoId)}/imagen`,
+    { method: "POST", body: cuerpo }
+  )
+}
+
+/** ADR-0028/0035: guarda la foto del estado abierto/cerrado en el mismo almacén de productos. */
+export async function subirImagenTienda(
+  estado: EstadoImagenTienda,
+  archivo: File,
+): Promise<ImagenesTienda> {
+  const blob = await reescalarImagen(archivo)
+  const cuerpo = new FormData()
+  cuerpo.append("imagen", new File([blob], "imagen.webp", { type: "image/webp" }))
+  return request<ImagenesTienda>(
+    `/tienda/imagen?estado=${encodeURIComponent(estado)}`,
+    { method: "POST", body: cuerpo },
+  )
+}
+
+export function resumenTienda(): Promise<ResumenTienda> {
+  return request<ResumenTienda>("/tienda/resumen", SIN_CACHE)
+}

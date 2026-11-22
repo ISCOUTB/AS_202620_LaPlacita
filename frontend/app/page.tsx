@@ -1,0 +1,117 @@
+import Image from "next/image"
+import { ArrowRight, Clock, ReceiptText, ShoppingBag, Store } from "lucide-react"
+import { BotonEnlace } from "@/components/utb/boton"
+import { Saludo } from "@/components/inicio/saludo"
+import { ListaTiendas } from "@/components/tiendas/lista-tiendas"
+
+const PASOS = [
+  {
+    icono: ShoppingBag,
+    titulo: "Elige",
+    texto: "Arma tu pedido con productos de una o varias tiendas, desde el mismo lugar.",
+  },
+  {
+    icono: ReceiptText,
+    titulo: "Paga",
+    texto: "Por transferencia o en efectivo. La tienda confirma tu pago y empieza a prepararlo.",
+  },
+  {
+    icono: Clock,
+    titulo: "Recoge",
+    texto: "Sigue el estado en vivo y pasa por el mostrador cuando diga «Listo».",
+  },
+]
+
+export default function Inicio() {
+  return (
+    <>
+      <section className="degradado-utb relative isolate overflow-hidden rounded-b-[2rem] text-white md:mx-auto md:mt-6 md:max-w-6xl md:rounded-3xl">
+        {/* Fachada de La Placita nítida de fondo, con el texto encima. En
+            pantalla ancha la foto arranca corrida a la derecha (lo que sobra se
+            recorta) para que el letrero quede libre y el texto caiga sobre los
+            árboles y el vidrio; su borde izquierdo se funde con el azul. La capa
+            de color es más oscura donde va el texto y se abre hacia el letrero.
+            En el celular el texto ocupa todo el ancho, así que la foto va como
+            franja arriba y se funde hacia abajo con el azul del texto. */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 top-0 -z-20 h-48 [mask-image:linear-gradient(to_bottom,black_60%,transparent)] md:inset-y-0 md:right-[-25%] md:left-[25%] md:h-auto md:[mask-image:linear-gradient(to_right,transparent,black_25%)]"
+        >
+          <Image
+            src="/imagenes/placita-utb.webp"
+            alt=""
+            fill
+            priority
+            unoptimized
+            className="object-cover object-center"
+          />
+        </div>
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 -z-10 hidden md:block md:bg-linear-to-r md:from-azul/40 md:from-30% md:via-noche/35 md:via-45% md:to-transparent md:to-65%"
+        />
+        <div className="mx-auto max-w-6xl px-5 pt-48 pb-10 [text-shadow:0_2px_16px_rgb(0_0_0/0.45)] md:px-10 md:py-16">
+          <div className="flex max-w-xl flex-col gap-4">
+            <Saludo />
+            <h1 className="font-display text-4xl leading-tight font-extrabold text-balance md:text-5xl">
+              ¿Qué se te antoja hoy?
+            </h1>
+            <p className="max-w-md text-lg text-white/85">
+              Pide en las cinco tiendas del campus desde el salón o la biblioteca y recógelo sin hacer fila.
+            </p>
+            <div className="flex flex-wrap gap-3 pt-2 [text-shadow:none]">
+              <BotonEnlace href="/tiendas" variante="principal" className="bg-white text-azul hover:bg-white/90">
+                Ver tiendas
+                <ArrowRight aria-hidden="true" className="size-5" />
+              </BotonEnlace>
+              <BotonEnlace href="#como-funciona" variante="claro">
+                Cómo funciona
+              </BotonEnlace>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="tiendas-titulo" className="mx-auto max-w-6xl px-4 pt-8 md:px-6 md:pt-12">
+        <div className="mb-4 flex items-end justify-between gap-4">
+          <div>
+            <h2 id="tiendas-titulo" className="font-display text-2xl font-extrabold text-noche md:text-3xl">
+              Tiendas del campus
+            </h2>
+            <p className="text-suave">Las que están abiertas aparecen primero.</p>
+          </div>
+          <BotonEnlace href="/tiendas" variante="contorno" className="hidden px-4 py-2 text-sm md:inline-flex">
+            <Store aria-hidden="true" className="size-4" />
+            Todas
+          </BotonEnlace>
+        </div>
+        <ListaTiendas />
+      </section>
+
+      <section
+        id="como-funciona"
+        aria-labelledby="como-titulo"
+        className="mx-auto max-w-6xl scroll-mt-20 px-4 pt-10 md:px-6 md:pt-14"
+      >
+        <h2 id="como-titulo" className="mb-4 font-display text-2xl font-extrabold text-noche md:text-3xl">
+          Cómo funciona
+        </h2>
+        <ol className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          {PASOS.map(({ icono: Icono, titulo, texto }, i) => (
+            <li key={titulo} className="flex gap-4 rounded-2xl bg-superficie p-5 shadow-tarjeta md:flex-col">
+              <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-violeta/10 text-violeta">
+                <Icono aria-hidden="true" className="size-6" />
+              </span>
+              <div>
+                <p className="font-display text-lg font-bold text-noche">
+                  <span className="text-violeta">{i + 1}.</span> {titulo}
+                </p>
+                <p className="mt-1 text-suave">{texto}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
+    </>
+  )
+}

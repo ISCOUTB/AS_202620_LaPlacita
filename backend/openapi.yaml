@@ -1,0 +1,1928 @@
+openapi: 3.1.0
+info:
+  title: LaPlacita API
+  description: |
+    API principal de LaPlacita — plataforma de pre-pedidos y recolección (Click & Collect).
+    Sistema de monolito modular con 5 dominios: Catálogo, Pedidos, Pagos, Entrega y Notificaciones.
+    Cada módulo opera en el contexto de una tienda (`tiendaId`) garantizando aislamiento estricto.
+  version: v1
+  contact:
+    name: Equipo LaPlacita
+  license:
+    name: Propietario
+
+servers:
+  - url: /api/v1
+    description: Servidor local de desarrollo (Next.js App Router)
+
+tags:
+  - name: health
+    description: Estado de salud del backend
+  - name: catalogo
+    description: Catálogo de productos por tienda
+  - name: pedidos
+    description: Ciclo de vida del pedido
+  - name: pagos
+    description: Confirmación de pagos
+  - name: entrega
+    description: Validación de entrega por PIN
+  - name: notificaciones
+    description: Notificaciones de cambio de estado
+  - name: identidad
+    description: Cuentas e inicio de sesión (ADR-0021)
+  - name: tienda
+    description: Panel del personal de cada tienda; la tienda sale del token (ADR-0023)
+  - name: admin
+    description: Administración general de todas las tiendas y cuentas; rol superadmin por ADMINS_GENERALES (ADR-0037)
+
+paths:
+  /auth/registro:
+    post:
+      tags: [identidad]
+      summary: Crear una cuenta de la comunidad (correo institucional) y abrir sesión
+      operationId: registrar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistroRequest'
+      responses:
+        '201':
+          description: Cuenta creada; incluye el token de sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sesion'
+        '400':
+          description: Datos inválidos (correo de otro dominio, contraseña corta…)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Ya existe una cuenta con ese correo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/sesion:
+    post:
+      tags: [identidad]
+      summary: Iniciar sesión con correo y contraseña
+      operationId: iniciarSesion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SesionRequest'
+      responses:
+        '200':
+          description: Sesión abierta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sesion'
+        '401':
+          description: Correo o contraseña incorrectos (mismo mensaje en ambos casos)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Demasiados intentos fallidos (5 en 15 minutos)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/yo:
+    get:
+      tags: [identidad]
+      summary: Datos de la cuenta de la sesión actual
+      operationId: obtenerCuenta
+      security:
+        - sesion: []
+      responses:
+        '200':
+          description: Cuenta autenticada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        '401':
+          description: Sin sesión o token inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /health:
+    get:
+      tags: [health]
+      summary: Estado de salud del backend
+      operationId: getHealth
+      responses:
+        '200':
+          description: Backend operativo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+
+  /metricas:
+    get:
+      tags: [health]
+      summary: Métricas de operación asociadas a los escenarios (ESC-01, ESC-03, ESC-04)
+      operationId: obtenerMetricas
+      responses:
+        '200':
+          description: Contadores en memoria del proceso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Metricas'
+
+  /catalogo/tiendas:
+    get:
+      tags: [catalogo]
+      summary: Establecimientos del catálogo e imágenes de presentación
+      operationId: listarTiendas
+      security: []
+      description: >-
+        Contenido público del catálogo. imagenAbiertaId e imagenCerradaId
+        son referencias uuid de Garage para el estado de atención (ADR-0035).
+        imagenId conserva compatibilidad con banners anteriores. Los bytes
+        los sirve /api/v1/imagenes/{id} (ADR-0028).
+      responses:
+        '200':
+          description: Establecimientos con su imagen si la tienen
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Tienda'
+
+  /catalogo/productos/{productoId}:
+    get:
+      tags: [catalogo]
+      summary: Obtener un producto por su ID y tienda
+      operationId: obtenerProducto
+      parameters:
+        - name: productoId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID del producto
+        - name: tiendaId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: ID de la tienda propietaria
+      responses:
+        '200':
+          description: Producto encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Producto'
+        '404':
+          description: Producto no encontrado o no pertenece a la tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Producto no disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /catalogo/tiendas/{tiendaId}/productos:
+    get:
+      tags: [catalogo]
+      summary: Listar productos de una tienda
+      operationId: listarProductosPorTienda
+      parameters:
+        - name: tiendaId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de productos de la tienda
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Producto'
+
+  /pedidos:
+    post:
+      tags: [pedidos]
+      summary: Crear un nuevo pedido
+      operationId: crearPedido
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: Clave única por intento lógico de compra. Un reintento con la misma clave y el mismo contenido devuelve el pedido original (S11, F-01/F-02).
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearPedidoRequest'
+      responses:
+        '201':
+          description: >-
+            Pedido creado en estado Recibido y CONFIRMADO por la base de datos
+            (ADR-0026). Incluye `seguimiento`, la llave de la vista pública
+            (ADR-0025); es la única respuesta que la entrega.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoCreado'
+        '400':
+          description: Datos de entrada inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+        '409':
+          description: Idempotency-Key reutilizada con otro contenido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: >-
+            La base de datos no confirmó el pedido tras los reintentos (ADR-0026).
+            El pedido NO existe: reintentar (cabecera Retry-After).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      tags: [pedidos]
+      summary: Pedidos de la cuenta autenticada, en todas las tiendas (sin PIN)
+      operationId: listarMisPedidos
+      security:
+        - sesion: []
+      responses:
+        '200':
+          description: Pedidos del usuario, del más reciente al más antiguo
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pedido'
+        '401':
+          description: Sin sesión o token inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /pedidos/{pedidoId}:
+    get:
+      tags: [pedidos]
+      summary: Obtener un pedido por ID y tienda (dueño con sesión o token de seguimiento)
+      operationId: obtenerPedido
+      security:
+        - {}
+        - sesion: []
+      parameters:
+        - name: pedidoId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: tiendaId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: seguimiento
+          in: query
+          required: false
+          description: >-
+            Token de seguimiento recibido al crear el pedido (ADR-0025). Sin él,
+            solo el dueño con sesión puede leer el pedido.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Pedido encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pedido'
+        '404':
+          description: >-
+            Pedido no encontrado en la tienda, o sin el token ni la sesión de su
+            dueño: las dos situaciones responden igual para que recorrer ids
+            consecutivos no revele qué pedidos existen (ADR-0025).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /pedidos/{pedidoId}/cancelar:
+    post:
+      tags: [pedidos]
+      summary: Cancelar un pedido propio antes de que esté Listo
+      description: >-
+        ADR-0034. Requiere sesión del dueño. Solo permite cancelar en Recibido
+        o En preparación. Conserva la fila y marca `canceladoEn`; una tienda que
+        ya avanzó el pedido a Listo hace que la operación responda 409.
+      operationId: cancelarMiPedido
+      security:
+        - sesion: []
+      parameters:
+        - name: pedidoId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: tiendaId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Pedido cancelado; queda visible en el historial del dueño
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pedido'
+        '401':
+          description: Sin sesión o token inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Pedido inexistente o perteneciente a otra cuenta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: El pedido ya está Listo, Entregado u otro estado no cancelable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /pedidos/{pedidoId}/pin:
+    get:
+      tags: [pedidos]
+      summary: PIN de retiro, solo para el dueño del pedido y con el pedido en Listo
+      description: >-
+        ADR-0022. Única lectura que devuelve el PIN y exige sesión. La vista
+        pública del pedido (GET /pedidos/{pedidoId}) sigue sin PIN (ADR-0013).
+        Un pedido ajeno o inexistente responde igual (404) para no revelar
+        pedidos de otras cuentas.
+      operationId: obtenerPinDelDueno
+      security:
+        - sesion: []
+      parameters:
+        - name: pedidoId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: tiendaId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: PIN del pedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PinPedido'
+        '401':
+          description: Sin sesión o token inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: El pedido no existe o no es de esta cuenta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: El pedido todavía no está Listo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /pagos/{pedidoId}/confirmar:
+    post:
+      tags: [pagos]
+      summary: Confirmar el pago de un pedido propio
+      operationId: confirmarPago
+      security:
+        - sesion: []
+      description: >-
+        ADR-0029 (S13): el pago lo confirma SU DUEÑO con sesión — antes era
+        la ruta v1 sin sesión conservada por las mediciones S9. El
+        pedidoId es enumerable (ADR-0024): sin dueño era superficie
+        abierta. El backend compara el clienteId del TOKEN (no del cuerpo)
+        con el del pedido y responde 403 en caso contrario.
+      parameters:
+        - name: pedidoId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: tiendaId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Pago confirmado, pedido en En preparación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pedido'
+        '400':
+          description: Pedido no está en estado Recibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Pedido no encontrado en la tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El pedido no es del usuario de la sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tienda/pedidos:
+    get:
+      tags: [tienda]
+      summary: Pedidos de la tienda del token, del más antiguo al más reciente (sin PIN)
+      operationId: listarPedidosDeTienda
+      security:
+        - sesion: []
+      responses:
+        '200':
+          description: Pedidos activos y entregados de hoy
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PedidoTienda'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de una cuenta de tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tienda/pedidos/{pedidoId}/pago:
+    post:
+      tags: [tienda]
+      summary: Confirmar el pago recibido (Recibido → En preparación)
+      operationId: confirmarPagoEnTienda
+      security:
+        - sesion: []
+      parameters:
+        - name: pedidoId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Pedido actualizado (sin PIN)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoTienda'
+        '400':
+          description: Transición no válida o PIN incorrecto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de una cuenta de tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: El pedido no es de esta tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tienda/pedidos/{pedidoId}/cancelar:
+    post:
+      tags: [tienda]
+      summary: Eliminar un pedido de la cola de la tienda, sin PIN (solo admin, ADR-0033)
+      operationId: cancelarEnTienda
+      security:
+        - sesion: []
+      parameters:
+        - name: pedidoId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Pedido cancelado; deja de aparecer en la cola
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoTienda'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es del administrador de una tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: El pedido no es de esta tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: El pedido ya fue entregado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tienda/pedidos/{pedidoId}/listo:
+    post:
+      tags: [tienda]
+      summary: Marcar el pedido como Listo; genera el PIN pero no lo devuelve
+      operationId: marcarListoEnTienda
+      security:
+        - sesion: []
+      parameters:
+        - name: pedidoId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Pedido actualizado (sin PIN)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoTienda'
+        '400':
+          description: Transición no válida o PIN incorrecto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de una cuenta de tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: El pedido no es de esta tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tienda/pedidos/{pedidoId}/entrega:
+    post:
+      tags: [tienda]
+      summary: Entregar con el PIN que dicta el cliente (5 intentos como máximo)
+      operationId: entregarConPin
+      security:
+        - sesion: []
+      parameters:
+        - name: pedidoId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pin:
+                  type: string
+                  pattern: '^[0-9]{4}$'
+              required: [pin]
+      responses:
+        '200':
+          description: Pedido actualizado (sin PIN)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoTienda'
+        '400':
+          description: Transición no válida o PIN incorrecto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de una cuenta de tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: El pedido no es de esta tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tienda/productos/{productoId}/imagen:
+    post:
+      tags: [tienda]
+      summary: Subir/actualizar la imagen de un producto (panel)
+      operationId: subirImagenProducto
+      security:
+        - sesion: []
+      description: >-
+        ADR-0028. multipart con el campo `imagen`. El cliente reescala en el
+        navegador (webp ~800px); el backend decide el MIME por sniffing de los
+        bytes (jamás por lo que declara la subida) y aplica un límite de
+        512 KB sobre el buffer real. Los bytes viven en Garage (red interna de
+        Dokploy); la base guarda solo la referencia `imagen_id` (uuid v4) y el
+        catálogo se invalida con la misma convención write-through del panel.
+      parameters:
+        - name: productoId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                imagen:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Producto con la imagen asignada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Producto'
+        '400':
+          description: Falta el archivo, no es webp/png/jpeg real o no es multipart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sin sesión
+        '404':
+          description: El producto no es de la tienda de la sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: La imagen supera el límite
+        '502':
+          description: El almacén de imágenes (Garage) no aceptó la subida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /imagenes/{id}:
+    get:
+      tags: [catalogo]
+      summary: Imagen pública del catálogo por su identidad uuid
+      operationId: obtenerImagen
+      security: []
+      description: >-
+        ADR-0028. Contenido público del menú (como el nombre y el precio): la
+        protección es no-conocimiento del id (uuid v4) y no la sesión. El
+        Content-Type saliente lo determina el sniffing del contenido y la
+        respuesta declara el umbral de cacheo en el borde (Cloudflare) con
+        `Cache-Control: public, max-age=86400, immutable` — una misma url
+        nunca cambia de contenido porque cada subida genera un uuid nuevo.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: uuid v4 de la imagen (productos.imagenId)
+      responses:
+        '200':
+          description: Bytes de la imagen (webp/png/jpeg)
+          content:
+            image/webp:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Imagen no encontrada o identidad sin formato válido
+
+  /tienda/imagen:
+    post:
+      tags: [tienda]
+      summary: Subir/actualizar una imagen de presentación de la tienda (panel)
+      operationId: subirImagenTienda
+      security:
+        - sesion: []
+      description: >-
+        ADR-0028/0035. multipart con el campo imagen y estado general,
+        abierta o cerrada; mismas defensas y almacenamiento que las imágenes
+        de producto. La tienda solo sube para sí misma: tiendaId sale del
+        token (ESC-02).
+      parameters:
+        - name: estado
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [general, abierta, cerrada]
+            default: general
+          description: Estado de apertura asociado a la imagen.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                imagen:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Referencia de la imagen asignada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tienda'
+        '400':
+          description: Falta el archivo o no es webp/png/jpeg real
+        '401':
+          description: Sin sesión
+        '413':
+          description: La imagen supera el límite
+        '502':
+          description: El almacén de imágenes (Garage) no aceptó la subida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tienda/productos:
+    get:
+      tags: [tienda]
+      summary: Menú completo de la tienda del token, incluidos los agotados
+      operationId: listarMenuDeTienda
+      security:
+        - sesion: []
+      responses:
+        '200':
+          description: Productos de la tienda
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Producto'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de una cuenta de tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tienda/productos/{productoId}:
+    patch:
+      tags: [tienda]
+      summary: Marcar agotado/disponible (cualquier cuenta) o cambiar el precio (solo admin)
+      operationId: actualizarProducto
+      security:
+        - sesion: []
+      parameters:
+        - name: productoId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CambioProducto'
+      responses:
+        '200':
+          description: Producto actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Producto'
+        '400':
+          description: Valor inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: No es cuenta de tienda, o un trabajador intenta cambiar el precio
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: El producto no es de esta tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tienda/resumen:
+    get:
+      tags: [tienda]
+      summary: Resumen del día de la tienda del token
+      operationId: obtenerResumenDelDia
+      security:
+        - sesion: []
+      responses:
+        '200':
+          description: Conteos del día; `ventas` solo para el admin (null para el trabajador)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResumenTienda'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de una cuenta de tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /notificaciones:
+    post:
+      tags: [notificaciones]
+      summary: Notificar cambio de estado de un pedido
+      operationId: notificarCambioEstado
+      description: >-
+        Desde S13 (ADR-0030) exige la sesión de una cuenta de la tienda del
+        pedido: el aviso aparece en el historial que ve el cliente.
+      security:
+        - sesion: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificarCambioEstadoRequest'
+      responses:
+        '201':
+          description: Notificación generada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notificacion'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de una cuenta de esa tienda (ADR-0030)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /notificaciones/{pedidoId}:
+    get:
+      tags: [notificaciones]
+      summary: Obtener notificaciones de un pedido por tienda (dueño con sesión o token de seguimiento)
+      operationId: obtenerNotificaciones
+      security:
+        - {}
+        - sesion: []
+      parameters:
+        - name: pedidoId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: tiendaId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: seguimiento
+          in: query
+          required: false
+          description: >-
+            Token de seguimiento recibido al crear el pedido (ADR-0025). Sin él,
+            solo el dueño con sesión puede leer el pedido.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de notificaciones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notificacion'
+        '404':
+          description: Pedido no encontrado, o sin el token ni la sesión de su dueño (ADR-0025)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/resumen:
+    get:
+      tags: [admin]
+      summary: Cifras de las cinco tiendas y cuentas por rol (ADR-0037)
+      operationId: resumenAdmin
+      security:
+        - sesion: []
+      responses:
+        '200':
+          description: Pedidos, ventas y productos por tienda; cuentas por rol
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de administración general
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/usuarios:
+    get:
+      tags: [admin]
+      summary: Todas las cuentas, sin hash, con su número de pedidos (ADR-0037)
+      operationId: listarUsuariosAdmin
+      security:
+        - sesion: []
+      responses:
+        '200':
+          description: Cuentas de la más reciente a la más antigua
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Usuario'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de administración general
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/usuarios/{usuarioId}:
+    patch:
+      tags: [admin]
+      summary: Cambiar nombre, rol (cliente, trabajador, admin) y tienda de una cuenta (ADR-0037)
+      operationId: actualizarUsuarioAdmin
+      security:
+        - sesion: []
+      parameters:
+        - name: usuarioId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nombre:
+                  type: string
+                rol:
+                  type: string
+                  enum: [cliente, trabajador, admin]
+                tiendaId:
+                  type: [string, 'null']
+      responses:
+        '200':
+          description: Cuenta actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        '400':
+          description: Datos inválidos (rol desconocido, tienda inexistente, nombre fuera de rango)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de administración general
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Cuenta no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Cuenta de administración general, o cambio del propio rol
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/usuarios/{usuarioId}/contrasena:
+    post:
+      tags: [admin]
+      summary: Poner una contraseña nueva a una cuenta (ADR-0037)
+      operationId: restablecerContrasenaAdmin
+      security:
+        - sesion: []
+      parameters:
+        - name: usuarioId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                contrasena:
+                  type: string
+                  minLength: 8
+                  maxLength: 128
+              required: [contrasena]
+      responses:
+        '200':
+          description: Contraseña cambiada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        '400':
+          description: Contraseña fuera de rango
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de administración general
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/pedidos:
+    get:
+      tags: [admin]
+      summary: Pedidos de todas las tiendas, sin PIN (ADR-0037)
+      operationId: listarPedidosAdmin
+      security:
+        - sesion: []
+      parameters:
+        - name: tiendaId
+          in: query
+          schema:
+            type: string
+        - name: clienteId
+          in: query
+          schema:
+            type: string
+        - name: estado
+          in: query
+          schema:
+            type: string
+            enum: [Recibido, En preparación, Listo, Entregado, Cancelado]
+        - name: incluirCancelados
+          in: query
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Pedidos del más reciente al más antiguo, con nombre y correo del cliente
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PedidoTienda'
+        '400':
+          description: Estado de filtro desconocido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de administración general
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/pedidos/cancelar:
+    post:
+      tags: [admin]
+      summary: Eliminar varios pedidos de una vez, o todos los de una cuenta (soft-delete de ADR-0033, ADR-0037)
+      operationId: cancelarPedidosAdmin
+      security:
+        - sesion: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                clienteId:
+                  type: string
+                pedidos:
+                  type: array
+                  maxItems: 2000
+                  items:
+                    type: object
+                    properties:
+                      tiendaId:
+                        type: string
+                      pedidoId:
+                        type: string
+                    required: [tiendaId, pedidoId]
+      responses:
+        '200':
+          description: Cuántos se eliminaron y cuáles se omitieron con su motivo (por ejemplo, ya entregados)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cancelados:
+                    type: integer
+                  omitidos:
+                    type: array
+                    items:
+                      type: object
+        '400':
+          description: Sin pedidos ni cuenta, o más de 2000 pedidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de administración general
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/pedidos/avanzar:
+    post:
+      tags: [admin]
+      summary: Confirmar el pago o marcar Listo un pedido de cualquier tienda; la entrega exige el PIN (ADR-0037)
+      operationId: avanzarPedidoAdmin
+      security:
+        - sesion: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tiendaId:
+                  type: string
+                pedidoId:
+                  type: string
+                accion:
+                  type: string
+                  enum: [pago, listo]
+              required: [tiendaId, pedidoId, accion]
+      responses:
+        '200':
+          description: Pedido con su nuevo estado, sin PIN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoTienda'
+        '400':
+          description: Acción desconocida o transición inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de administración general
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/productos:
+    get:
+      tags: [admin]
+      summary: Menú de una tienda o de todas (ADR-0037)
+      operationId: listarProductosAdmin
+      security:
+        - sesion: []
+      parameters:
+        - name: tiendaId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Productos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Producto'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de administración general
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/productos/{productoId}:
+    patch:
+      tags: [admin]
+      summary: Precio, disponibilidad y descripción de un producto de cualquier tienda (ADR-0037)
+      operationId: actualizarProductoAdmin
+      security:
+        - sesion: []
+      parameters:
+        - name: productoId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tiendaId:
+                  type: string
+                precio:
+                  type: integer
+                disponible:
+                  type: boolean
+                descripcion:
+                  type: string
+              required: [tiendaId]
+      responses:
+        '200':
+          description: Producto actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Producto'
+        '400':
+          description: Cambio inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sin sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La sesión no es de administración general
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: El producto no es de esa tienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    sesion:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >-
+        Token de sesión de POST /auth/sesion o /auth/registro (ADR-0021). En la
+        app web lo agrega el BFF del frontend desde una cookie httpOnly.
+
+  schemas:
+    Health:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        huella:
+          type: string
+          description: >-
+            Huella SHA-256 (16 caracteres) del código que sirve el contenedor,
+            calculada al construir la imagen con scripts/huella.mjs. El workflow
+            de despliegue la compara con la del commit para confirmar que Dokploy
+            ya sirve la versión nueva. Fuera de Docker vale «local».
+          example: 3f9a1c0b7d2e4a51
+      required:
+        - status
+
+    Metricas:
+      type: object
+      properties:
+        pedidosCreados:
+          type: integer
+          minimum: 0
+          description: Total de pedidos creados (ESC-01)
+        pagosConfirmados:
+          type: integer
+          minimum: 0
+          description: Transiciones a En preparación (ESC-04)
+        pedidosListos:
+          type: integer
+          minimum: 0
+          description: Transiciones a Listo (ESC-03)
+        entregasValidadas:
+          type: integer
+          minimum: 0
+          description: Transiciones a Entregado con PIN válido (ESC-03)
+        pinesRechazados:
+          type: integer
+          minimum: 0
+          description: Intentos con PIN incorrecto (ESC-03, A-06)
+        pinesBloqueados:
+          type: integer
+          minimum: 0
+          description: Intentos sobre pedidos bloqueados tras 5 fallos (ESC-03, A-06)
+        escriturasReintentadas:
+          type: integer
+          minimum: 0
+          description: Reintentos de escritura de pedidos a PostgreSQL (Taller S12, ADR-0026)
+        escriturasDescartadas:
+          type: integer
+          minimum: 0
+          description: Mensajes de escritura descartados por duplicados u obsoletos (secuencia)
+        escriturasFallidas:
+          type: integer
+          minimum: 0
+          description: Mensajes que agotaron los reintentos y pasaron a la cola de fallidos
+        escriturasEnColaDeFallidos:
+          type: integer
+          minimum: 0
+          description: Tamaño actual de la cola de fallidos (debe volver a 0 cuando la base responde)
+      required:
+        - pedidosCreados
+        - pagosConfirmados
+        - pedidosListos
+        - entregasValidadas
+        - pinesRechazados
+        - pinesBloqueados
+
+    Tienda:
+      type: object
+      description: >-
+        Establecimiento del catálogo. imagenAbiertaId e imagenCerradaId son
+        referencias uuid en Garage (ADR-0035); imagenId es la referencia
+        anterior genérica que se conserva por compatibilidad (ADR-0028).
+      properties:
+        id:
+          type: string
+        nombre:
+          type: string
+        imagenId:
+          type: string
+          nullable: true
+        imagenAbiertaId:
+          type: string
+          nullable: true
+        imagenCerradaId:
+          type: string
+          nullable: true
+      required:
+        - id
+        - nombre
+
+    Producto:
+      type: object
+      description: >-
+        Producto del menú. `imagenId` (ADR-0028) es la referencia uuid del
+        objeto en el almacén de imágenes: el nombre y el precio sí son
+        obligatorios; el campo es NULL para productos sin imagen y la PWA
+        muestra la inicial del producto en ese caso (igual que hasta ahora).
+      properties:
+        id:
+          type: string
+        tiendaId:
+          type: string
+        nombre:
+          type: string
+        precio:
+          type: number
+          minimum: 0
+        disponible:
+          type: boolean
+        imagenId:
+          type: string
+          nullable: true
+          description: uuid v4 del objeto en Garage (ADR-0028); null si no hay imagen
+        descripcion:
+          type: string
+          nullable: true
+          maxLength: 500
+          description: >-
+            Texto corto del producto (S14, detalle en la PWA); null si la
+            tienda no lo definió
+      required:
+        - id
+        - tiendaId
+        - nombre
+        - precio
+        - disponible
+
+    Pedido:
+      type: object
+      description: >-
+        Vista pública del pedido. NO incluye `pin`: la lectura de un pedido no
+        debe permitir obtener el PIN de validación del punto de recolección
+        (A-06, ESC-03). S9 / ADR-0013.
+      properties:
+        id:
+          type: string
+        codigo:
+          type: [string, 'null']
+          pattern: '^[A-HJ-NP-Z][0-9]{2}$'
+          example: A07
+          description: >-
+            Código corto para reconocer el pedido en el mostrador (A01 … Z99,
+            sin las letras I y O, que se confunden con 1 y 0).
+            Por tienda, se reinicia cada día (hora de Colombia) y no se repite
+            entre pedidos no entregados. No reemplaza a `id`. Null en pedidos
+            creados antes de existir el campo.
+        creadoEn:
+          type: [string, 'null']
+          format: date-time
+          description: Momento de creación del pedido (null en pedidos anteriores al campo).
+        clienteId:
+          type: string
+        tiendaId:
+          type: string
+        productoId:
+          type: string
+          description: Primer producto del pedido. El detalle completo está en `items`.
+        cantidad:
+          type: integer
+          minimum: 1
+          maximum: 500
+          description: >-
+            Unidades totales del pedido. El servidor rechaza un pedido de más de
+            500 unidades o de más de 100 por producto (S14).
+        items:
+          type: array
+          description: Productos del pedido, con el nombre y el precio del momento de la compra (ADR-0032).
+          items:
+            $ref: '#/components/schemas/ItemPedido'
+        total:
+          type: number
+          minimum: 0
+        estado:
+          type: string
+          enum: [Recibido, En preparación, Listo, Entregado]
+        canceladoEn:
+          type: [string, 'null']
+          format: date-time
+          description: Momento en que la tienda o el dueño canceló el pedido (ADR-0033/0034). Null si sigue vigente.
+      required:
+        - id
+        - clienteId
+        - tiendaId
+        - productoId
+        - cantidad
+        - total
+        - estado
+
+    ItemPedido:
+      type: object
+      properties:
+        productoId:
+          type: string
+        nombre:
+          type: [string, 'null']
+          description: Nombre al comprar. Null en pedidos anteriores a ADR-0032.
+        cantidad:
+          type: integer
+          minimum: 1
+          maximum: 100
+        precioUnitario:
+          type: number
+          minimum: 0
+      required:
+        - productoId
+        - cantidad
+        - precioUnitario
+
+    PedidoCreado:
+      type: object
+      description: >-
+        Respuesta de POST /pedidos: la vista pública más el token de
+        seguimiento (ADR-0025). Guárdalo: es la llave para leer el pedido sin
+        sesión (`?seguimiento=`) y no se vuelve a entregar.
+      allOf:
+        - $ref: '#/components/schemas/Pedido'
+        - type: object
+          properties:
+            seguimiento:
+              type: string
+              pattern: '^[A-Za-z0-9_-]{22}$'
+              description: 128 bits al azar en base64url.
+          required:
+            - seguimiento
+
+    CrearPedidoRequest:
+      type: object
+      description: >-
+        Un pedido agrupa los productos de UNA tienda, con un solo código y un
+        solo PIN (ADR-0032). Se envía `items`, o `productoId` y `cantidad` para
+        un producto (formato original de v1).
+      properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items:
+            type: object
+            properties:
+              productoId:
+                type: string
+              cantidad:
+                type: integer
+                minimum: 1
+                maximum: 100
+            required:
+              - productoId
+              - cantidad
+        productoId:
+          type: string
+        cantidad:
+          type: integer
+          minimum: 1
+          maximum: 100
+        clienteId:
+          type: string
+        tiendaId:
+          type: string
+      required:
+        - clienteId
+        - tiendaId
+      oneOf:
+        - required:
+            - items
+        - required:
+            - productoId
+            - cantidad
+
+    ValidarPinRequest:
+      type: object
+      properties:
+        pinIngresado:
+          type: string
+          minLength: 4
+          maxLength: 4
+      required:
+        - pinIngresado
+
+    NotificarCambioEstadoRequest:
+      type: object
+      properties:
+        pedidoId:
+          type: string
+        estado:
+          type: string
+          enum: [Recibido, En preparación, Listo, Entregado]
+        tiendaId:
+          type: string
+      required:
+        - pedidoId
+        - estado
+        - tiendaId
+
+    Notificacion:
+      type: object
+      properties:
+        pedidoId:
+          type: string
+        tiendaId:
+          type: string
+        estado:
+          type: string
+        mensaje:
+          type: string
+        enviadaEn:
+          type: string
+          format: date-time
+      required:
+        - pedidoId
+        - tiendaId
+        - estado
+        - mensaje
+        - enviadaEn
+
+    Usuario:
+      type: object
+      description: Cuenta sin datos sensibles (nunca incluye el hash de la contraseña).
+      properties:
+        id:
+          type: string
+        correo:
+          type: string
+          format: email
+        nombre:
+          type: string
+        rol:
+          type: string
+          enum: [cliente, trabajador, admin, superadmin]
+        tiendaId:
+          type: [string, 'null']
+      required: [id, correo, nombre, rol]
+
+    RegistroRequest:
+      type: object
+      properties:
+        correo:
+          type: string
+          format: email
+          description: Correo institucional (por defecto @utb.edu.co)
+        nombre:
+          type: string
+          minLength: 2
+          maxLength: 60
+        contrasena:
+          type: string
+          minLength: 8
+          maxLength: 128
+        avisoVersion:
+          type: string
+          description: Versión vigente del aviso de privacidad que el usuario aceptó (S13)
+      required: [correo, nombre, contrasena, avisoVersion]
+
+    SesionRequest:
+      type: object
+      properties:
+        correo:
+          type: string
+          format: email
+        contrasena:
+          type: string
+      required: [correo, contrasena]
+
+    Sesion:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT HS256, vence a los 7 días
+        usuario:
+          $ref: '#/components/schemas/Usuario'
+      required: [token, usuario]
+
+    PinPedido:
+      type: object
+      description: PIN de retiro para el dueño del pedido (ADR-0022).
+      properties:
+        pedidoId:
+          type: string
+        tiendaId:
+          type: string
+        codigo:
+          type: [string, 'null']
+        pin:
+          type: string
+          pattern: '^[0-9]{4}$'
+      required: [pedidoId, tiendaId, pin]
+
+    PedidoTienda:
+      description: Pedido visto desde el mostrador (sin PIN) con el primer nombre del cliente.
+      allOf:
+        - $ref: '#/components/schemas/Pedido'
+        - type: object
+          properties:
+            clienteNombre:
+              type: [string, 'null']
+
+    CambioProducto:
+      type: object
+      properties:
+        disponible:
+          type: boolean
+        precio:
+          type: integer
+          minimum: 100
+          maximum: 1000000
+          description: Solo el admin de la tienda
+        descripcion:
+          type: string
+          maxLength: 500
+          description: Texto corto del producto; cadena vacía lo borra
+
+    ResumenTienda:
+      type: object
+      properties:
+        fecha:
+          type: string
+          format: date
+        pedidos:
+          type: integer
+        porEstado:
+          type: object
+          additionalProperties:
+            type: integer
+        ventas:
+          type: [number, 'null']
+      required: [fecha, pedidos, porEstado]
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error

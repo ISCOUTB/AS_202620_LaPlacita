@@ -1,0 +1,14 @@
+# dependencias y artefactos de build: se regeneran dentro de la imagen
+node_modules
+.next
+out
+
+# entorno
+.env
+.env*.local
+
+# logs
+npm-debug.log*
+
+# material de diseño que no participa en el build
+landinepage
