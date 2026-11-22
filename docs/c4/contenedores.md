@@ -29,17 +29,20 @@ flowchart TD
         garage[("<b>Almacén de imágenes</b><br/>Garage S3<br/><i>Fotos de productos y tiendas</i><br/><i>Referencia UUID en PostgreSQL</i>)]:::container
     end
 
-    pago["<b>Pasarela de pagos</b><br/>Planeada"]:::planned
-    push["<b>Notificaciones</b><br/>Planeadas"]:::planned
+    pago["<b>Pasarela de Pagos</b><br/>[Planeada]<br/><i>Confirmación simulada</i>"]:::planned
+    push["<b>Notificaciones</b><br/>[Planeadas]<br/><i>Consulta periódica del estado</i>"]:::planned
 
-    usuario -->|"Hace pedidos y consulta"| app
-    establecimiento -->|"Opera pedidos y menú"| app
-    administrador -->|"Administra cuentas y tiendas"| app
+    usuario -->|"Compra y consulta estado<br/>HTTPS"| app
+    establecimiento -->|"Gestiona pedidos y PIN<br/>HTTPS"| app
+    administrador -->|"Gestiona cuentas y tiendas<br/>HTTPS"| app
 
-    app -->|"BFF · solicitudes HTTP"| api
+    app -->|"BFF reenvía solicitudes<br/>BACKEND_URL"| api
 
-    api -->|"SQL · red interna"| db
-    api -->|"S3 · red interna"| garage
+    api -->|"Escrituras SQL y reintentos<br/>red interna"| db
+    api -->|"API S3 por HTTP<br/>red interna"| garage
+
+    api -.->|Integración futura no activa| pago
+    api -.->|Integración futura no activa| push
 
 ```
 
